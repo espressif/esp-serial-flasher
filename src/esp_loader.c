@@ -214,6 +214,13 @@ esp_loader_error_t esp_loader_flash_verify(void)
 
 #endif
 
+esp_loader_error_t esp_loader_spi_params(uint32_t total_size)
+{
+    loader_port_start_timer(DEFAULT_TIMEOUT);
+
+    return loader_spi_parameters(total_size);
+}
+
 void esp_loader_reset_target(void)
 {
     loader_port_reset_target();
