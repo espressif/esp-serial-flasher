@@ -167,6 +167,19 @@ esp_loader_error_t esp_loader_change_baudrate(uint32_t baudrate);
 esp_loader_error_t esp_loader_flash_verify(void);
 
 /**
+	* @brief Set SPI flash memory parameters.
+	*        Call before using esp_loader_flash_start
+	*
+	* @param total_size[in]     total size of flash memory in bytes
+	*
+	* @return
+	*     - ESP_LOADER_SUCCESS Success
+	*     - ESP_LOADER_ERROR_TIMEOUT Timeout
+	*     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+	*/
+esp_loader_error_t esp_loader_spi_params(uint32_t total_size);
+    
+/**
   * @brief Toggles reset pin.
   */
 void esp_loader_reset_target(void);
