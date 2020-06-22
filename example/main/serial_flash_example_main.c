@@ -31,7 +31,8 @@ static void flash_binary(FILE *image, size_t image_size)
     int32_t packet_number = 0;
     esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
 
-    err = esp_loader_connect(&connect_config);
+    //PICO-D4: --spi-connection=6,17,8,11,16, spi_connection = 188777542
+    err = esp_loader_connect(&connect_config, 0);
     if (err != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "Cannot connect to target.");
         return;

@@ -74,7 +74,7 @@ static uint32_t timeout_per_mb(uint32_t size_bytes, uint32_t time_per_mb)
 }
 
 
-esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
+esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args, uint32_t spi_connection)
 {
     esp_loader_error_t err;
     int32_t trials = connect_args->trials;
@@ -95,7 +95,7 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
     } while (err != ESP_LOADER_SUCCESS);
 
     loader_port_start_timer(DEFAULT_TIMEOUT);
-    return loader_spi_attach_cmd(SPI_PIN_CONFIG_DEFAULT);
+    return loader_spi_attach_cmd(spi_connection ? spi_connection : SPI_PIN_CONFIG_DEFAULT);
 }
 
 

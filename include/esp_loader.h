@@ -37,7 +37,7 @@ typedef enum
 /**
  * @brief Connection arguments
  */
-typedef struct 
+typedef struct
 {
   uint32_t sync_timeout;  /*!< Maximum time to wait for response from serial interface. */
   int32_t trials;         /*!< Number of trials to connect to target. If greater than 1,
@@ -53,13 +53,14 @@ typedef struct
   * @brief Connects to the target
   *
   * @param connect_args[in] Timing parameters to be used for connecting to target.
+  * @param spi_connection[in] SPI Pin connection information.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args);
+esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args, uint32_t spi_connection);
 
 /**
   * @brief Initiates flash operation
