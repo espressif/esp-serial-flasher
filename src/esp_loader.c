@@ -288,10 +288,10 @@ static esp_loader_error_t spi_flash_command(spi_flash_cmd_t cmd, void *data_tx, 
         RETURN_ON_ERROR( esp_loader_write_register(s_reg->w0, 0) );
     } else {
         uint32_t *data = (uint32_t *)data_tx;
-        uint32_t words_to_write = MIN((tx_size + 31) / 8 * 4, 1);
+        uint32_t dwords_to_write = (tx_size + 31) / (8 * 4);
         uint32_t data_reg_addr = s_reg->w0;
 
-        while (words_to_write--) {
+        while (dwords_to_write--) {
             uint32_t word = *data++;
             RETURN_ON_ERROR( esp_loader_write_register(data_reg_addr, word) );
             data_reg_addr += 4;
