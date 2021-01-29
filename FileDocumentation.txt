@@ -1,0 +1,173 @@
+esp32_port.h
+
+loader_esp32_config_t: config for specific ESP32 setup
+loader_port_esp32_init: config UART and GPIO pins for ESP32
+loader_port_esp32_deinit: deinitialise UART for ESP32
+
+
+esp32_port.c
+
+dec_to_hex_str: turns a uint8_t into a two digit hex
+serial_debug_print: logs a data block to debug console
+s_time_end: value of esp_timer_get_time() when timer expires
+s_uart_port: the uart port number being used
+s_reset_trigger_pin: pin connected to target's reset pin, set by loader_port_esp32_init
+s_gpio0_trigger_pin: pin connected to target's GPIO0, set by loader_port_esp32_init
+loader_port_esp32_init: sets s_uart_port, s_reset_trigger_pin, s_gpio0_trigger_pin from the config, initialises the UART and the pins
+loader_port_esp32_deinit: deletes the UART driver
+loader_port_serial_write: uses uart_write_bytes and uart_wait_tx_done
+loader_port_serial_read: uses uart_read_bytes
+loader_port_enter_bootloader: reset target into bootloader
+loader_port_reset_target: reset target
+loader_port_delay_ms: uses usleep
+loader_port_start_timer: sets s_time_end to the expiry time of the timer
+loader_port_remaining_time: gets how many ms before expiry time of the timer,
+    which is used as timeout for calls to loader_port_serial_read and loader_port_serial_write
+loader_port_debug_print: uses printf
+loader_port_change_baudrate: calls uart_set_baudrate
+
+
+esp_loader.h
+
+esp_loader_error_t: error code enum
+target_chip_t: target chip type enum
+esp_loader_spi_config_t: which pins are connected to flash to be programmed into target boot loader packed into 30 bits
+    set whole thing to 0 to use defaults
+esp_loader_connect_args_t: config to be used to connect, also includes the esp_loader_spi_config_t to use
+ESP_LOADER_CONNECT_DEFAULT(): a esp_loader_connect_args_t with timeout 100, retries 10, a default esp_loader_spi_config_t
+ESP_LOADER_SPI_CONFIG_ESP32PICOD4(): a esp_loader_spi_config_t for the PICO D4
+
+headers for:
+esp_loader_connect: Connects to the target
+esp_loader_get_target: Returns attached target chip
+esp_loader_flash_start: Initiates flash operation
+esp_loader_flash_write: Writes supplied data to target's flash memory
+esp_loader_flash_finish: Ends flash operation
+esp_loader_write_register: Writes register
+esp_loader_read_register: Reads register by starting timer and then calling loader_read_reg_cmd
+esp_loader_change_baudrate: Change baud rate of target
+esp_loader_flash_verify: Verify target's flash integrity by checking MD5.
+esp_loader_reset_target: Toggles reset pin
+
+
+esp_loader.c
+
+spi_flash_cmd_t: enum that only contains command id for SPI_FLASH_READ_ID, which is used as argument to spi_flash_command
+target_registers_t: struct containing the register addresses for various registers for a particular chip
+date_registers_t: struct containing the expected values from reading the date registers for a particular chip
+registers: a target_registers_t for each target chip
+s_flash_write_size: the block size set by esp_loader_flash_start
+s_target: the detected target chip type set by esp_loader_connect
+s_reg: the target_registers_t for the detected chip type set by esp_loader_connect
+s_date_regs: a date_registers_t for each chip to match against
+init_md5/md5_update/md5_final: a wrapper around MD5 implementation that is empty if MD5_ENABLED is not defined
+timeout_per_mb: return the timeout for writing a certain amount of data
+detect_chip: reads registers UART_DATE_REG_ADDR and UART_DATE_REG2_ADDR from target
+    compares results to the values in s_date_regs to find target chip type and returns it
+esp_loader_connect: calls loader_port_enter_bootloader
+    calls loader_port_start_timer then calls loader_sync_cmd and if getting a response times out repeats this up to trials times
+    uses detect_chip to set s_target, s_reg
+    for ESP8266 calls loader_flash_begin_cmd with all zeros,
+    for other chips calls loader_port_start_timer and then calls loader_spi_attach_cmd using the first uint32 in connect_args->spi_pin_config
+esp_loader_get_target: returns s_target, the detected target chip type
+spi_set_data_lengths: sets the MOSI and MISO data lengths in bits for the target
+spi_set_data_lengths_8266: sets the MOSI and MISO data lengths in bits for the target (ESP8266 only)
+spi_flash_command: saves usr & usr2 registers and restores them at end,
+    sets data lengths using spi_set_data_lengths or spi_set_data_lengths_8266
+    sends the command and whether to read/write data, followed by the data, then waits for acknowledgement, then reads result
+detect_flash_size: calls spi_flash_command to get the ID of the flash and uses this to calculate the flash size
+esp_loader_flash_start: calls loader_port_start_timer then calls loader_flash_begin_cmd
+    erase size is set to the size of the flash data to write rounded up to the nearest block size
+    calls detect_flash_size and checks image fits in available size before calling loader_spi_parameters with the detected flash size
+    calls init_md5, saving the offset and image size to request the target MD5 of later
+esp_loader_flash_write: calls loader_port_start_timer then calls loader_flash_data_cmd,
+    padding the data array (in place!) up to s_flash_write_size (the block size) with PADDING_PATTERN 
+    and using md5_update on the passed data (including padding if necessary to round up to the nearest 4 bytes)
+esp_loader_flash_finish: calls loader_port_start_timer then calls loader_flash_end_cmd
+esp_loader_read_register: calls loader_port_start_timer then calls loader_read_reg_cmd
+esp_loader_write_register: calls loader_port_start_timer then calls loader_write_reg_cmd
+esp_loader_change_baudrate: calls loader_port_start_timer then calls loader_change_baudrate_cmd
+hexify: turns a MD5 16 byte array into a long hexadecimal number
+esp_loader_flash_verify: finishes calculation of MD5 of data sent, converts to hex,
+    calls loader_md5_cmd to get MD5 from target and compares,
+    printing both to debug if they don't match and returning the result, except on ESP8266 (unsupported)
+esp_loader_reset_target: calls loader_port_reset_target
+
+
+serial_io.h
+
+headers for:
+loader_port_change_baudrate: port implementation to change baud rate (only used from client app)
+loader_port_serial_write: port implementation to write to serial port (used from serial_comm.c)
+loader_port_serial_read: port implementation to read from serial port (used from serial_comm.c)
+loader_port_delay_ms: port implementation to 
+loader_port_start_timer: port implementation to 
+loader_port_remaining_time: port implementation to 
+loader_port_enter_bootloader: port implementation to hold bootloader pin low
+loader_port_reset_target: port implementation to toggle reset pin
+loader_port_debug_print: port implementation to write debug messages (used from serial_comm.c)
+
+
+serial_comm_prv.h
+
+command_t: an enum of command types
+error_code_t: an enum of error codes received over the protocol
+command_common_t: included as the first part of a command
+begin_command_t: command to begin a flash operation
+data_command_t: command notifying that we're about to send data for a flash operation
+flash_end_command_t: command to end a flash operation
+mem_end_command_t: like a flash_end_command_t but with an entry point address
+sync_command_t: 
+write_reg_command_t: command to write a register
+read_reg_command_t: command to read a register
+spi_attach_command_t:
+change_baudrate_command_t: command to change baud rate
+spi_flash_md5_command_t:
+common_response_t: included as the first part of a response to a message
+response_status_t: included as the final part of a response_t to say whether it failed and the error code
+response_t: a common_response_t plus a response_t
+rom_md5_response_t: a common_response_t plus a response_t with an MD5 checksum in the middle
+write_spi_command_t:
+
+
+serial_comm.h
+
+headers for:
+loader_flash_begin_cmd: sends begin_command_t using send_cmd
+loader_flash_data_cmd: sends data_command_t and some data using send_cmd_with_data including s_sequence_number before incrementing it and checksum calculated with compute_checksum
+loader_flash_end_cmd: sends flash_end_command_t using send_cmd
+loader_write_reg_cmd: sends write_reg_command_t using send_cmd
+loader_read_reg_cmd: sends read_reg_command_t using send_cmd
+loader_sync_cmd: sends sync_command_t using send_cmd with a pre-determined sync sequence (mostly 0x55's)
+loader_spi_attach_cmd: sends spi_attach_command_t using send_cmd with the given config number?
+loader_change_baudrate_cmd: sends change_baudrate_command_t using send_cmd with the old baud rate set to 0
+loader_md5_cmd: sends spi_flash_md5_command_t using send_cmd_md5 and returns the MD5 hash
+loader_spi_parameters: sends write_spi_command_t using send_cmd
+
+
+serial_comm.c
+
+s_sequence_number: the sequence number of the data packet being sent
+serial_read: calls loader_port_serial_read passing loader_port_remaining_time()
+serial_write: calls loader_port_serial_write passing loader_port_remaining_time()
+compute_checksum: calculates a very basic checksum of a data block to be sent
+SLIP_receive_data: reads data using serial_read and SLIP decodes it
+SLIP_receive_packet: loads a packet from the serial port using serial_read and SLIP_receive_data to decode the data
+SLIP_send: sends a buffer over the serial port using serial_write after encoding for the SLIP protocol
+SLIP_send_delimiter: sends the SLIP delimiter character using serial_write
+send_cmd: sends a command over the wire using SLIP_send and then uses check_response to get the result
+send_cmd_with_data: sends a command followed by some data using SLIP
+send_cmd_md5: sends a command and gets back a rom_md5_response_t using SLIP and copies the MD5 from it to the client
+log_loader_internal_error: prints human readable version of response error code to debug console
+check_response: uses SLIP_receive_packet to get the response
+loader_flash_begin_cmd: sends begin_command_t using send_cmd
+loader_flash_data_cmd: sends data_command_t and some data using send_cmd_with_data including s_sequence_number before incrementing it and checksum calculated with compute_checksum
+loader_flash_end_cmd: sends flash_end_command_t using send_cmd
+loader_sync_cmd: sends sync_command_t using send_cmd with a pre-determined sync sequence (mostly 0x55's)
+loader_write_reg_cmd: sends write_reg_command_t using send_cmd
+loader_read_reg_cmd: sends read_reg_command_t using send_cmd
+loader_spi_attach_cmd: sends spi_attach_command_t using send_cmd with the given config number?
+loader_change_baudrate_cmd: sends change_baudrate_command_t using send_cmd with the old baud rate set to 0
+loader_md5_cmd: sends spi_flash_md5_command_t using send_cmd_md5 and returns the MD5 hash
+loader_spi_parameters: sends write_spi_command_t using send_cmd
+loader_port_debug_print: an empty debug printer in case one isn't provided
