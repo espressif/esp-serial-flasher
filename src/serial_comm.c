@@ -27,7 +27,7 @@ static const uint8_t DELIMITER = 0xC0;
 static const uint8_t C0_REPLACEMENT[2] = {0xDB, 0xDC};
 static const uint8_t DB_REPLACEMENT[2] = {0xDB, 0xDD};
 
-static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void* resp, uint32_t resp_size);
+static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, common_response_t *response, uint32_t resp_size);
 
 
 static inline esp_loader_error_t serial_read(uint8_t *buff, size_t size)
@@ -142,44 +142,44 @@ static esp_loader_error_t SLIP_send_delimiter(void)
 }
 
 
-static esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_value)
+static esp_loader_error_t send_cmd(const command_common_t *cmd_data, uint32_t size, uint32_t *reg_value)
 {
     response_t response;
-    command_t command = ((command_common_t *)cmd_data)->command;
+    command_t command = cmd_data->command;
 
     RETURN_ON_ERROR( SLIP_send_delimiter() );
     RETURN_ON_ERROR( SLIP_send((const uint8_t *)cmd_data, size) );
     RETURN_ON_ERROR( SLIP_send_delimiter() );
 
-    return check_response(command, reg_value, &response, sizeof(response));
+    return check_response(command, reg_value, &response.common, sizeof(response));
 }
 
 
-static esp_loader_error_t send_cmd_with_data(const void *cmd_data, size_t cmd_size,
+static esp_loader_error_t send_cmd_with_data(const data_command_t *cmd_data, size_t cmd_size,
                                              const void *data, size_t data_size)
 {
     response_t response;
-    command_t command = ((command_common_t *)cmd_data)->command;
+    command_t command = cmd_data->common.command;
 
     RETURN_ON_ERROR( SLIP_send_delimiter() );
     RETURN_ON_ERROR( SLIP_send((const uint8_t *)cmd_data, cmd_size) );
     RETURN_ON_ERROR( SLIP_send(data, data_size) );
     RETURN_ON_ERROR( SLIP_send_delimiter() );
 
-    return check_response(command, NULL, &response, sizeof(response));
+    return check_response(command, NULL, &response.common, sizeof(response));
 }
 
 
-static esp_loader_error_t send_cmd_md5(const void *cmd_data, size_t cmd_size, uint8_t md5_out[MD5_SIZE])
+static esp_loader_error_t send_cmd_md5(const spi_flash_md5_command_t *cmd_data, size_t cmd_size, uint8_t md5_out[MD5_SIZE])
 {
     rom_md5_response_t response;
-    command_t command = ((command_common_t *)cmd_data)->command;
+    command_t command = cmd_data->common.command;
 
     RETURN_ON_ERROR( SLIP_send_delimiter() );
     RETURN_ON_ERROR( SLIP_send((const uint8_t *)cmd_data, cmd_size) );
     RETURN_ON_ERROR( SLIP_send_delimiter() );
 
-    RETURN_ON_ERROR( check_response(command, NULL, &response, sizeof(response)) );
+    RETURN_ON_ERROR( check_response(command, NULL, &response.common, sizeof(response)) );
 
     memcpy(md5_out, response.md5, MD5_SIZE);
 
@@ -201,24 +201,23 @@ static void log_loader_internal_error(error_code_t error)
         case DEFLATE_ERROR:   loader_port_debug_print("DEFLATE_ERROR"); break;
         default:              loader_port_debug_print("UNKNOWN ERROR"); break;
     }
-    
+
     loader_port_debug_print("\n");
 }
 
 
-static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void* resp, uint32_t resp_size)
+static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, common_response_t *response, uint32_t resp_size)
 {
     esp_loader_error_t err;
-    common_response_t *response = (common_response_t *)resp;
-
     do {
-        err = SLIP_receive_packet(resp, resp_size);
+        err = SLIP_receive_packet((uint8_t *)response, resp_size);
         if (err != ESP_LOADER_SUCCESS) {
             return err;
         }
     } while ((response->direction != READ_DIRECTION) || (response->command != cmd));
 
-    response_status_t *status = (response_status_t *)((uint8_t *)resp + resp_size - sizeof(response_status_t));
+    // Response always ends with a response_status_t
+    response_status_t *status = (response_status_t *)((uint8_t *)response + resp_size - sizeof(response_status_t));
 
     if (status->failed) {
         log_loader_internal_error(status->error);
@@ -258,7 +257,7 @@ esp_loader_error_t loader_flash_begin_cmd(uint32_t offset,
     s_sequence_number = 0;
 
 
-    return send_cmd(&begin_cmd, sizeof(begin_cmd) - encription, NULL);
+    return send_cmd(&begin_cmd.common, sizeof(begin_cmd) - encription, NULL);
 }
 
 
@@ -291,7 +290,7 @@ esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader)
         .stay_in_loader = stay_in_loader
     };
 
-    return send_cmd(&end_cmd, sizeof(end_cmd), NULL);
+    return send_cmd(&end_cmd.common, sizeof(end_cmd), NULL);
 }
 
 
@@ -313,7 +312,7 @@ esp_loader_error_t loader_sync_cmd(void)
         }
     };
 
-    return send_cmd(&sync_cmd, sizeof(sync_cmd), NULL);
+    return send_cmd(&sync_cmd.common, sizeof(sync_cmd), NULL);
 }
 
 
@@ -333,7 +332,7 @@ esp_loader_error_t loader_write_reg_cmd(uint32_t address, uint32_t value,
         .delay_us = delay_us
     };
 
-    return send_cmd(&write_cmd, sizeof(write_cmd), NULL);
+    return send_cmd(&write_cmd.common, sizeof(write_cmd), NULL);
 }
 
 
@@ -349,7 +348,7 @@ esp_loader_error_t loader_read_reg_cmd(uint32_t address, uint32_t *reg)
         .address = address,
     };
 
-    return send_cmd(&read_cmd, sizeof(read_cmd), reg);
+    return send_cmd(&read_cmd.common, sizeof(read_cmd), reg);
 }
 
 
@@ -366,7 +365,7 @@ esp_loader_error_t loader_spi_attach_cmd(uint32_t config)
         .zero = 0
     };
 
-    return send_cmd(&attach_cmd, sizeof(attach_cmd), NULL);
+    return send_cmd(&attach_cmd.common, sizeof(attach_cmd), NULL);
 }
 
 esp_loader_error_t loader_change_baudrate_cmd(uint32_t baudrate)
@@ -382,7 +381,7 @@ esp_loader_error_t loader_change_baudrate_cmd(uint32_t baudrate)
         .old_baudrate = 0 // ESP32 ROM only
     };
 
-    return send_cmd(&baudrate_cmd, sizeof(baudrate_cmd), NULL);
+    return send_cmd(&baudrate_cmd.common, sizeof(baudrate_cmd), NULL);
 }
 
 esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out)
@@ -420,7 +419,7 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
         .status_mask = 0xFFFF,
     };
 
-    return send_cmd(&spi_cmd, sizeof(spi_cmd), NULL);
+    return send_cmd(&spi_cmd.common, sizeof(spi_cmd), NULL);
 }
 
 __attribute__ ((weak)) void loader_port_debug_print(const char *str)
