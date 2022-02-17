@@ -254,7 +254,7 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
 }
 
 
-esp_loader_error_t esp_loader_flash_write(void *payload, uint32_t size)
+esp_loader_error_t esp_loader_flash_write(const void *payload, uint32_t size)
 {
     uint32_t padding_bytes = s_flash_write_size - size;
     uint8_t *data = (uint8_t *)payload;
