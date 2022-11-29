@@ -6,7 +6,6 @@ set(srcs src/esp_loader.c
          src/md5_hash.c
 )
 
-
 if (DEFINED ESP_PLATFORM)
     # Register component to esp-idf build system
     list(APPEND srcs port/esp32_port.c)
@@ -33,6 +32,15 @@ if (DEFINED ESP_PLATFORM)
         set(target ${COMPONENT_TARGET})
     endif()
 
+elseif(PORT STREQUAL "ZEPHYR")
+    find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
+    project(flasher)
+
+    list(APPEND srcs port/zephyr_port.c)
+    FILE(GLOB app_sources ${srcs})
+    target_sources(app PRIVATE ${app_sources})
+    zephyr_library_include_directories(app PUBLIC include port private_include)
+    
 else()
     # Create traditional CMake target
     add_library(flasher ${srcs})
