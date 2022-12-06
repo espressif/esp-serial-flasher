@@ -3,7 +3,6 @@ menu "ESP serial flasher"
         bool "Enable serial flasher library"
         default y
         select CONSOLE_SUBSYS
-        select CONSOLE_GETCHAR
         help
             Select this option to enable the ESP serial flasher library.
 

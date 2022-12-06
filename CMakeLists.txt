@@ -33,13 +33,16 @@ if (DEFINED ESP_PLATFORM)
     endif()
 
 elseif(PORT STREQUAL "ZEPHYR")
+    set(target ${TARGET})
+
     find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
     project(flasher)
 
     list(APPEND srcs port/zephyr_port.c)
     FILE(GLOB app_sources ${srcs})
-    target_sources(app PRIVATE ${app_sources})
+    target_sources(${target} PRIVATE ${app_sources})
     zephyr_library_include_directories(app PUBLIC include port private_include)
+
     
 else()
     # Create traditional CMake target

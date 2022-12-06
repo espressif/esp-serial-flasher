@@ -9,6 +9,7 @@ Supported **host** microcontrollers:
 - STM32
 - Raspberry Pi
 - ESP32
+- MCU running ZEPHYR OS
 
 Supported **target** microcontrollers:
 
@@ -38,7 +39,7 @@ Following functions are part of serial_io.h header for convenience, however, use
 - loader_port_debug_print()
 
 Prototypes of all function mentioned above can be found in [serial_io.h](include/serial_io.h).
-Please refer to ports in `port` directory. Currently, only ports for [ESP32 port](port/esp32_port.c) and [STM32 port](port/stm32_port.c) are available.
+Please refer to ports in `port` directory. Currently, only ports for [ESP32 port](port/esp32_port.c), [STM32 port](port/stm32_port.c), and [ZEPHYR port](port/zephyr_port.c) are available.
 
 ## Configuration
 
@@ -86,6 +87,63 @@ set(TOOLCHAIN_PREFIX    path_to_toolchain)
 set(STM32Cube_DIR       path_to_stm32_HAL)
 set(STM32_CHIP          STM32F407VG)
 set(PORT                STM32)
+```
+
+### ZEPHYR support
+
+The ZEPHYR port is ready to be integrated into your Zephyr app. Clone this repository into your app directory:
+
+```
+cd app
+git clone --recursive https://github.com/kt-elektronik/esp-serial-flasher.git
+```
+
+Add it as a submodule to your Zephyr app's Git repository.
+
+To your `app/CMakeLists.txt`, add these lines - it is assumed here that your target app is named `app`:
+
+```
+set(PORT ZEPHYR)
+set(TARGET app)
+add_subdirectory(esp-serial-flasher)
+```
+
+To your `app/Kconfig`, add this:
+
+```
+rsource "esp-serial-flasher/Kconfig"
+```
+
+Configure your project for the library using these lines in `app/prj.conf`:
+
+```
+CONFIG_SERIAL_FLASHER=y
+CONFIG_CONSOLE_GETCHAR=y
+```
+
+In your source code, you can use this code fragment as a starting point:
+
+```
+#include <zephyr_port.h>
+#include <esp_loader.h>
+
+static const struct device *uart_dev = ...;
+static const struct gpio_dt_spec enable_spec = ...;
+static const struct gpio_dt_spec boot_spec = ...;
+
+gpio_pin_configure_dt(&boot_spec, GPIO_OUTPUT_ACTIVE);
+gpio_pin_configure_dt(&enable_spec, GPIO_OUTPUT_INACTIVE);
+
+loader_zephyr_config_t initArgs = {
+    .uart_dev = uart_dev,
+    .enable_spec = enable_spec,
+    .boot_spec = boot_spec
+};
+
+loader_port_zephyr_init(&initArgs);
+esp_loader_connect_args_t connectArgs = ESP_LOADER_CONNECT_DEFAULT();
+esp_loader_connect(&connectArgs);
+target_chip_t targetChip = esp_loader_get_target();
 ```
 
 ## Licence
