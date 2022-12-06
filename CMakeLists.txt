@@ -39,9 +39,9 @@ elseif(PORT STREQUAL "ZEPHYR")
     project(flasher)
 
     list(APPEND srcs port/zephyr_port.c)
-    FILE(GLOB app_sources ${srcs})
-    target_sources(${target} PRIVATE ${app_sources})
-    zephyr_library_include_directories(app PUBLIC include port private_include)
+    FILE(GLOB flasher_sources ${srcs})
+    target_sources(${target} PRIVATE ${flasher_sources})
+    zephyr_library_include_directories(${target} PUBLIC include port private_include)
 
     
 else()
