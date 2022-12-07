@@ -1,15 +1,15 @@
 menu "ESP serial flasher"
-    config SERIAL_FLASHER
+    config ESP32_SERIAL_FLASHER
         bool "Enable serial flasher library"
         default y
         select CONSOLE_SUBSYS
         help
             Select this option to enable the ESP serial flasher library.
 
-    config SERIAL_FLASHER_MD5_ENABLED
+    config ESP32_SERIAL_FLASHER_MD5_ENABLED
         bool "Enable MD5 check"
         default y
-        select SERIAL_FLASHER
+        select ESP32_SERIAL_FLASHER
         help
             Select this option to enable MD5 hashsum check after flashing.
 endmenu
