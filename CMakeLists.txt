@@ -32,7 +32,9 @@ if (DEFINED ESP_PLATFORM)
         set(target ${COMPONENT_TARGET})
     endif()
 
-elseif(PORT STREQUAL "ZEPHYR")
+elseif(DEFINED ZEPHYR_CURRENT_MODULE_DIR)
+    set(target esp32_flasher)
+
     zephyr_interface_library_named(esp32_flasher)
 
     list(APPEND srcs port/zephyr_port.c)
@@ -41,13 +43,11 @@ elseif(PORT STREQUAL "ZEPHYR")
 
     zephyr_library_link_libraries(esp32_flasher)
 
-    target_link_libraries(esp32_flasher INTERFACE zephyr_interface)
-    
     zephyr_include_directories(
-        ${ZEPHYR_CURRENT_MODULE_DIR}/include 
-        ${ZEPHYR_CURRENT_MODULE_DIR}/port 
+        ${ZEPHYR_CURRENT_MODULE_DIR}/include
+        ${ZEPHYR_CURRENT_MODULE_DIR}/port
         ${ZEPHYR_CURRENT_MODULE_DIR}/private_include)
-    
+
 else()
     # Create traditional CMake target
     add_library(flasher ${srcs})
@@ -69,6 +69,10 @@ else()
 
 endif()
 
-if(DEFINED MD5_ENABLED OR CONFIG_ESP32_SERIAL_FLASHER_MD5_ENABLED)
-    target_compile_definitions(${target} PUBLIC -DMD5_ENABLED=1)
+if(DEFINED MD5_ENABLED OR CONFIG_SERIAL_FLASHER_MD5_ENABLED)
+    if(DEFINED ZEPHYR_CURRENT_MODULE_DIR)
+        target_compile_definitions(${target} INTERFACE -DMD5_ENABLED=1)
+    else()
+        target_compile_definitions(${target} INTERFACE -DMD5_ENABLED=1)
+    endif()
 endif()

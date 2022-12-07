@@ -6,7 +6,7 @@ menu "ESP serial flasher"
         help
             Select this option to enable the ESP serial flasher library.
 
-    config ESP32_SERIAL_FLASHER_MD5_ENABLED
+    config SERIAL_FLASHER_MD5_ENABLED
         bool "Enable MD5 check"
         default y
         select ESP32_SERIAL_FLASHER
