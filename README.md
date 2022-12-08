@@ -96,7 +96,7 @@ The ZEPHYR port is ready to be integrated into your Zephyr app as a Zephyr modul
 ```
     - name: esp32-flasher
       url: https://github.com/kt-elektronik/esp-serial-flasher.git
-      revision: d79e9a7dfc55e2d633199cf81eec6dc9bd3742eb
+      revision: <insert current revision here>
       path: modules/lib/esp32_flasher
 ```
 
