@@ -1,4 +1,4 @@
-name: esp32-flasher
+name: esp-flasher
 
 build:
   cmake: zephyr

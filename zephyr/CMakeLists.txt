@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.5)
 
-if (CONFIG_ESP32_SERIAL_FLASHER)
+if (CONFIG_ESP_SERIAL_FLASHER)
     zephyr_include_directories(
         "${ZEPHYR_CURRENT_MODULE_DIR}/include"
         "${ZEPHYR_CURRENT_MODULE_DIR}/port"
         "${ZEPHYR_CURRENT_MODULE_DIR}/private_include"
     )
 
-    zephyr_interface_library_named(esp32_flasher)
+    zephyr_interface_library_named(esp_flasher)
 
     zephyr_library()
 
@@ -18,9 +18,9 @@ if (CONFIG_ESP32_SERIAL_FLASHER)
                 ${ZEPHYR_CURRENT_MODULE_DIR}/port/zephyr_port.c
     )
 
-    zephyr_library_link_libraries(esp32_flasher)
+    zephyr_library_link_libraries(esp_flasher)
 
     if(DEFINED MD5_ENABLED OR CONFIG_SERIAL_FLASHER_MD5_ENABLED)
-        target_compile_definitions(esp32_flasher INTERFACE -DMD5_ENABLED=1)
+        target_compile_definitions(esp_flasher INTERFACE -DMD5_ENABLED=1)
     endif()
 endif()

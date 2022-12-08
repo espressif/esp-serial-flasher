@@ -1,10 +1,10 @@
-config ESP32_SERIAL_FLASHER
-    bool "Enable serial flasher library"
+config ESP_SERIAL_FLASHER
+    bool "Enable ESP serial flasher library"
     default y
     select CONSOLE_SUBSYS
     help
         Select this option to enable the ESP serial flasher library.
 
-if ESP32_SERIAL_FLASHER
+if ESP_SERIAL_FLASHER
     rsource "../Kconfig"
 endif

@@ -94,20 +94,20 @@ set(PORT                STM32)
 The ZEPHYR port is ready to be integrated into your Zephyr app as a Zephyr module. In the manifest file (west.yml), add:
 
 ```
-    - name: esp32-flasher
+    - name: esp-flasher
       url: https://github.com/kt-elektronik/esp-serial-flasher.git
       revision: <insert current revision here>
-      path: modules/lib/esp32_flasher
+      path: modules/lib/esp_flasher
 ```
 
 And add
 
 ```
-CONFIG_SERIAL_FLASHER=y
+CONFIG_ESP_SERIAL_FLASHER=y
 CONFIG_CONSOLE_GETCHAR=y
 ```
 
-to your project configuration.
+to your project configuration `prj.conf`.
 
 In your source code, you can use this code fragment as a starting point:
 
@@ -129,9 +129,6 @@ loader_zephyr_config_t initArgs = {
 };
 
 loader_port_zephyr_init(&initArgs);
-esp_loader_connect_args_t connectArgs = ESP_LOADER_CONNECT_DEFAULT();
-esp_loader_connect(&connectArgs);
-target_chip_t targetChip = esp_loader_get_target();
 ```
 
 ## Licence
