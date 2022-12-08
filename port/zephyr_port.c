@@ -28,6 +28,13 @@ static struct tty_serial tty;
 static char tty_rx_buf[MSG_SIZE];
 static char tty_tx_buf[MSG_SIZE];
 
+void configure_tty()
+{
+    tty_init(&tty, uart_dev);
+    tty_set_rx_buf(&tty, tty_rx_buf, sizeof(tty_rx_buf));
+    tty_set_tx_buf(&tty, tty_tx_buf, sizeof(tty_tx_buf));
+}
+
 esp_loader_error_t loader_port_serial_read(uint8_t *data, uint16_t size, uint32_t timeout)
 {
     if (!device_is_ready(uart_dev) || data == NULL || size == 0) {
@@ -67,11 +74,7 @@ void loader_port_zephyr_init(loader_zephyr_config_t *config)
     uart_dev = config->uart_dev;
     enable_spec = config->enable_spec;
     boot_spec = config->boot_spec;
-
-    /* configure tty */
-    tty_init(&tty, uart_dev);
-    tty_set_rx_buf(&tty, tty_rx_buf, sizeof(tty_rx_buf));
-    tty_set_tx_buf(&tty, tty_tx_buf, sizeof(tty_tx_buf));
+    configure_tty();
 }
 
 void loader_port_reset_target(void)
@@ -124,10 +127,8 @@ esp_loader_error_t loader_port_change_baudrate(uint32_t baudrate)
         return ESP_LOADER_ERROR_FAIL;
     }
 
-    /* reconfigure tty */
-    tty_init(&tty, uart_dev);
-    tty_set_rx_buf(&tty, tty_rx_buf, sizeof(tty_rx_buf));
-    tty_set_tx_buf(&tty, tty_tx_buf, sizeof(tty_tx_buf));
+    /* bitrate-change can require tty re-configuration */
+    configure_tty();
 
     return ESP_LOADER_SUCCESS;
 }
