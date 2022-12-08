@@ -1,5 +1,5 @@
 name: esp32-flasher
 
 build:
-  cmake: .
+  cmake: zephyr
   kconfig: zephyr/Kconfig

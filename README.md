@@ -91,35 +91,23 @@ set(PORT                STM32)
 
 ### ZEPHYR support
 
-The ZEPHYR port is ready to be integrated into your Zephyr app. Clone this repository into your app directory:
+The ZEPHYR port is ready to be integrated into your Zephyr app as a Zephyr module. In the manifest file (west.yml), add:
 
 ```
-cd app
-git clone --recursive https://github.com/kt-elektronik/esp-serial-flasher.git
+    - name: esp32-flasher
+      url: https://github.com/kt-elektronik/esp-serial-flasher.git
+      revision: d79e9a7dfc55e2d633199cf81eec6dc9bd3742eb
+      path: modules/lib/esp32_flasher
 ```
 
-Add it as a submodule to your Zephyr app's Git repository.
-
-To your `app/CMakeLists.txt`, add these lines - it is assumed here that your target app is named `app`:
-
-```
-set(PORT ZEPHYR)
-set(TARGET app)
-add_subdirectory(esp-serial-flasher)
-```
-
-To your `app/Kconfig`, add this:
-
-```
-rsource "esp-serial-flasher/Kconfig"
-```
-
-Configure your project for the library using these lines in `app/prj.conf`:
+And add
 
 ```
 CONFIG_SERIAL_FLASHER=y
 CONFIG_CONSOLE_GETCHAR=y
 ```
+
+to your project configuration.
 
 In your source code, you can use this code fragment as a starting point:
 

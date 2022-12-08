@@ -6,6 +6,7 @@ set(srcs src/esp_loader.c
          src/md5_hash.c
 )
 
+
 if (DEFINED ESP_PLATFORM)
     # Register component to esp-idf build system
     list(APPEND srcs port/esp32_port.c)
@@ -32,22 +33,6 @@ if (DEFINED ESP_PLATFORM)
         set(target ${COMPONENT_TARGET})
     endif()
 
-elseif(DEFINED ZEPHYR_CURRENT_MODULE_DIR)
-    set(target esp32_flasher)
-
-    zephyr_interface_library_named(esp32_flasher)
-
-    list(APPEND srcs port/zephyr_port.c)
-    FILE(GLOB flasher_sources ${srcs})
-    zephyr_library_sources(${flasher_sources})
-
-    zephyr_library_link_libraries(esp32_flasher)
-
-    zephyr_include_directories(
-        ${ZEPHYR_CURRENT_MODULE_DIR}/include
-        ${ZEPHYR_CURRENT_MODULE_DIR}/port
-        ${ZEPHYR_CURRENT_MODULE_DIR}/private_include)
-
 else()
     # Create traditional CMake target
     add_library(flasher ${srcs})
@@ -70,9 +55,5 @@ else()
 endif()
 
 if(DEFINED MD5_ENABLED OR CONFIG_SERIAL_FLASHER_MD5_ENABLED)
-    if(DEFINED ZEPHYR_CURRENT_MODULE_DIR)
-        target_compile_definitions(${target} INTERFACE -DMD5_ENABLED=1)
-    else()
-        target_compile_definitions(${target} INTERFACE -DMD5_ENABLED=1)
-    endif()
+    target_compile_definitions(${target} PUBLIC -DMD5_ENABLED=1)
 endif()

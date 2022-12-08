@@ -1,15 +1,10 @@
-menu "ESP serial flasher"
-    config ESP32_SERIAL_FLASHER
-        bool "Enable serial flasher library"
-        default y
-        select CONSOLE_SUBSYS
-        help
-            Select this option to enable the ESP serial flasher library.
+config ESP32_SERIAL_FLASHER
+    bool "Enable serial flasher library"
+    default y
+    select CONSOLE_SUBSYS
+    help
+        Select this option to enable the ESP serial flasher library.
 
-    config SERIAL_FLASHER_MD5_ENABLED
-        bool "Enable MD5 check"
-        default y
-        select ESP32_SERIAL_FLASHER
-        help
-            Select this option to enable MD5 hashsum check after flashing.
-endmenu
+if ESP32_SERIAL_FLASHER
+    rsource "../Kconfig"
+endif
