@@ -22,11 +22,11 @@ static const struct device *uart_dev;
 static struct gpio_dt_spec enable_spec;
 static struct gpio_dt_spec boot_spec;
 
-#define MSG_SIZE 256
+#define MSG_SIZE 512
 
 static struct tty_serial tty;
-static char __nocache tty_rx_buf[MSG_SIZE];
-static char __nocache tty_tx_buf[MSG_SIZE];
+static char tty_rx_buf[MSG_SIZE];
+static char tty_tx_buf[MSG_SIZE];
 
 esp_loader_error_t loader_port_serial_read(uint8_t *data, uint16_t size, uint32_t timeout)
 {
