@@ -20,10 +20,12 @@
 #include <zephyr_port.h>
 #include <esp_loader.h>
 
+/* Getting the proper DTS entries is specific to your board running Zephyr. */
+/* TODO: Get the UART that is connected to the ESP's default flashing / logging UART. */
 static const struct device *esp_uart_dev = DEVICE_DT_GET(...);
-
+/* TODO: Get the GPIO pin this is connected to the ESP's enable pin. */
 static const struct gpio_dt_spec esp_enable_spec = GPIO_DT_SPEC_GET(...);
-
+/* TODO: Get the GPIO pin this is connected to the ESP's boot pin. */
 static const struct gpio_dt_spec esp_boot_spec = GPIO_DT_SPEC_GET(...);
 
 esp_loader_error_t flashESPBinary(const uint8_t* bin, size_t size, size_t address)
@@ -32,13 +34,13 @@ esp_loader_error_t flashESPBinary(const uint8_t* bin, size_t size, size_t addres
 	static uint8_t payload[1024];
 	const uint8_t *bin_addr = bin;
 
-	LOG_INF("Erasing ESP flash (this may take a while)...");
+	printk("Erasing ESP flash (this may take a while)...");
 	err = esp_loader_flash_start(address, size, sizeof(payload));
 	if (err != ESP_LOADER_SUCCESS) {
-		LOG_ERR("Erasing ESP flash failed. Error %d", err);
+		printk("Erasing ESP flash failed. Error %d", err);
 		return err;
 	}
-	LOG_INF("Start programming ESP");
+	printk("Start programming ESP");
 
 	while (size > 0) {
 		size_t to_read = MIN(size, sizeof(payload));
@@ -46,7 +48,7 @@ esp_loader_error_t flashESPBinary(const uint8_t* bin, size_t size, size_t addres
 
 		err = esp_loader_flash_write(payload, to_read);
 		if (err != ESP_LOADER_SUCCESS) {
-			LOG_ERR("ESP packet could not be written. Error %d", err);
+			printk("ESP packet could not be written. Error %d", err);
 			return err;
 		}
 
@@ -54,18 +56,18 @@ esp_loader_error_t flashESPBinary(const uint8_t* bin, size_t size, size_t addres
 		bin_addr += to_read;
 	};
 
-	LOG_INF("ESP finished programming");
+	printk("ESP finished programming");
 
 #if MD5_ENABLED
 	err = esp_loader_flash_verify();
 	if (err == ESP_LOADER_ERROR_UNSUPPORTED_FUNC) {
-		LOG_INF("ESP8266 does not support flash verify command");
+		printk("ESP8266 does not support flash verify command");
 		return err;
 	} else if (err != ESP_LOADER_SUCCESS) {
-		LOG_ERR("ESP MD5 does not match. Error %d", err);
+		printk("ESP MD5 does not match. Error %d", err);
 		return err;
 	}
-	LOG_INF("ESP flash verified");
+	printk("ESP flash verified");
 #endif
 
 	return ESP_LOADER_SUCCESS;
@@ -88,7 +90,7 @@ esp_loader_error_t espFlashBegin()
 	if (res == ESP_LOADER_SUCCESS) {
 		res = esp_loader_connect(&connectArgs);
 		if (res != ESP_LOADER_SUCCESS) {
-			LOG_ERR("ESP loader connect failed. Error %d", (int)res);
+			printk("ESP loader connect failed. Error %d", (int)res);
 		}
 	}
 
@@ -97,13 +99,13 @@ esp_loader_error_t espFlashBegin()
 	if (res == ESP_LOADER_SUCCESS) {
 		res = esp_loader_change_baudrate(higherBaudrate);
 		if (res != ESP_LOADER_SUCCESS) {
-			LOG_ERR("ESP loader change baudrate failed. Error %d", (int)res);
+			printk("ESP loader change baudrate failed. Error %d", (int)res);
 		}
 	}
 	if (res == ESP_LOADER_SUCCESS) {
 		res = loader_port_change_baudrate(higherBaudrate);
 		if (res != ESP_LOADER_SUCCESS) {
-			LOG_ERR("ESP loader: Change host UART baudrate failed. Error %d", (int)res);
+			printk("ESP loader: Change host UART baudrate failed. Error %d", (int)res);
 		}
 	}
 
@@ -119,15 +121,15 @@ void espFlashFinish()
 void zephyr_example(const uint8_t* bin, size_t size, size_t address)
 {
 	if (!device_is_ready(esp_uart_dev)) {
-		LOG_ERR("ESP UART not ready.");
+		printk("ESP UART not ready.");
 		return;
 	}
 	if (!device_is_ready(esp_boot_spec.port)) {
-		LOG_ERR("ESP boot GPIO not ready");
+		printk("ESP boot GPIO not ready");
 		return;
 	}
 	if (!device_is_ready(esp_enable_spec.port)) {
-		LOG_ERR("Bluetooth Enable GPIO not ready");
+		printk("Bluetooth Enable GPIO not ready");
 		return;
 	}
 	gpio_pin_configure_dt(&esp_boot_spec, GPIO_OUTPUT_ACTIVE);
@@ -137,7 +139,7 @@ void zephyr_example(const uint8_t* bin, size_t size, size_t address)
 		esp_loader_error_t res = flashESPBinary(
 			bin, size, address);
 		if (res != ESP_LOADER_SUCCESS) {
-			LOG_ERR("ESP loader flash failed. Error %d", (int)res);
+			printk("ESP loader flash failed. Error %d", (int)res);
 		}
 		espFlashFinish();
 	}
