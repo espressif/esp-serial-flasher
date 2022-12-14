@@ -109,27 +109,7 @@ CONFIG_CONSOLE_GETCHAR=y
 
 to your project configuration `prj.conf`.
 
-In your source code, you can use this code fragment as a starting point:
-
-```
-#include <zephyr_port.h>
-#include <esp_loader.h>
-
-static const struct device *uart_dev = ...;
-static const struct gpio_dt_spec enable_spec = ...;
-static const struct gpio_dt_spec boot_spec = ...;
-
-gpio_pin_configure_dt(&boot_spec, GPIO_OUTPUT_ACTIVE);
-gpio_pin_configure_dt(&enable_spec, GPIO_OUTPUT_INACTIVE);
-
-loader_zephyr_config_t initArgs = {
-    .uart_dev = uart_dev,
-    .enable_spec = enable_spec,
-    .boot_spec = boot_spec
-};
-
-loader_port_zephyr_init(&initArgs);
-```
+For your C/C++ source code, you can use the example code provided in `examples/zephyr_example` as a starting point.
 
 ## Licence
 
