@@ -74,11 +74,23 @@ esp_loader_error_t espFlashBegin()
 		.boot_spec = esp_boot_spec
 	};
 
-	loader_port_zephyr_init(&initArgs);
-	loader_port_change_baudrate(115200);
-
 	esp_loader_connect_args_t connectArgs = ESP_LOADER_CONNECT_DEFAULT();
 	esp_loader_error_t res = ESP_LOADER_SUCCESS;
+
+	if (res == ESP_LOADER_SUCCESS) {
+		res = loader_port_zephyr_init(&initArgs);
+		if (res != ESP_LOADER_SUCCESS) {
+			printk("ESP loader init failed. Error %d", (int)res);
+		}
+	}
+	if (res == ESP_LOADER_SUCCESS) {
+		// set default startup bit rate
+		res = esp_loader_change_baudrate(115200);
+		if (res != ESP_LOADER_SUCCESS) {
+			printk("ESP loader change baudrate failed. Error %d",
+				(int)res);
+		}
+	}
 
 	if (res == ESP_LOADER_SUCCESS) {
 		res = esp_loader_connect(&connectArgs);
