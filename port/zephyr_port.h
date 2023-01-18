@@ -21,11 +21,11 @@
 #include <zephyr/drivers/gpio.h>
 #include <stdint.h>
 
-typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef struct {
     const struct device *uart_dev;
     const struct gpio_dt_spec enable_spec;
     const struct gpio_dt_spec boot_spec;
