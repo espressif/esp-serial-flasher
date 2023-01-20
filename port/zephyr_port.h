@@ -31,7 +31,7 @@ typedef struct {
     const struct gpio_dt_spec boot_spec;
 } loader_zephyr_config_t;
 
-esp_loader_error_t loader_port_zephyr_init(loader_zephyr_config_t *config);
+esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config);
 
 #ifdef __cplusplus
 }

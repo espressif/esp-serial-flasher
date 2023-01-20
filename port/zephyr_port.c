@@ -73,7 +73,7 @@ esp_loader_error_t loader_port_serial_write(const uint8_t *data, uint16_t size, 
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t loader_port_zephyr_init(loader_zephyr_config_t *config)
+esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config)
 {
     uart_dev = config->uart_dev;
     enable_spec = config->enable_spec;
