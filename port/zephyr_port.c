@@ -84,7 +84,7 @@ esp_loader_error_t loader_port_zephyr_init(loader_zephyr_config_t *config)
 void loader_port_reset_target(void)
 {
     gpio_pin_set_dt(&enable_spec, false);
-    loader_port_delay_ms(50);
+    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
     gpio_pin_set_dt(&enable_spec, true);
 }
 
@@ -92,7 +92,7 @@ void loader_port_enter_bootloader(void)
 {
     gpio_pin_set_dt(&boot_spec, false);
     loader_port_reset_target();
-    loader_port_delay_ms(50);
+    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
     gpio_pin_set_dt(&boot_spec, true);
 }
 
