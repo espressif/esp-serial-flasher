@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <zephyr_port.h>
-#include <esp_loader.h>
+#include <esp_loader_io.h>
 #include "example_common.h"
 
 #define HIGHER_BAUDRATE 230400
