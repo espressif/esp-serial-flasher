@@ -67,7 +67,7 @@ else()
         message(WARNING "No port selected, default to user-defined")
         set(PORT "USER_DEFINED")
     elseif(PORT STREQUAL "USER_DEFINED")
-        #
+        # The user has to manually link their port with the flasher target
     elseif(PORT STREQUAL "STM32")
         stm32_get_chip_info(${STM32_CHIP} FAMILY DEVICE_FAMILY DEVICE DEVICE_CODE)
         if(DEFINED CORE_USED)
