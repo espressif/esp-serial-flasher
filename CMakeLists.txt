@@ -63,7 +63,12 @@ else()
 
     target_include_directories(flasher PUBLIC include port PRIVATE private_include)
 
-    if(PORT STREQUAL "STM32")
+    if (NOT DEFINED PORT)
+        message(WARNING "No port selected, default to user-defined")
+        set(PORT "USER_DEFINED")
+    elseif(PORT STREQUAL "USER_DEFINED")
+        #
+    elseif(PORT STREQUAL "STM32")
         stm32_get_chip_info(${STM32_CHIP} FAMILY DEVICE_FAMILY DEVICE DEVICE_CODE)
         if(DEFINED CORE_USED)
             string(APPEND DEVICE_FAMILY ::${CORE_USED})
