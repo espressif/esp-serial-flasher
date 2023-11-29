@@ -106,25 +106,38 @@ if(DEFINED SERIAL_FLASHER_DEBUG_TRACE OR CONFIG_SERIAL_FLASHER_DEBUG_TRACE)
     target_compile_definitions(${target} PUBLIC SERIAL_FLASHER_DEBUG_TRACE)
 endif()
 
-if(DEFINED CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS AND DEFINED CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS)
+if (DEFINED CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS)
     target_compile_definitions(${target}
     PUBLIC
         SERIAL_FLASHER_RESET_HOLD_TIME_MS=${CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS}
-        SERIAL_FLASHER_BOOT_HOLD_TIME_MS=${CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS}
+    )
+elseif (DEFINED SERIAL_FLASHER_RESET_HOLD_TIME_MS)
+    target_compile_definitions(${target}
+    PUBLIC
+        SERIAL_FLASHER_RESET_HOLD_TIME_MS=${SERIAL_FLASHER_RESET_HOLD_TIME_MS}
     )
 else()
-    if(NOT DEFINED SERIAL_FLASHER_RESET_HOLD_TIME_MS)
-        target_compile_definitions(${target}
-        PUBLIC
-            SERIAL_FLASHER_RESET_HOLD_TIME_MS=100
-        )
-    endif()
-    if(NOT DEFINED SERIAL_FLASHER_BOOT_HOLD_TIME_MS)
-        target_compile_definitions(${target}
-        PUBLIC
-            SERIAL_FLASHER_BOOT_HOLD_TIME_MS=50
-        )
-    endif()
+    target_compile_definitions(${target}
+    PUBLIC
+        SERIAL_FLASHER_RESET_HOLD_TIME_MS=100
+    )
+endif()
+
+if (DEFINED CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS)
+    target_compile_definitions(${target}
+    PUBLIC
+        SERIAL_FLASHER_BOOT_HOLD_TIME_MS=${CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS}
+    )
+elseif (DEFINED SERIAL_FLASHER_BOOT_HOLD_TIME_MS)
+    target_compile_definitions(${target}
+    PUBLIC
+        SERIAL_FLASHER_BOOT_HOLD_TIME_MS=${SERIAL_FLASHER_BOOT_HOLD_TIME_MS}
+    )
+else()
+    target_compile_definitions(${target}
+    PUBLIC
+        SERIAL_FLASHER_BOOT_HOLD_TIME_MS=50
+    )
 endif()
 
 if (DEFINED CONFIG_SERIAL_FLASHER_WRITE_BLOCK_RETRIES)
