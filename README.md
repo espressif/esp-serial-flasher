@@ -3,7 +3,7 @@
 `esp-serial-flasher` is a portable C library for flashing or loading apps to RAM of Espressif SoCs from other host microcontrollers.
 
 ## Using the library
-Espressif SoCs are normally programmed via serial interface (UART). The port layer for the given host microcontroller has to be implemented if not available. Details can be found in section below.
+Espressif SoCs are normally programmed via serial interface (UART).
 
 Supported **host** microcontrollers:
 
@@ -28,29 +28,6 @@ Supported hardware interfaces:
 - SPI (only for RAM download, experimental)
 
 For example usage check the `examples` directory.
-
-## Supporting a new host target
-
-In order to support a new target, following functions have to be implemented by user:
-
-- `loader_port_read()`
-- `loader_port_write()`
-- `loader_port_enter_bootloader()`
-- `loader_port_delay_ms()`
-- `loader_port_start_timer()`
-- `loader_port_remaining_time()`
-
-For the SPI interface ports
-- `loader_port_spi_set_cs()`
-needs to be implemented as well.
-
-The following functions are part of the [io.h](include/io.h) header for convenience, however, the user does not have to strictly follow function signatures, as there are not called directly from library.
-
-- `loader_port_change_transmission_rate()`
-- `loader_port_reset_target()`
-- `loader_port_debug_print()`
-
-Prototypes of all functions mentioned above can be found in [io.h](include/io.h).
 
 ## Configuration
 
@@ -153,6 +130,31 @@ CONFIG_SERIAL_FLASHER_MD5_ENABLED=y
 to the project configuration `prj.conf`.
 
 For the C/C++ source code, the example code provided in `examples/zephyr_example` can be used as a starting point.
+
+## Supporting a new host target
+
+The port layer for the given host microcontroller can be implemented if not available, in order to support a new target, following functions have to be implemented by user:
+
+- `loader_port_read()`
+- `loader_port_write()`
+- `loader_port_enter_bootloader()`
+- `loader_port_delay_ms()`
+- `loader_port_start_timer()`
+- `loader_port_remaining_time()`
+
+For the SPI interface ports
+- `loader_port_spi_set_cs()`
+needs to be implemented as well.
+
+The following functions are part of the [io.h](include/io.h) header for convenience, however, the user does not have to strictly follow function signatures, as there are not called directly from library.
+
+- `loader_port_change_transmission_rate()`
+- `loader_port_reset_target()`
+- `loader_port_debug_print()`
+
+Prototypes of all functions mentioned above can be found in [io.h](include/io.h).
+
+After that, the target implementing these functions should be linked with the `flasher` target and the `PORT` CMake variable should be set to `USER_DEFINED`.
 
 ## Licence
 
