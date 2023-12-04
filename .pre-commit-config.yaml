@@ -19,3 +19,8 @@ repos:
       - id: astyle_py
         args: [--options=astyle_config]
         exclude: *excludes
+  - repo: https://github.com/espressif/conventional-precommit-linter
+    rev: v1.2.1
+    hooks:
+      - id: conventional-precommit-linter
+        stages: [commit-msg]
