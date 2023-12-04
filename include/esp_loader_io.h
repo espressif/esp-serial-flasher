@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
- #pragma once
+#pragma once
 
 #include <stdint.h>
 #include "esp_loader.h"

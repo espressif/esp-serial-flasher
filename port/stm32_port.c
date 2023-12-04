@@ -21,7 +21,7 @@
 #include "stm32_port.h"
 
 static UART_HandleTypeDef *uart;
-static GPIO_TypeDef* gpio_port_io0, *gpio_port_rst;
+static GPIO_TypeDef *gpio_port_io0, *gpio_port_rst;
 static uint16_t gpio_num_io0, gpio_num_rst;
 
 #ifdef SERIAL_FLASHER_DEBUG_TRACE
@@ -132,7 +132,7 @@ esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
 {
     uart->Init.BaudRate = baudrate;
 
-    if( HAL_UART_Init(uart) != HAL_OK ) {
+    if ( HAL_UART_Init(uart) != HAL_OK ) {
         return ESP_LOADER_ERROR_FAIL;
     }
 

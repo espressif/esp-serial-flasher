@@ -129,7 +129,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.data  = ESP32_S2_hello_world_bin;
         bins->app.size  = ESP32_S2_hello_world_bin_size;
         bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32H4_CHIP){
+    } else if (target == ESP32H4_CHIP) {
         bins->boot.data = ESP32_H4_bootloader_bin;
         bins->boot.size = ESP32_H4_bootloader_bin_size;
         bins->boot.addr = BOOTLOADER_ADDRESS_V1;
@@ -139,7 +139,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.data  = ESP32_H4_hello_world_bin;
         bins->app.size  = ESP32_H4_hello_world_bin_size;
         bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32H2_CHIP){
+    } else if (target == ESP32H2_CHIP) {
         bins->boot.data = ESP32_H2_bootloader_bin;
         bins->boot.size = ESP32_H2_bootloader_bin_size;
         bins->boot.addr = BOOTLOADER_ADDRESS_V1;
@@ -149,7 +149,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.data  = ESP32_H2_hello_world_bin;
         bins->app.size  = ESP32_H2_hello_world_bin_size;
         bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32C2_CHIP){
+    } else if (target == ESP32C2_CHIP) {
         bins->boot.data = ESP32_C2_bootloader_bin;
         bins->boot.size = ESP32_C2_bootloader_bin_size;
         bins->boot.addr = BOOTLOADER_ADDRESS_V1;
@@ -159,7 +159,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.data  = ESP32_C2_hello_world_bin;
         bins->app.size  = ESP32_C2_hello_world_bin_size;
         bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32C3_CHIP){
+    } else if (target == ESP32C3_CHIP) {
         bins->boot.data = ESP32_C3_bootloader_bin;
         bins->boot.size = ESP32_C3_bootloader_bin_size;
         bins->boot.addr = BOOTLOADER_ADDRESS_V1;
@@ -169,7 +169,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.data  = ESP32_C3_hello_world_bin;
         bins->app.size  = ESP32_C3_hello_world_bin_size;
         bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32C6_CHIP){
+    } else if (target == ESP32C6_CHIP) {
         bins->boot.data = ESP32_C6_bootloader_bin;
         bins->boot.size = ESP32_C6_bootloader_bin_size;
         bins->boot.addr = BOOTLOADER_ADDRESS_V1;
@@ -180,7 +180,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.size  = ESP32_C6_hello_world_bin_size;
         bins->app.addr  = APPLICATION_ADDRESS;
 
-    } else if (target == ESP32S3_CHIP){
+    } else if (target == ESP32S3_CHIP) {
         bins->boot.data = ESP32_S3_bootloader_bin;
         bins->boot.size = ESP32_S3_bootloader_bin_size;
         bins->boot.addr = BOOTLOADER_ADDRESS_V1;
@@ -190,8 +190,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.data  = ESP32_S3_hello_world_bin;
         bins->app.size  = ESP32_S3_hello_world_bin_size;
         bins->app.addr  = APPLICATION_ADDRESS;
-    }
-    else {
+    } else {
         abort();
     }
 }
@@ -215,44 +214,44 @@ extern const uint32_t ESP32_C6_app_bin_size;
 void get_example_ram_app_binary(target_chip_t target, example_ram_app_binary_t *bin)
 {
     switch (target) {
-        case ESP32_CHIP: {
-            bin->ram_app.data = ESP32_app_bin;
-            bin->ram_app.size = ESP32_app_bin_size;
-            break;
-        }
-        case ESP32C2_CHIP: {
-            bin->ram_app.data = ESP32_C2_app_bin;
-            bin->ram_app.size = ESP32_C2_app_bin_size;
-            break;
-        }
-        case ESP32C3_CHIP: {
-            bin->ram_app.data = ESP32_C3_app_bin;
-            bin->ram_app.size = ESP32_C3_app_bin_size;
-            break;
-        }
-        case ESP32H2_CHIP: {
-            bin->ram_app.data = ESP32_H2_app_bin;
-            bin->ram_app.size = ESP32_H2_app_bin_size;
-            break;
-        }
-        case ESP32H4_CHIP: {
-            bin->ram_app.data = ESP32_H4_app_bin;
-            bin->ram_app.size = ESP32_H4_app_bin_size;
-            break;
-        }
-        case ESP32S3_CHIP: {
-            bin->ram_app.data = ESP32_S3_app_bin;
-            bin->ram_app.size = ESP32_S3_app_bin_size;
-            break;
-        }
-        case ESP32C6_CHIP: {
-            bin->ram_app.data = ESP32_C6_app_bin;
-            bin->ram_app.size = ESP32_C6_app_bin_size;
-            break;
-        }
-        default: {
-            abort();
-        }
+    case ESP32_CHIP: {
+        bin->ram_app.data = ESP32_app_bin;
+        bin->ram_app.size = ESP32_app_bin_size;
+        break;
+    }
+    case ESP32C2_CHIP: {
+        bin->ram_app.data = ESP32_C2_app_bin;
+        bin->ram_app.size = ESP32_C2_app_bin_size;
+        break;
+    }
+    case ESP32C3_CHIP: {
+        bin->ram_app.data = ESP32_C3_app_bin;
+        bin->ram_app.size = ESP32_C3_app_bin_size;
+        break;
+    }
+    case ESP32H2_CHIP: {
+        bin->ram_app.data = ESP32_H2_app_bin;
+        bin->ram_app.size = ESP32_H2_app_bin_size;
+        break;
+    }
+    case ESP32H4_CHIP: {
+        bin->ram_app.data = ESP32_H4_app_bin;
+        bin->ram_app.size = ESP32_H4_app_bin_size;
+        break;
+    }
+    case ESP32S3_CHIP: {
+        bin->ram_app.data = ESP32_S3_app_bin;
+        bin->ram_app.size = ESP32_S3_app_bin_size;
+        break;
+    }
+    case ESP32C6_CHIP: {
+        bin->ram_app.data = ESP32_C6_app_bin;
+        bin->ram_app.size = ESP32_C6_app_bin_size;
+        break;
+    }
+    default: {
+        abort();
+    }
     }
 }
 
@@ -357,9 +356,9 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     // Parse segments
     uint32_t seg;
     uint32_t *cur_seg_pos;
-    for (seg=0, cur_seg_pos = (uint32_t *)(&bin[BIN_FIRST_SEGMENT_OFFSET]);
-         seg < header->segments;
-         seg++) {
+    for (seg = 0, cur_seg_pos = (uint32_t *)(&bin[BIN_FIRST_SEGMENT_OFFSET]);
+            seg < header->segments;
+            seg++) {
         segments[seg].addr = *cur_seg_pos++;
         segments[seg].size = *cur_seg_pos++;
         segments[seg].data = (uint8_t *)cur_seg_pos;
@@ -367,7 +366,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     }
 
     // Download segments
-    for (seg=0; seg < header->segments; seg++) {
+    for (seg = 0; seg < header->segments; seg++) {
         printf("Downloading %"PRIu32" bytes at 0x%08"PRIx32"...\n", segments[seg].size, segments[seg].addr);
 
         err = esp_loader_mem_start(segments[seg].addr, segments[seg].size, ESP_RAM_BLOCK);
@@ -378,7 +377,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
 
         size_t remain_size = segments[seg].size;
         uint8_t *data_pos = segments[seg].data;
-        while(remain_size > 0) {
+        while (remain_size > 0) {
             size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
             err = esp_loader_mem_write(data_pos, data_size);
             if (err != ESP_LOADER_SUCCESS) {
@@ -399,4 +398,3 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
 
     return ESP_LOADER_SUCCESS;
 }
-

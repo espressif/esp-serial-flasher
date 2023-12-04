@@ -205,7 +205,7 @@ esp_loader_error_t loader_detect_chip(target_chip_t *target_chip, const target_r
     RETURN_ON_ERROR( esp_loader_read_register(CHIP_DETECT_MAGIC_REG_ADDR,  &magic_value) );
 
     for (int chip = 0; chip < ESP_MAX_CHIP; chip++) {
-        for(int index = 0; index < MAX_MAGIC_VALUES; index++) {
+        for (int index = 0; index < MAX_MAGIC_VALUES; index++) {
             if (magic_value == esp_target[chip].chip_magic_value[index]) {
                 *target_chip = (target_chip_t)chip;
                 *target_data = (target_registers_t *)&esp_target[chip];

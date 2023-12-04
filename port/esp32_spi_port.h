@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
- #pragma once
+#pragma once
 
 #include "esp_loader_io.h"
 #include "driver/spi_master.h"
@@ -22,8 +22,7 @@
 extern "C" {
 #endif
 
-typedef struct
-{
+typedef struct {
     spi_host_device_t spi_bus;
     uint32_t frequency;
     uint32_t spi_clk_pin;

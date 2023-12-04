@@ -129,7 +129,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
         transfer_debug_print(data, bytes_read, false);
 #endif
 
-        file.write((const char*)&data[written], bytes_read);
+        file.write((const char *)&data[written], bytes_read);
         file.flush();
 
         written += bytes_read;

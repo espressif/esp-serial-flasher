@@ -19,7 +19,8 @@
 #include <stddef.h>
 #include <assert.h>
 
-typedef struct __attribute__((packed)) {
+typedef struct __attribute__((packed))
+{
     uint8_t cmd;
     uint8_t addr;
     uint8_t dummy;
@@ -70,11 +71,11 @@ static uint8_t s_slave_seq_tx;
 static uint8_t s_slave_seq_rx;
 
 static esp_loader_error_t write_slave_reg(const uint8_t *data, const uint32_t addr,
-                                                 const uint8_t size);
+        const uint8_t size);
 static esp_loader_error_t read_slave_reg(uint8_t *out_data, const uint32_t addr,
-                                                const uint8_t size);
+        const uint8_t size);
 static esp_loader_error_t handle_slave_state(const uint32_t status_reg_addr, uint8_t *seq_state,
-                                             bool *slave_ready, uint32_t *buf_size);
+        bool *slave_ready, uint32_t *buf_size);
 static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value);
 
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args)
@@ -82,7 +83,7 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
     for (uint8_t trial = 0; trial < connect_args->trials; trial++) {
         uint8_t slave_ready_flag;
         RETURN_ON_ERROR(read_slave_reg(&slave_ready_flag, SLAVE_REGISTER_CMD,
-                                              sizeof(slave_ready_flag)));
+                                       sizeof(slave_ready_flag)));
 
         if (slave_ready_flag != SLAVE_CMD_IDLE) {
             loader_port_debug_print("Waiting for Slave to be idle...\n");
@@ -98,7 +99,7 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
     for (uint8_t trial = 0; trial < connect_args->trials; trial++) {
         uint8_t slave_ready_flag;
         RETURN_ON_ERROR(read_slave_reg(&slave_ready_flag, SLAVE_REGISTER_CMD,
-                                              sizeof(slave_ready_flag)));
+                                       sizeof(slave_ready_flag)));
 
         if (slave_ready_flag != SLAVE_CMD_READY) {
             loader_port_debug_print("Waiting for Slave to be ready...\n");
@@ -187,7 +188,7 @@ esp_loader_error_t send_cmd_with_data(const void *cmd_data, size_t cmd_size,
 
 
 static esp_loader_error_t read_slave_reg(uint8_t *out_data, const uint32_t addr,
-                                         const uint8_t size)
+        const uint8_t size)
 {
     transaction_preamble_t preamble = {
         .cmd = TRANS_CMD_RDBUF,
@@ -205,7 +206,7 @@ static esp_loader_error_t read_slave_reg(uint8_t *out_data, const uint32_t addr,
 
 
 static esp_loader_error_t write_slave_reg(const uint8_t *data, const uint32_t addr,
-                                          const uint8_t size)
+        const uint8_t size)
 {
     transaction_preamble_t preamble = {
         .cmd = TRANS_CMD_WRBUF,
@@ -223,36 +224,36 @@ static esp_loader_error_t write_slave_reg(const uint8_t *data, const uint32_t ad
 
 
 static esp_loader_error_t handle_slave_state(const uint32_t status_reg_addr, uint8_t *seq_state,
-                                             bool *slave_ready, uint32_t *buf_size)
+        bool *slave_ready, uint32_t *buf_size)
 {
     uint32_t status_reg;
     RETURN_ON_ERROR(read_slave_reg((uint8_t *)&status_reg, status_reg_addr,
                                    sizeof(status_reg)));
     const slave_state_t state = status_reg & (SLAVE_STA_TOGGLE_BIT | SLAVE_STA_INIT_BIT);
 
-    switch(state) {
-        case SLAVE_STATE_INIT: {
-            const uint32_t initial = 0U;
-            RETURN_ON_ERROR(write_slave_reg((uint8_t *)&initial, status_reg_addr, sizeof(initial)));
-            break;
-        }
+    switch (state) {
+    case SLAVE_STATE_INIT: {
+        const uint32_t initial = 0U;
+        RETURN_ON_ERROR(write_slave_reg((uint8_t *)&initial, status_reg_addr, sizeof(initial)));
+        break;
+    }
 
-        case SLAVE_STATE_FIRST_PACKET: {
-            *seq_state = state & SLAVE_STA_TOGGLE_BIT;
+    case SLAVE_STATE_FIRST_PACKET: {
+        *seq_state = state & SLAVE_STA_TOGGLE_BIT;
+        *buf_size = status_reg >> SLAVE_STA_BUF_LENGTH_POS;
+        *slave_ready = true;
+        break;
+    }
+
+    default: {
+        const uint8_t new_seq = state & SLAVE_STA_TOGGLE_BIT;
+        if (new_seq != *seq_state) {
+            *seq_state = new_seq;
             *buf_size = status_reg >> SLAVE_STA_BUF_LENGTH_POS;
             *slave_ready = true;
-            break;
         }
-
-        default: {
-            const uint8_t new_seq = state & SLAVE_STA_TOGGLE_BIT;
-            if (new_seq != *seq_state) {
-                *seq_state = new_seq;
-                *buf_size = status_reg >> SLAVE_STA_BUF_LENGTH_POS;
-                *slave_ready = true;
-            }
-            break;
-        }
+        break;
+    }
     }
 
     return ESP_LOADER_SUCCESS;

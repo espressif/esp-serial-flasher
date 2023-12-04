@@ -4,7 +4,7 @@ set(FLASHER_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
 set(PORT RASPBERRY_PI)
 
 project(raspberry_flasher)
-    
+
 add_executable(${CMAKE_PROJECT_NAME} Src/main.c ../common/example_common.c)
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ../common/)
