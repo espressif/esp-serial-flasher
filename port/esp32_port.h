@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
- #pragma once
+#pragma once
 
 #include "esp_loader_io.h"
 #include "freertos/FreeRTOS.h"
@@ -23,18 +23,17 @@
 extern "C" {
 #endif
 
-typedef struct
-{
-  uint32_t baud_rate;     /*!< Initial baud rate, can be changed later */
-  uint32_t uart_port;     /*!< UART port */
-  uint32_t uart_rx_pin;   /*!< This pin will be configured as UART Rx pin */
-  uint32_t uart_tx_pin;   /*!< This pin will be configured as UART Tx pin */
-  uint32_t reset_trigger_pin; /*!< This pin will be used to reset target chip */
-  uint32_t gpio0_trigger_pin; /*!< This pin will be used to toggle set IO0 of target chip */
-  uint32_t rx_buffer_size;    /*!< Set to zero for default RX buffer size */
-  uint32_t tx_buffer_size;    /*!< Set to zero for default TX buffer size */
-  uint32_t queue_size;        /*!< Set to zero for default UART queue size */
-  QueueHandle_t *uart_queue;  /*!< Set to NULL, if UART queue handle is not
+typedef struct {
+    uint32_t baud_rate;     /*!< Initial baud rate, can be changed later */
+    uint32_t uart_port;     /*!< UART port */
+    uint32_t uart_rx_pin;   /*!< This pin will be configured as UART Rx pin */
+    uint32_t uart_tx_pin;   /*!< This pin will be configured as UART Tx pin */
+    uint32_t reset_trigger_pin; /*!< This pin will be used to reset target chip */
+    uint32_t gpio0_trigger_pin; /*!< This pin will be used to toggle set IO0 of target chip */
+    uint32_t rx_buffer_size;    /*!< Set to zero for default RX buffer size */
+    uint32_t tx_buffer_size;    /*!< Set to zero for default TX buffer size */
+    uint32_t queue_size;        /*!< Set to zero for default UART queue size */
+    QueueHandle_t *uart_queue;  /*!< Set to NULL, if UART queue handle is not
                                    necessary. Otherwise, it will be assigned here */
 } loader_esp32_config_t;
 

@@ -73,11 +73,11 @@ typedef enum {
  * @brief Application binary header
  */
 typedef struct {
-  uint8_t magic;
-  uint8_t segments;
-  uint8_t flash_mode;
-  uint8_t flash_size_freq;
-  uint32_t entrypoint;
+    uint8_t magic;
+    uint8_t segments;
+    uint8_t flash_mode;
+    uint8_t flash_size_freq;
+    uint32_t entrypoint;
 } esp_loader_bin_header_t;
 
 /**

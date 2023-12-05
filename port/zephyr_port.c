@@ -45,8 +45,8 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 esp_loader_error_t configure_tty()
 {
     if (tty_init(&tty, uart_dev) < 0 ||
-        tty_set_rx_buf(&tty, tty_rx_buf, sizeof(tty_rx_buf)) < 0 ||
-        tty_set_tx_buf(&tty, tty_tx_buf, sizeof(tty_tx_buf)) < 0) {
+            tty_set_rx_buf(&tty, tty_rx_buf, sizeof(tty_rx_buf)) < 0 ||
+            tty_set_tx_buf(&tty, tty_tx_buf, sizeof(tty_tx_buf)) < 0) {
         return ESP_LOADER_ERROR_FAIL;
     }
 
@@ -65,7 +65,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
     tty_set_rx_timeout(&tty, timeout);
     while (remaining > 0) {
         const uint16_t chunk_size = remaining < CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE ?
-            remaining : CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE;
+                                    remaining : CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE;
         ssize_t read = tty_read(&tty, &data[total_read], chunk_size);
         if (read < 0) {
             return ESP_LOADER_ERROR_TIMEOUT;
@@ -92,7 +92,7 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
     tty_set_tx_timeout(&tty, timeout);
     while (remaining > 0) {
         const uint16_t chunk_size = remaining < CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE ?
-            remaining : CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE;
+                                    remaining : CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE;
         ssize_t written = tty_write(&tty, &data[total_written], chunk_size);
         if (written < 0) {
             return ESP_LOADER_ERROR_TIMEOUT;

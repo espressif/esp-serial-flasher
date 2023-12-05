@@ -323,7 +323,7 @@ esp_loader_error_t esp_loader_mem_start(uint32_t offset, uint32_t size, uint32_t
 esp_loader_error_t esp_loader_mem_write(const void *payload, uint32_t size)
 {
     const uint8_t *data = (const uint8_t *)payload;
-    
+
     unsigned int attempt = 0;
     esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;
     do {
@@ -331,7 +331,7 @@ esp_loader_error_t esp_loader_mem_write(const void *payload, uint32_t size)
         result = loader_mem_data_cmd(data, size);
         attempt++;
     } while (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
-    
+
     return result;
 }
 

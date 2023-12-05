@@ -156,6 +156,20 @@ Prototypes of all functions mentioned above can be found in [io.h](include/io.h)
 
 After that, the target implementing these functions should be linked with the `flasher` target and the `PORT` CMake variable should be set to `USER_DEFINED`.
 
+## Contributing
+
+We welcome contributions to this project in the form of bug reports, feature requests and pull requests.
+
+Issue reports and feature requests can be submitted using [Github Issues](https://github.com/espressif/esp-serial-flasher/issues). Please check if the issue has already been reported before opening a new one.
+
+Contributions in the form of pull requests should follow ESP-IDF project's [contribution guidelines](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/contribute/style-guide.html) and use the [conventional commit message style](https://www.conventionalcommits.org/en/v1.0.0/).
+
+To automatically enforce these rules, use [pre-commit](https://pre-commit.com/) and install hooks with the following commands:
+```
+pre-commit install
+pre-commit install -t commit-msg
+```
+
 ## Licence
 
 Code is distributed under Apache 2.0 license.

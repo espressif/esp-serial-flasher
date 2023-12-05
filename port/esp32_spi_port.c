@@ -50,12 +50,12 @@ static void serial_debug_print(const uint8_t *data, uint16_t size, bool write)
     static bool write_prev = false;
     uint8_t hex_str[3];
 
-    if(write_prev != write) {
+    if (write_prev != write) {
         write_prev = write;
         printf("\n--- %s ---\n", write ? "WRITE" : "READ");
     }
 
-    for(uint32_t i = 0; i < size; i++) {
+    for (uint32_t i = 0; i < size; i++) {
         dec_to_hex_str(data[i], hex_str);
         printf("%s ", hex_str);
     }
@@ -135,7 +135,8 @@ void loader_port_esp32_spi_deinit(void)
 }
 
 
-void loader_port_spi_set_cs(const uint32_t level) {
+void loader_port_spi_set_cs(const uint32_t level)
+{
     gpio_set_level(s_spi_cs_pin, level);
 }
 

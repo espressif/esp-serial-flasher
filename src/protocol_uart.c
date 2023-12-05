@@ -20,9 +20,10 @@
 #include <stddef.h>
 #include <string.h>
 
-static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void* resp, uint32_t resp_size);
+static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void *resp, uint32_t resp_size);
 
-esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args) {
+esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args)
+{
     esp_loader_error_t err;
     int32_t trials = connect_args->trials;
 
@@ -52,7 +53,7 @@ esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_v
     RETURN_ON_ERROR( SLIP_send_delimiter() );
 
     const uint8_t response_cnt = command == SYNC ? 8 : 1;
-    
+
     for (uint8_t recv_cnt = 0; recv_cnt < response_cnt; recv_cnt++) {
         RETURN_ON_ERROR(check_response(command, reg_value, &response, sizeof(response)));
     }
@@ -93,7 +94,7 @@ esp_loader_error_t send_cmd_md5(const void *cmd_data, size_t cmd_size, uint8_t m
 }
 
 
-static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void* resp, uint32_t resp_size)
+static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void *resp, uint32_t resp_size)
 {
     esp_loader_error_t err;
     common_response_t *response = (common_response_t *)resp;

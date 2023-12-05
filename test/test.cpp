@@ -48,9 +48,13 @@ static void arrays_match(void *array_1, void *array_2, size_t size)
                    i, arr_1[i], arr_2[i]);
 
             printf("\nExpected: ");
-            for (uint32_t j = 0; j < size; j++) { printf("%02hhx ", arr_1[j]); }
+            for (uint32_t j = 0; j < size; j++) {
+                printf("%02hhx ", arr_1[j]);
+            }
             printf("\nActual:   ");
-            for (uint32_t j = 0; j < size; j++) { printf("%02hhx ", arr_2[j]); }
+            for (uint32_t j = 0; j < size; j++) {
+                printf("%02hhx ", arr_2[j]);
+            }
 
             return;
         }
@@ -132,7 +136,7 @@ void queue_connect_response(target_chip_t target = ESP32_CHIP, uint32_t magic_va
     for (uint8_t resp = 0; resp < 8; resp++) {
         queue_response(sync_response);
     }
-    
+
     queue_response(magic_value_response);
 
     if (target == ESP8266_CHIP) {
@@ -327,7 +331,7 @@ TEST_CASE( "Sync command is constructed correctly" )
     };
 
     clear_buffers();
-    
+
     for (uint8_t resp = 0; resp < 8; resp++) {
         queue_response(sync_response);
     }
