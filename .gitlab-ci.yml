@@ -39,10 +39,6 @@ variables:
     - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
     - idf.py build
 
-build_idf_v4.2:
-  extends: .build_idf_template
-  image: espressif/idf:release-v4.2
-
 build_idf_v4.3:
   extends: .build_idf_template
   image: espressif/idf:release-v4.3
