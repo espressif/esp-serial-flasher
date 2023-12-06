@@ -20,29 +20,15 @@ if (DEFINED ESP_PLATFORM)
             port/esp32_spi_port.c
         )
     endif()
+
     # Register component to esp-idf build system
-    if ("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER "4.0")
-        # esp_timer component was introduced in v4.2
-        set(priv_requires driver)
-        if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER "4.1")
-            list(APPEND priv_requires esp_timer)
-        endif()
+    idf_component_register(SRCS ${srcs}
+                           INCLUDE_DIRS include port
+                           PRIV_INCLUDE_DIRS private_include
+                           PRIV_REQUIRES driver esp_timer)
 
-        idf_component_register(SRCS ${srcs}
-                               INCLUDE_DIRS include port
-                               PRIV_INCLUDE_DIRS private_include
-                               PRIV_REQUIRES ${priv_requires})
-
-        set(target ${COMPONENT_LIB})
-        component_compile_options(-Wstrict-prototypes)
-    else()
-        # Remove when dropping support for IDF 3.3
-        set(COMPONENT_SRCS ${srcs})
-        set(COMPONENT_ADD_INCLUDEDIRS include port)
-        set(COMPONENT_PRIV_INCLUDEDIRS private_include)
-        register_component()
-        set(target ${COMPONENT_TARGET})
-    endif()
+    set(target ${COMPONENT_LIB})
+    component_compile_options(-Wstrict-prototypes)
 
 else()
     if (NOT DEFINED SERIAL_FLASHER_INTERFACE_UART AND NOT DEFINED SERIAL_FLASHER_INTERFACE_SPI)
