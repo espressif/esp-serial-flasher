@@ -11,6 +11,12 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ../common/)
 
 add_subdirectory(${FLASHER_DIR} ${CMAKE_BINARY_DIR}/flasher)
 
+target_compile_options(flasher
+PRIVATE
+    -Wunused-parameter
+    -Wshadow
+)
+
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE flasher)
 
 # This example only supports one target (ESP32) and uses specific binary to be flashed.

@@ -68,12 +68,6 @@ static inline void md5_final(uint8_t digets[16])
     MD5Final(digets, &s_md5_context);
 }
 
-#else
-
-static inline void init_md5(uint32_t address, uint32_t size) { }
-static inline void md5_update(const uint8_t *data, uint32_t size) { }
-static inline void md5_final(uint8_t digets[16]) { }
-
 #endif
 
 
@@ -263,7 +257,9 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
         loader_port_debug_print("Flash size detection failed, falling back to default");
     }
 
+#if MD5_ENABLED
     init_md5(offset, image_size);
+#endif
 
     bool encryption_in_cmd = encryption_in_begin_flash_cmd(s_target);
     const uint32_t erase_size = calc_erase_size(esp_loader_get_target(), offset, image_size);
@@ -290,7 +286,9 @@ esp_loader_error_t esp_loader_flash_write(void *payload, uint32_t size)
         data[padding_index++] = padding_pattern;
     }
 
+#if MD5_ENABLED
     md5_update(payload, (size + 3) & ~3);
+#endif
 
     unsigned int attempt = 0;
     esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;

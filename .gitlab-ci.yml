@@ -27,7 +27,7 @@ variables:
     - build
     - internet
   variables:
-    PEDANTIC_FLAGS: "-Werror=all -Werror=extra"
+    PEDANTIC_FLAGS: "-Werror -Wall -Wextra"
     EXTRA_CFLAGS: "${PEDANTIC_FLAGS}"
     EXTRA_CXXFLAGS: "${PEDANTIC_FLAGS}"
   script:
