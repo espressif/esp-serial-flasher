@@ -1,3 +1,9 @@
+## v1.0.2 (2023-12-20)
+
+### Bug Fixes
+
+- Fix flash size ID sanity checks
+
 ## v1.0.1 (2023-12-19)
 
 ### Bug Fixes
