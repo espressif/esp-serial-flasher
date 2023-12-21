@@ -203,18 +203,24 @@ static esp_loader_error_t spi_flash_command(spi_flash_cmd_t cmd, void *data_tx, 
 
 static esp_loader_error_t detect_flash_size(size_t *flash_size)
 {
+    static const uint8_t size_ids[] = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
+                                       0x1A, 0x1B, 0x1C, 0x20, 0x21, 0x22, 0x32, 0x33,
+                                       0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A
+                                      };
     uint32_t flash_id = 0;
 
     RETURN_ON_ERROR( spi_flash_command(SPI_FLASH_READ_ID, NULL, 0, &flash_id, 24) );
-    uint32_t size_id = flash_id >> 16;
+    uint8_t size_id = flash_id >> 16;
 
-    if (size_id < 0x12 || size_id > 0x18) {
-        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    // Try finding the size id within supported size ids
+    for (size_t i = 0; i < sizeof(size_ids) / sizeof(size_ids[0]); i++) {
+        if (size_id == size_ids[i]) {
+            *flash_size = 1 << size_id;
+            return ESP_LOADER_SUCCESS;
+        }
     }
 
-    *flash_size = 1 << size_id;
-
-    return ESP_LOADER_SUCCESS;
+    return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
 }
 
 static uint32_t calc_erase_size(const target_chip_t target, const uint32_t offset,
