@@ -283,3 +283,38 @@ bool encryption_in_begin_flash_cmd(const target_chip_t target)
 {
     return esp_target[target].encryption_in_begin_flash_cmd;
 }
+
+esp_loader_error_t read_mac(const target_chip_t target_chip, uint8_t *mac)
+{
+    uint32_t mac0 = 0, mac1 = 0;
+    const esp_target_t *target = &esp_target[target_chip];
+    if (target_chip == ESP32_CHIP)
+    {
+        RETURN_ON_ERROR( esp_loader_read_register(efuse_word_addr(target->efuse_base, 1), &mac0) );
+        RETURN_ON_ERROR( esp_loader_read_register(efuse_word_addr(target->efuse_base, 2), &mac1) );
+    }
+    else if (target_chip == ESP32S2_CHIP)
+    {
+        RETURN_ON_ERROR( esp_loader_read_register(0x3F41A044, &mac0) );
+        RETURN_ON_ERROR( esp_loader_read_register(0x3F41A044 + 4, &mac1) );
+    }
+    else if (target_chip == ESP32C3_CHIP || target_chip == ESP32S3_CHIP || target_chip == ESP32C6_CHIP)
+    {
+        RETURN_ON_ERROR( esp_loader_read_register(target->efuse_base + 0x44, &mac0) );
+        RETURN_ON_ERROR( esp_loader_read_register(target->efuse_base + 0x44 + 4, &mac1) );
+    }
+    else if (target_chip == ESP32C2_CHIP)
+    {
+        RETURN_ON_ERROR( esp_loader_read_register(target->efuse_base + 0x040, &mac0) );
+        RETURN_ON_ERROR( esp_loader_read_register(target->efuse_base + 0x040 + 4, &mac1) );
+    }
+
+    mac[0] = mac1 >> 8;
+    mac[1] = mac1 & 0xff;
+    mac[2] = mac0 >> 24;
+    mac[3] = mac0 >> 16;
+    mac[4] = mac0 >> 8;
+    mac[5] = mac0 & 0xff;
+
+    return ESP_LOADER_SUCCESS;
+}
