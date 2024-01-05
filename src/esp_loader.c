@@ -201,7 +201,7 @@ static esp_loader_error_t spi_flash_command(spi_flash_cmd_t cmd, void *data_tx, 
     return ESP_LOADER_SUCCESS;
 }
 
-static esp_loader_error_t detect_flash_size(size_t *flash_size)
+esp_loader_error_t detect_flash_size(size_t *flash_size)
 {
     static const uint8_t size_ids[] = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
                                        0x1A, 0x1B, 0x1C, 0x20, 0x21, 0x22, 0x32, 0x33,
