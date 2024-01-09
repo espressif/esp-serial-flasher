@@ -34,8 +34,8 @@
 #endif
 
 static const uint32_t DEFAULT_TIMEOUT = 1000;
-static const uint32_t DEFAULT_FLASH_TIMEOUT = 3000;       // timeout for most flash operations
-static const uint32_t LOAD_RAM_TIMEOUT_PER_MB = 2000000; // timeout (per megabyte) for erasing a region
+static const uint32_t DEFAULT_FLASH_TIMEOUT = 3000;
+static const uint32_t LOAD_RAM_TIMEOUT_PER_MB = 2000000;
 
 typedef enum {
     SPI_FLASH_READ_ID = 0x9F
@@ -203,12 +203,35 @@ static esp_loader_error_t spi_flash_command(spi_flash_cmd_t cmd, void *data_tx, 
 
 static esp_loader_error_t detect_flash_size(size_t *flash_size)
 {
-    static const uint8_t size_ids[] = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
-                                       0x1A, 0x1B, 0x1C, 0x20, 0x21, 0x22, 0x32, 0x33,
-                                       0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A
-                                      };
-    uint32_t flash_id = 0;
+    /* There is no rule manufacturers have to follow for assigning these parts of the flash ID,
+       these constants have been taken from esptool source code. */
+    static const uint8_t size_ids[] = {
+        0x12, /* 256KB */
+        0x13, /* 512KB */
+        0x14, /* 1MB */
+        0x15, /* 2MB */
+        0x16, /* 4MB */
+        0x17, /* 8MB */
+        0x18, /* 16MB */
+        0x19, /* 32MB */
+        0x1A, /* 64MB */
+        0x1B, /* 128MB */
+        0x1C, /* 256MB */
+        0x20, /* 64MB */
+        0x21, /* 128MB */
+        0x22, /* 256MB */
+        0x32, /* 256KB */
+        0x33, /* 512KB */
+        0x34, /* 1MB */
+        0x35, /* 2MB */
+        0x36, /* 4MB */
+        0x37, /* 8MB */
+        0x38, /* 16MB */
+        0x39, /* 32MB */
+        0x3A, /* 64MB */
+    };
 
+    uint32_t flash_id = 0;
     RETURN_ON_ERROR( spi_flash_command(SPI_FLASH_READ_ID, NULL, 0, &flash_id, 24) );
     uint8_t size_id = flash_id >> 16;
 
