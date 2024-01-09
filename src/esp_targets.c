@@ -274,7 +274,8 @@ static esp_loader_error_t spi_config_esp32xx(uint32_t efuse_base, uint32_t *spi_
 // Some newer chips like the esp32c6 do not support configurable SPI
 static esp_loader_error_t spi_config_unsupported(uint32_t efuse_base, uint32_t *spi_config)
 {
-    (void)(efuse_base); // UNUSED param
+    (void)(efuse_base);
+
     *spi_config = 0;
     return ESP_LOADER_SUCCESS;
 }
