@@ -19,6 +19,12 @@ if (DEFINED ESP_PLATFORM)
             src/protocol_spi.c
             port/esp32_spi_port.c
         )
+    elseif (${CONFIG_SERIAL_FLASHER_INTERFACE_USB})
+        list(APPEND srcs
+            src/protocol_uart.c
+            src/slip.c
+            port/esp32_usb_cdc_acm_port.c
+        )
     endif()
 
     # Register component to esp-idf build system
@@ -26,6 +32,10 @@ if (DEFINED ESP_PLATFORM)
                            INCLUDE_DIRS include port
                            PRIV_INCLUDE_DIRS private_include
                            PRIV_REQUIRES driver esp_timer)
+
+    if (${CONFIG_SERIAL_FLASHER_INTERFACE_USB})
+        idf_component_set_property(${COMPONENT_NAME} PRIV_REQUIRES usb APPEND)
+    endif()
 
     set(target ${COMPONENT_LIB})
     component_compile_options(-Wstrict-prototypes)
@@ -90,6 +100,11 @@ elseif (DEFINED SERIAL_FLASHER_INTERFACE_SPI OR CONFIG_SERIAL_FLASHER_INTERFACE_
     target_compile_definitions(${target}
     PUBLIC
         SERIAL_FLASHER_INTERFACE_SPI
+    )
+elseif (DEFINED SERIAL_FLASHER_INTERFACE_USB OR CONFIG_SERIAL_FLASHER_INTERFACE_USB STREQUAL "y")
+    target_compile_definitions(${target}
+    PUBLIC
+        SERIAL_FLASHER_INTERFACE_USB
     )
 endif()
 

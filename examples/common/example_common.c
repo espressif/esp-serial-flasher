@@ -253,7 +253,7 @@ esp_loader_error_t connect_to_target(uint32_t higher_transmission_rate)
     }
     printf("Connected to target\n");
 
-#ifdef SERIAL_FLASHER_INTERFACE_UART
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
     if (higher_transmission_rate && esp_loader_get_target() != ESP8266_CHIP) {
         err = esp_loader_change_transmission_rate(higher_transmission_rate);
         if (err == ESP_LOADER_ERROR_UNSUPPORTED_FUNC) {
@@ -271,12 +271,12 @@ esp_loader_error_t connect_to_target(uint32_t higher_transmission_rate)
             printf("Transmission rate changed changed\n");
         }
     }
-#endif /* SERIAL_FLASHER_INTERFACE_UART */
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
     return ESP_LOADER_SUCCESS;
 }
 
-#ifdef SERIAL_FLASHER_INTERFACE_UART
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 {
     esp_loader_error_t err;
@@ -329,7 +329,7 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 
     return ESP_LOADER_SUCCESS;
 }
-#endif /* SERIAL_FLASHER_INTERFACE_UART */
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 esp_loader_error_t load_ram_binary(const uint8_t *bin)
 {

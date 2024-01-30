@@ -3,7 +3,7 @@
 `esp-serial-flasher` is a portable C library for flashing or loading apps to RAM of Espressif SoCs from other host microcontrollers.
 
 ## Using the library
-Espressif SoCs are normally programmed via serial interface (UART).
+`esp-serial-flasher` supports a variety of host/target/interface combinations:
 
 Supported **host** microcontrollers:
 
@@ -26,6 +26,7 @@ Supported **target** microcontrollers:
 Supported hardware interfaces:
 - UART
 - SPI (only for RAM download)
+- USB CDC ACM (experimental)
 
 For example usage check the `examples` directory.
 
@@ -33,7 +34,7 @@ For example usage check the `examples` directory.
 
 These are the configuration toggles available to the user:
 
-* `SERIAL_FLASHER_INTERFACE_UART/SERIAL_FLASHER_INTERFACE_SPI`
+* `SERIAL_FLASHER_INTERFACE_UART`/`SERIAL_FLASHER_INTERFACE_SPI`/`SERIAL_FLASHER_INTERFACE_USB`
 
 This defines the hardware interface to use.
 

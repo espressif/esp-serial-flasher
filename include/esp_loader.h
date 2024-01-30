@@ -126,7 +126,7 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args);
 target_chip_t esp_loader_get_target(void);
 
 
-#ifdef SERIAL_FLASHER_INTERFACE_UART
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 /**
   * @brief Initiates flash operation
   *
@@ -173,7 +173,7 @@ esp_loader_error_t esp_loader_flash_write(void *payload, uint32_t size);
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
 esp_loader_error_t esp_loader_flash_finish(bool reboot);
-#endif /* SERIAL_FLASHER_INTERFACE_UART */
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 
 /**

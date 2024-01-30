@@ -38,10 +38,29 @@ variables:
     - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
     - idf.py build
+    - cd $CI_PROJECT_DIR/examples/esp32_usb_cdc_acm_example
+    - idf.py build
 
+# Special case as ESP-IDF v4.3 is not supported by the usb_host_cdc_acm component
+# required by the USB CDC ACM interface port and its example
 build_idf_v4.3:
-  extends: .build_idf_template
+  stage: build
   image: espressif/idf:release-v4.3
+  tags:
+    - build
+    - internet
+  variables:
+    PEDANTIC_FLAGS: "-Werror -Wall -Wextra"
+    EXTRA_CFLAGS: "${PEDANTIC_FLAGS}"
+    EXTRA_CXXFLAGS: "${PEDANTIC_FLAGS}"
+  script:
+    - cd $CI_PROJECT_DIR/examples/esp32_example
+    - idf.py build -DMD5_ENABLED=1
+    - idf.py build -DMD5_ENABLED=0
+    - cd $CI_PROJECT_DIR/examples/esp32_load_ram_example
+    - idf.py build
+    - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
+    - idf.py build
 
 build_idf_v4.4:
   extends: .build_idf_template

@@ -197,7 +197,7 @@ typedef struct __attribute__((packed))
 
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args);
 
-#ifdef SERIAL_FLASHER_INTERFACE_UART
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 esp_loader_error_t loader_flash_begin_cmd(uint32_t offset, uint32_t erase_size, uint32_t block_size, uint32_t blocks_to_write, bool encryption);
 
 esp_loader_error_t loader_flash_data_cmd(const uint8_t *data, uint32_t size);
@@ -211,7 +211,7 @@ esp_loader_error_t loader_spi_attach_cmd(uint32_t config);
 esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out);
 
 esp_loader_error_t loader_spi_parameters(uint32_t total_size);
-#endif /* SERIAL_FLASHER_INTERFACE_UART */
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t blocks_to_write, uint32_t block_size);
 

@@ -17,6 +17,9 @@ menu "ESP serial flasher"
         config SERIAL_FLASHER_INTERFACE_SPI
             bool "SPI (Only supports downloading to RAM)"
 
+        config SERIAL_FLASHER_INTERFACE_USB
+            bool "USB (Experimental)"
+
     endchoice
 
     config SERIAL_FLASHER_RESET_HOLD_TIME_MS

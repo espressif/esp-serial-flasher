@@ -85,7 +85,7 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
 
     RETURN_ON_ERROR(loader_detect_chip(&s_target, &s_reg));
 
-#ifdef SERIAL_FLASHER_INTERFACE_UART
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
     esp_loader_error_t err;
     uint32_t spi_config;
     if (s_target == ESP8266_CHIP) {
@@ -96,7 +96,7 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
         err = loader_spi_attach_cmd(spi_config);
     }
     return err;
-#endif /* SERIAL_FLASHER_INTERFACE_UART */
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
     return ESP_LOADER_SUCCESS;
 }
 
@@ -105,7 +105,7 @@ target_chip_t esp_loader_get_target(void)
     return s_target;
 }
 
-#ifdef SERIAL_FLASHER_INTERFACE_UART
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 static uint32_t s_flash_write_size = 0;
 
 static esp_loader_error_t spi_set_data_lengths(size_t mosi_bits, size_t miso_bits)
@@ -337,7 +337,7 @@ esp_loader_error_t esp_loader_flash_finish(bool reboot)
 
     return loader_flash_end_cmd(!reboot);
 }
-#endif /* SERIAL_FLASHER_INTERFACE_UART */
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 esp_loader_error_t esp_loader_mem_start(uint32_t offset, uint32_t size, uint32_t block_size)
 {
