@@ -25,7 +25,7 @@ Supported **target** microcontrollers:
 
 Supported hardware interfaces:
 - UART
-- SPI (only for RAM download, experimental)
+- SPI (only for RAM download)
 
 For example usage check the `examples` directory.
 
@@ -35,7 +35,7 @@ These are the configuration toggles available to the user:
 
 * `SERIAL_FLASHER_INTERFACE_UART/SERIAL_FLASHER_INTERFACE_SPI`
 
-This defines the hardware interface to use. SPI interface only supports RAM download mode and is in experimental stage and can undergo changes.
+This defines the hardware interface to use.
 
 Default: SERIAL_FLASHER_INTERFACE_UART
 

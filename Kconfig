@@ -15,7 +15,7 @@ menu "ESP serial flasher"
             bool "UART"
 
         config SERIAL_FLASHER_INTERFACE_SPI
-            bool "SPI (Only supports downloading to RAM, experimental)"
+            bool "SPI (Only supports downloading to RAM)"
 
     endchoice
 
