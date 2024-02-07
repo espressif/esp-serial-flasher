@@ -36,6 +36,8 @@ typedef struct {
     uint32_t strap_bit1_pin;
     uint32_t strap_bit2_pin;
     uint32_t strap_bit3_pin;
+    bool dont_initialize_bus; /* Use if the bus has already been initialized,
+                                 useful when sharing the bus with other devices. */
 } loader_esp32_spi_config_t;
 
 /**
