@@ -70,6 +70,7 @@ static uint32_t s_strap_bit1_pin;
 static uint32_t s_strap_bit2_pin;
 static uint32_t s_strap_bit3_pin;
 static uint32_t s_spi_cs_pin;
+static bool s_bus_needs_deinit;
 
 esp_loader_error_t loader_port_esp32_spi_init(const loader_esp32_spi_config_t *config)
 {
@@ -83,15 +84,19 @@ esp_loader_error_t loader_port_esp32_spi_init(const loader_esp32_spi_config_t *c
     s_spi_cs_pin = config->spi_cs_pin;
 
     /* Configure and initialize the SPI bus*/
-    s_spi_config.mosi_io_num = config->spi_mosi_pin;
-    s_spi_config.miso_io_num = config->spi_miso_pin;
-    s_spi_config.sclk_io_num = config->spi_clk_pin;
-    s_spi_config.quadwp_io_num = config->spi_quadwp_pin;
-    s_spi_config.quadhd_io_num = config->spi_quadhd_pin;
-    s_spi_config.max_transfer_sz = 4096 * 4;
+    if (!config->dont_initialize_bus) {
+        s_spi_config.mosi_io_num = config->spi_mosi_pin;
+        s_spi_config.miso_io_num = config->spi_miso_pin;
+        s_spi_config.sclk_io_num = config->spi_clk_pin;
+        s_spi_config.quadwp_io_num = config->spi_quadwp_pin;
+        s_spi_config.quadhd_io_num = config->spi_quadhd_pin;
+        s_spi_config.max_transfer_sz = 4096 * 4;
 
-    if (spi_bus_initialize(s_spi_bus, &s_spi_config, DMA_CHAN) != ESP_OK) {
-        return ESP_LOADER_ERROR_FAIL;
+        if (spi_bus_initialize(s_spi_bus, &s_spi_config, DMA_CHAN) != ESP_OK) {
+            return ESP_LOADER_ERROR_FAIL;
+        }
+
+        s_bus_needs_deinit = true;
     }
 
     /* Configure and add the device */
@@ -125,7 +130,9 @@ void loader_port_esp32_spi_deinit(void)
     gpio_reset_pin(s_reset_trigger_pin);
     gpio_reset_pin(s_spi_cs_pin);
     spi_bus_remove_device(s_device_h);
-    spi_bus_free(s_spi_bus);
+    if (s_bus_needs_deinit) {
+        spi_bus_free(s_spi_bus);
+    }
 }
 
 

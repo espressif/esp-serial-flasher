@@ -35,6 +35,9 @@ typedef struct {
     uint32_t queue_size;        /*!< Set to zero for default UART queue size */
     QueueHandle_t *uart_queue;  /*!< Set to NULL, if UART queue handle is not
                                    necessary. Otherwise, it will be assigned here */
+    bool dont_initialize_peripheral; /* Use if the peripheral has already been initialized,
+                                        useful when using the peripheral for multiple
+                                        purposes (e.g. monitoring) */
 } loader_esp32_config_t;
 
 /**
