@@ -41,7 +41,7 @@ typedef enum {
     SPI_FLASH_READ_ID = 0x9F
 } spi_flash_cmd_t;
 
-static const target_registers_t *s_reg = NULL;
+static const target_registers_t *s_reg = NULL;           
 static target_chip_t s_target = ESP_UNKNOWN_CHIP;
 
 #if MD5_ENABLED
