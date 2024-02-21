@@ -67,7 +67,6 @@ static inline void md5_final(uint8_t digets[16])
 
 #endif
 
-
 static uint32_t timeout_per_mb(uint32_t size_bytes, uint32_t time_per_mb)
 {
     uint32_t timeout = time_per_mb * (size_bytes / 1e6);
@@ -687,7 +686,6 @@ esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rat
 #endif /* SERIAL_FLASHER_INTERFACE_SDIO */
 
 #if MD5_ENABLED
-
 static void hexify(const uint8_t raw_md5[16], uint8_t hex_md5_out[32])
 {
     static const uint8_t dec_to_hex[] = {
@@ -700,24 +698,35 @@ static void hexify(const uint8_t raw_md5[16], uint8_t hex_md5_out[32])
     }
 }
 
-esp_loader_error_t esp_loader_flash_verify(void)
+esp_loader_error_t esp_loader_flash_verify_known_md5(uint32_t address,
+        uint32_t size,
+        const uint8_t *expected_md5)
 {
     if (s_target == ESP8266_CHIP && !esp_stub_get_running()) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
+    if (s_target_flash_size == 0) {
+        if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
+            loader_port_start_timer(DEFAULT_TIMEOUT);
+            RETURN_ON_ERROR( loader_spi_parameters(s_target_flash_size) );
+        } else {
+            loader_port_debug_print("Flash size detection failed, falling back to default");
+            s_target_flash_size = DEFAULT_FLASH_SIZE;
+        }
+    }
+
+    if (address + size > s_target_flash_size) {
+        return ESP_LOADER_ERROR_IMAGE_SIZE;
+    }
+
     /* Zero termination require 1 byte */
     uint8_t received_md5[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
-    uint8_t calculated_md5[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
 
-    uint8_t raw_md5[16] = {0};
-    md5_final(raw_md5);
+    loader_port_start_timer(timeout_per_mb(size, MD5_TIMEOUT_PER_MB));
 
-    loader_port_start_timer(timeout_per_mb(s_image_size, MD5_TIMEOUT_PER_MB));
+    RETURN_ON_ERROR(loader_md5_cmd(address, size, received_md5));
 
-    RETURN_ON_ERROR( loader_md5_cmd(s_start_address, s_image_size, received_md5) );
-
-    hexify(raw_md5, calculated_md5);
     if (esp_stub_get_running()) {
         // Convert the received MD5 to hex, because stub returns it as 16 raw data bytes
         uint8_t rec_md5_hex[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
@@ -725,11 +734,11 @@ esp_loader_error_t esp_loader_flash_verify(void)
         memcpy(received_md5, rec_md5_hex, MD5_SIZE_ROM);
     }
 
-    bool md5_match = memcmp(calculated_md5, received_md5, MD5_SIZE_ROM) == 0;
+    bool md5_match = memcmp(expected_md5, received_md5, MD5_SIZE_ROM) == 0;
     if (!md5_match) {
         loader_port_debug_print("Error: MD5 checksum does not match");
         loader_port_debug_print("Expected:");
-        loader_port_debug_print((char *)calculated_md5);
+        loader_port_debug_print((char *)expected_md5);
         loader_port_debug_print("Actual:");
         loader_port_debug_print((char *)received_md5);
 
@@ -739,6 +748,16 @@ esp_loader_error_t esp_loader_flash_verify(void)
     return ESP_LOADER_SUCCESS;
 }
 
+esp_loader_error_t esp_loader_flash_verify(void)
+{
+    uint8_t raw_md5[16] = {0};
+    /* Zero termination require 1 byte */
+    uint8_t hex_md5[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
+    md5_final(raw_md5);
+    hexify(raw_md5, hex_md5);
+
+    return esp_loader_flash_verify_known_md5(s_start_address, s_image_size, hex_md5);
+}
 #endif
 
 void esp_loader_reset_target(void)
