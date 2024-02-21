@@ -1,4 +1,5 @@
 stages:
+  - pre_check
   - build
   - test
   - deploy
@@ -20,6 +21,7 @@ variables:
   ZEPHYR_TOOLCHAIN: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/toolchain_linux-x86_64_xtensa-espressif_esp32_zephyr-elf.tar.xz
   ZEPHYR_SDK: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-aarch64_minimal.tar.xz
 
+
 .build_idf_template:
   stage: build
   image: espressif/idf:latest
@@ -40,6 +42,16 @@ variables:
     - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_usb_cdc_acm_example
     - idf.py build
+
+run_pre_commit:
+  stage: pre_check
+  image: python:3.11-bookworm
+  tags:
+    - internet
+  script:
+    - apt-get update
+    - pip install pre-commit
+    - pre-commit run --show-diff-on-failure --from-ref origin/master --to-ref HEAD
 
 # Special case as ESP-IDF v4.3 is not supported by the usb_host_cdc_acm component
 # required by the USB CDC ACM interface port and its example
@@ -142,7 +154,7 @@ run_tests:
 
 push_to_the_components_registry:
   stage: deploy
-  image: python:3.10-alpine
+  image: python:3.11-bookworm
   tags:
     - build
     - internet
