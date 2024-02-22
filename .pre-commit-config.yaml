@@ -13,8 +13,8 @@ repos:
       - id: mixed-line-ending
         args: ['-f=lf']
         exclude: *excludes
-  - repo: https://github.com/igrr/astyle_py.git
-    rev: v0.9.0
+  - repo: https://github.com/espressif/astyle_py.git
+    rev: v1.0.5
     hooks:
       - id: astyle_py
         args: [--options=astyle_config]
