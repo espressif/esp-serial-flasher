@@ -29,6 +29,7 @@ Following steps are performed in order to re-program the target's memory:
 Table below shows connection between two Espressif MCUs.
 
 | Host         | Slave         |
+|:------------:|:-------------:|
 |    IO_5      |    RESET      |
 |    IO_12     |    CLK        |
 |    IO_10     |    CS         |
