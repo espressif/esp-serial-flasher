@@ -173,6 +173,17 @@ esp_loader_error_t esp_loader_flash_write(void *payload, uint32_t size);
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
 esp_loader_error_t esp_loader_flash_finish(bool reboot);
+
+/**
+  * @brief Detects the size of the flash chip used by target
+  *
+  * @param flash_size[out] Flash size detected in bytes
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP The target flash chip is not known
+  */
+esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size);
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 

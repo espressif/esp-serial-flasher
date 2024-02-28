@@ -201,51 +201,6 @@ static esp_loader_error_t spi_flash_command(spi_flash_cmd_t cmd, void *data_tx, 
     return ESP_LOADER_SUCCESS;
 }
 
-static esp_loader_error_t detect_flash_size(size_t *flash_size)
-{
-    /* There is no rule manufacturers have to follow for assigning these parts of the flash ID,
-       these constants have been taken from esptool source code. */
-    static const uint8_t size_ids[] = {
-        0x12, /* 256KB */
-        0x13, /* 512KB */
-        0x14, /* 1MB */
-        0x15, /* 2MB */
-        0x16, /* 4MB */
-        0x17, /* 8MB */
-        0x18, /* 16MB */
-        0x19, /* 32MB */
-        0x1A, /* 64MB */
-        0x1B, /* 128MB */
-        0x1C, /* 256MB */
-        0x20, /* 64MB */
-        0x21, /* 128MB */
-        0x22, /* 256MB */
-        0x32, /* 256KB */
-        0x33, /* 512KB */
-        0x34, /* 1MB */
-        0x35, /* 2MB */
-        0x36, /* 4MB */
-        0x37, /* 8MB */
-        0x38, /* 16MB */
-        0x39, /* 32MB */
-        0x3A, /* 64MB */
-    };
-
-    uint32_t flash_id = 0;
-    RETURN_ON_ERROR( spi_flash_command(SPI_FLASH_READ_ID, NULL, 0, &flash_id, 24) );
-    uint8_t size_id = flash_id >> 16;
-
-    // Try finding the size id within supported size ids
-    for (size_t i = 0; i < sizeof(size_ids) / sizeof(size_ids[0]); i++) {
-        if (size_id == size_ids[i]) {
-            *flash_size = 1 << size_id;
-            return ESP_LOADER_SUCCESS;
-        }
-    }
-
-    return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
-}
-
 static uint32_t calc_erase_size(const target_chip_t target, const uint32_t offset,
                                 const uint32_t image_size)
 {
@@ -271,12 +226,62 @@ static uint32_t calc_erase_size(const target_chip_t target, const uint32_t offse
     }
 }
 
+esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size)
+{
+    typedef struct {
+        uint8_t id;
+        uint32_t size;
+    } size_id_size_pair_t;
+
+    /* There is no rule manufacturers have to follow for assigning these parts of the flash ID,
+       these constants have been taken from esptool source code. */
+    static const size_id_size_pair_t size_mapping[] = {
+        { 0x12, 256 * 1024 },
+        { 0x13, 512 * 1024 },
+        { 0x14, 1 * 1024 * 1024 },
+        { 0x15, 2 * 1024 * 1024 },
+        { 0x16, 4 * 1024 * 1024 },
+        { 0x17, 8 * 1024 * 1024 },
+        { 0x18, 16 * 1024 * 1024 },
+        { 0x19, 32 * 1024 * 1024 },
+        { 0x1A, 64 * 1024 * 1024 },
+        { 0x1B, 128 * 1024 * 1024 },
+        { 0x1C, 256 * 1024 * 1024 },
+        { 0x20, 64 * 1024 * 1024 },
+        { 0x21, 128 * 1024 * 1024 },
+        { 0x22, 256 * 1024 * 1024 },
+        { 0x32, 256 * 1024 },
+        { 0x33, 512 * 1024 },
+        { 0x34, 1 * 1024 * 1024 },
+        { 0x35, 2 * 1024 * 1024 },
+        { 0x36, 4 * 1024 * 1024 },
+        { 0x37, 8 * 1024 * 1024 },
+        { 0x38, 16 * 1024 * 1024 },
+        { 0x39, 32 * 1024 * 1024 },
+        { 0x3A, 64 * 1024 * 1024 },
+    };
+
+    uint32_t flash_id = 0;
+    RETURN_ON_ERROR( spi_flash_command(SPI_FLASH_READ_ID, NULL, 0, &flash_id, 24) );
+    uint8_t size_id = flash_id >> 16;
+
+    // Try finding the size id within supported size ids
+    for (size_t i = 0; i < sizeof(size_mapping) / sizeof(size_mapping[0]); i++) {
+        if (size_id == size_mapping[i].id) {
+            *flash_size = size_mapping[i].size;
+            return ESP_LOADER_SUCCESS;
+        }
+    }
+
+    return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+}
+
 esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, uint32_t block_size)
 {
     s_flash_write_size = block_size;
 
-    size_t flash_size = 0;
-    if (detect_flash_size(&flash_size) == ESP_LOADER_SUCCESS) {
+    uint32_t flash_size = 0;
+    if (esp_loader_flash_detect_size(&flash_size) == ESP_LOADER_SUCCESS) {
         if (image_size > flash_size) {
             return ESP_LOADER_ERROR_IMAGE_SIZE;
         }
