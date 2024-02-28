@@ -1,3 +1,14 @@
+## v1.2.0 (2024-02-28)
+
+### New Features
+
+- Move flash size detection functionality to the public API
+
+### Bug Fixes
+
+- Fix inferring flash size from the flash ID
+- **docs**: Fix table in SPI load to RAM example
+
 ## v1.1.0 (2024-02-13)
 
 ### New Features
