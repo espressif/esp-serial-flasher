@@ -1,5 +1,5 @@
 version: "1.2.0"
-description: Serial flasher component provides portable library for flashing or loading ram loadble app to Espressif SoCs from other host microcontroller
+description: esp-serial-flasher is a portable C library for flashing or loading apps to RAM of Espressif SoCs from other host microcontrollers
 url: https://github.com/espressif/esp-serial-flasher
 dependencies:
   idf: ">=4.3"
