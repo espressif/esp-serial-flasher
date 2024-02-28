@@ -201,7 +201,32 @@ static esp_loader_error_t spi_flash_command(spi_flash_cmd_t cmd, void *data_tx, 
     return ESP_LOADER_SUCCESS;
 }
 
-static esp_loader_error_t detect_flash_size(size_t *flash_size)
+static uint32_t calc_erase_size(const target_chip_t target, const uint32_t offset,
+                                const uint32_t image_size)
+{
+    if (target != ESP8266_CHIP) {
+        return image_size;
+    } else {
+        /* Needed to fix a bug in the ESP8266 ROM */
+        const uint32_t sectors_per_block = 16U;
+        const uint32_t sector_size = 4096U;
+
+        const uint32_t num_sectors = (image_size + sector_size - 1) / sector_size;
+        const uint32_t start_sector = offset / sector_size;
+
+        uint32_t head_sectors = sectors_per_block - (start_sector % sectors_per_block);
+
+        /* The ROM bug deletes extra num_sectors if we don't cross the block boundary
+           and extra head_sectors if we do */
+        if (num_sectors <= head_sectors) {
+            return ((num_sectors + 1) / 2) * sector_size;
+        } else {
+            return (num_sectors - head_sectors) * sector_size;
+        }
+    }
+}
+
+esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size)
 {
     /* There is no rule manufacturers have to follow for assigning these parts of the flash ID,
        these constants have been taken from esptool source code. */
@@ -246,37 +271,12 @@ static esp_loader_error_t detect_flash_size(size_t *flash_size)
     return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
 }
 
-static uint32_t calc_erase_size(const target_chip_t target, const uint32_t offset,
-                                const uint32_t image_size)
-{
-    if (target != ESP8266_CHIP) {
-        return image_size;
-    } else {
-        /* Needed to fix a bug in the ESP8266 ROM */
-        const uint32_t sectors_per_block = 16U;
-        const uint32_t sector_size = 4096U;
-
-        const uint32_t num_sectors = (image_size + sector_size - 1) / sector_size;
-        const uint32_t start_sector = offset / sector_size;
-
-        uint32_t head_sectors = sectors_per_block - (start_sector % sectors_per_block);
-
-        /* The ROM bug deletes extra num_sectors if we don't cross the block boundary
-           and extra head_sectors if we do */
-        if (num_sectors <= head_sectors) {
-            return ((num_sectors + 1) / 2) * sector_size;
-        } else {
-            return (num_sectors - head_sectors) * sector_size;
-        }
-    }
-}
-
 esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, uint32_t block_size)
 {
     s_flash_write_size = block_size;
 
-    size_t flash_size = 0;
-    if (detect_flash_size(&flash_size) == ESP_LOADER_SUCCESS) {
+    uint32_t flash_size = 0;
+    if (esp_loader_flash_detect_size(&flash_size) == ESP_LOADER_SUCCESS) {
         if (image_size > flash_size) {
             return ESP_LOADER_ERROR_IMAGE_SIZE;
         }
