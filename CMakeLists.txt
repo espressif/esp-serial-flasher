@@ -96,6 +96,12 @@ if (DEFINED SERIAL_FLASHER_INTERFACE_UART OR CONFIG_SERIAL_FLASHER_INTERFACE_UAR
     if (DEFINED MD5_ENABLED OR CONFIG_SERIAL_FLASHER_MD5_ENABLED)
         target_compile_definitions(${target} PUBLIC MD5_ENABLED=1)
     endif()
+    if (DEFINED STUB_ENABLED OR CONFIG_SERIAL_FLASHER_STUB_ENABLED)
+        target_compile_definitions(${target} PUBLIC STUB_ENABLED=1)
+        include(cmake/add_gen_flasher_stub_target.cmake)
+        add_gen_flasher_stub_target(VERSION 4.7.0)
+        target_sources(${target} PRIVATE src/esp_stubs.c)
+    endif()
 elseif (DEFINED SERIAL_FLASHER_INTERFACE_SPI OR CONFIG_SERIAL_FLASHER_INTERFACE_SPI STREQUAL "y")
     target_compile_definitions(${target}
     PUBLIC

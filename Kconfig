@@ -5,6 +5,12 @@ menu "ESP serial flasher"
         help
             Select this option to enable MD5 hashsum check after flashing.
 
+    config SERIAL_FLASHER_STUB_ENABLED
+        bool "Enable flasher stub"
+        default y
+        help
+            Select this option to enable the flasher stub.
+
     choice SERIAL_FLASHER_INTERFACE
         prompt "Hardware interface to use for firmware download"
         default SERIAL_FLASHER_INTERFACE_UART
