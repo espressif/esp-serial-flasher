@@ -375,6 +375,15 @@ esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint)
 }
 
 
+esp_loader_error_t esp_loader_read_mac(uint8_t *mac)
+{
+    if (s_target == ESP8266_CHIP) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    }
+
+    return loader_read_mac(s_target, mac);
+}
+
 esp_loader_error_t esp_loader_read_register(uint32_t address, uint32_t *reg_value)
 {
     loader_port_start_timer(DEFAULT_TIMEOUT);
