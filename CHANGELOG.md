@@ -1,3 +1,13 @@
+## v1.3.0 (2024-03-22)
+
+### New Features
+
+- Add a convenient public API way to read the WIFI MAC
+
+### Bug Fixes
+
+- Correctly compare image size with memory size including offset
+
 ## v1.2.0 (2024-02-28)
 
 ### New Features
