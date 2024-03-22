@@ -40,6 +40,8 @@ variables:
     - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
     - idf.py build
+    - cd $CI_PROJECT_DIR/examples/esp32_get_target_info_example
+    - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_usb_cdc_acm_example
     - idf.py build
 
@@ -72,6 +74,8 @@ build_idf_v4.3:
     - cd $CI_PROJECT_DIR/examples/esp32_load_ram_example
     - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
+    - idf.py build
+    - cd $CI_PROJECT_DIR/examples/esp32_get_target_info_example
     - idf.py build
 
 build_idf_v4.4:

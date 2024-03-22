@@ -238,6 +238,18 @@ esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint);
 
 
 /**
+  * @brief Reads te MAC of the connected chip.
+  *
+  * @param mac[out] 6 byte MAC address of the chip
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  */
+esp_loader_error_t esp_loader_read_mac(uint8_t *mac);
+
+/**
   * @brief Writes register.
   *
   * @param address[in]      Address of register.
