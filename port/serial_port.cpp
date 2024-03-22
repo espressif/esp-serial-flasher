@@ -32,7 +32,6 @@ using namespace std::chrono_literals;
 loader_serial_config_t serial_config;
 std::unique_ptr<serial::Serial> serial_port;
 std::chrono::steady_clock::time_point serial_timer;
-uint32_t serial_timer_offset = 0;
 
 #ifdef SERIAL_FLASHER_DEBUG_TRACE
 static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
@@ -50,7 +49,17 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 }
 #endif
 
-static uint32_t s_time_end;
+void setTimeout(uint32_t timeout)
+{
+    if(timeout == serial_config.timeout)
+        return;
+
+    if(!serial_port || !serial_port->isOpen())
+        return;
+
+    serial_port->setTimeout(serial::Timeout::simpleTimeout(timeout));
+    serial_config.timeout = timeout;
+}
 
 esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_t timeout)
 {
@@ -58,12 +67,13 @@ esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_
         if(!serial_port || !serial_port->isOpen())
             return ESP_LOADER_ERROR_FAIL;
 
-        serial_port->setTimeout(serial::Timeout::simpleTimeout(timeout));
+        setTimeout(timeout);
         size_t result = serial_port->write(data, size);
         if (result != size) {
             return ESP_LOADER_ERROR_FAIL;
         }
-    } catch (...) {
+    } catch (std::exception &e){
+        loader_port_debug_print(e.what());
         return ESP_LOADER_ERROR_FAIL;
     }
 
@@ -81,11 +91,13 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
         if(!serial_port || !serial_port->isOpen())
             return ESP_LOADER_ERROR_FAIL;
 
+        setTimeout(timeout);
         size_t result = serial_port->read(data, size);
         if (result != size) {
             return ESP_LOADER_ERROR_FAIL;
         }
-    } catch (...) {
+    } catch (std::exception &e){
+        loader_port_debug_print(e.what());
         return ESP_LOADER_ERROR_FAIL;
     }
 
@@ -105,7 +117,8 @@ esp_loader_error_t loader_port_serial_init(const loader_serial_config_t *config)
         if ( serial_port->isOpen() == false ) {
             return ESP_LOADER_ERROR_FAIL;
         }
-    } catch (...) {
+    } catch (std::exception &e){
+        loader_port_debug_print(e.what());
         return ESP_LOADER_ERROR_FAIL;
     }
     
@@ -135,15 +148,14 @@ void loader_port_delay_ms(uint32_t ms)
 
 void loader_port_start_timer(uint32_t ms)
 {
-    serial_timer = high_resolution_clock::now();
-    serial_timer_offset = ms;
+    serial_timer = high_resolution_clock::now() + (ms * 1ms);
 }
 
 
 uint32_t loader_port_remaining_time(void)
 {
     auto time_now = high_resolution_clock::now();
-    int32_t remaining = (duration_cast<milliseconds>(time_now - serial_timer - serial_timer_offset * 1ms)).count();
+    int32_t remaining = (duration_cast<milliseconds>(serial_timer - time_now)).count();
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
@@ -155,13 +167,13 @@ void loader_port_debug_print(const char *str)
 
 esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
 {
+    if(!serial_port || !serial_port->isOpen())
+        return ESP_LOADER_ERROR_FAIL;
+    
     try {
-        serial_port = std::make_unique<serial::Serial>(serial_config.portName, baudrate, serial::Timeout::simpleTimeout(serial_config.timeout));
-
-        if ( serial_port->isOpen() == false ) {
-            return ESP_LOADER_ERROR_FAIL;
-        }
-    } catch (...) {
+        serial_port->setBaudrate(baudrate);
+    } catch (std::exception &e){
+        loader_port_debug_print(e.what());
         return ESP_LOADER_ERROR_FAIL;
     }
 

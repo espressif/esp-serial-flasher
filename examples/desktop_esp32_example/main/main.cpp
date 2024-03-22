@@ -33,7 +33,7 @@ int main(int argv, char **argc)
 
     loader_serial_config_t config;
     config.portName = argc[1];
-    // config.portName = "COM3";
+    // config.portName = "COM4";
     config.baudrate = 115200;
     config.timeout = 1000;
 
@@ -42,6 +42,7 @@ int main(int argv, char **argc)
         return -1;
     }
 
+    printf("Connecting...\n");
     if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
         get_example_binaries(esp_loader_get_target(), &bin);
