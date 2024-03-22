@@ -17,10 +17,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#if !defined(WIN32)
 #include <sys/param.h>
+#endif
 #include "esp_loader_io.h"
 #include "esp_loader.h"
 #include "example_common.h"
+
+#ifndef MAX
+#define MAX(a, b) ((a) > (b)) ? (a) : (b)
+#endif
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
+#endif
 
 #ifndef SINGLE_TARGET_SUPPORT
 
@@ -336,7 +346,8 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     printf("Start loading\n");
     esp_loader_error_t err;
     const esp_loader_bin_header_t *header = (const esp_loader_bin_header_t *)bin;
-    esp_loader_bin_segment_t segments[header->segments];
+    //esp_loader_bin_segment_t segments[header->segments];
+    esp_loader_bin_segment_t* segments = malloc(header->segments * sizeof(esp_loader_bin_segment_t));
 
     // Parse segments
     uint32_t seg;
@@ -357,6 +368,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
         err = esp_loader_mem_start(segments[seg].addr, segments[seg].size, ESP_RAM_BLOCK);
         if (err != ESP_LOADER_SUCCESS) {
             printf("Loading ram start with error %d.\n", err);
+            free(segments);
             return err;
         }
 
@@ -367,6 +379,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
             err = esp_loader_mem_write(data_pos, data_size);
             if (err != ESP_LOADER_SUCCESS) {
                 printf("\nPacket could not be written! Error %d.\n", err);
+                free(segments);
                 return err;
             }
             data_pos += data_size;
@@ -377,9 +390,11 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     err = esp_loader_mem_finish(header->entrypoint);
     if (err != ESP_LOADER_SUCCESS) {
         printf("\nLoad ram finish with Error %d.\n", err);
+        free(segments);
         return err;
     }
     printf("\nFinished loading\n");
 
+    free(segments);
     return ESP_LOADER_SUCCESS;
 }
