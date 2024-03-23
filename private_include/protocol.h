@@ -31,6 +31,21 @@ extern "C" {
 
 #define MD5_SIZE 32
 
+// Maximum block sized for RAM and Flash writes, respectively.
+#define ESP_RAM_BLOCK 0x1800
+
+#ifndef MAX
+#define MAX(a, b) ((a) > (b)) ? (a) : (b)
+#endif
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
+#endif
+
+#ifndef ROUNDUP
+#define ROUNDUP(a, b) (((int)a + (int)b - 1) / (int)b)
+#endif
+
 typedef enum __attribute__((packed))
 {
     FLASH_BEGIN = 0x02,
@@ -211,6 +226,10 @@ esp_loader_error_t loader_spi_attach_cmd(uint32_t config);
 esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out);
 
 esp_loader_error_t loader_spi_parameters(uint32_t total_size);
+
+esp_loader_error_t loader_no_stub(bool no_stub);
+
+esp_loader_error_t loader_run_stub(target_chip_t target);
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t blocks_to_write, uint32_t block_size);

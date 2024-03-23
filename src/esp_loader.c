@@ -21,18 +21,6 @@
 #include <string.h>
 #include <assert.h>
 
-#ifndef MAX
-#define MAX(a, b) ((a) > (b)) ? (a) : (b)
-#endif
-
-#ifndef MIN
-#define MIN(a, b) ((a) < (b)) ? (a) : (b)
-#endif
-
-#ifndef ROUNDUP
-#define ROUNDUP(a, b) (((int)a + (int)b - 1) / (int)b)
-#endif
-
 static const uint32_t DEFAULT_TIMEOUT = 1000;
 static const uint32_t DEFAULT_FLASH_TIMEOUT = 3000;
 static const uint32_t LOAD_RAM_TIMEOUT_PER_MB = 2000000;
@@ -84,6 +72,10 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
     RETURN_ON_ERROR(loader_initialize_conn(connect_args));
 
     RETURN_ON_ERROR(loader_detect_chip(&s_target, &s_reg));
+
+#if STUB_ENABLED
+    RETURN_ON_ERROR(loader_run_stub(s_target));
+#endif
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
     esp_loader_error_t err;

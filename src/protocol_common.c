@@ -16,6 +16,8 @@
 #include "protocol.h"
 #include "protocol_prv.h"
 #include "esp_loader_io.h"
+#include "esp_stubs.h"
+#include "slip.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -294,6 +296,57 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
 
     return send_cmd(&spi_cmd, sizeof(spi_cmd), NULL);
 }
+
+#if STUB_ENABLED
+
+esp_loader_error_t loader_no_stub(bool no_stub) {
+    return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t loader_run_stub(target_chip_t target)
+{
+    esp_loader_error_t err;
+    const esp_stub_t* stub = &esp_stub[target];
+
+    // Download segments
+    for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+        err = esp_loader_mem_start(stub->segments[seg].addr, stub->segments[seg].size, ESP_RAM_BLOCK);
+        if (err != ESP_LOADER_SUCCESS) {
+            return err;
+        }
+
+        size_t remain_size = stub->segments[seg].size;
+        uint8_t *data_pos = stub->segments[seg].data;
+        while (remain_size > 0) {
+            size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
+            err = esp_loader_mem_write(data_pos, data_size);
+            if (err != ESP_LOADER_SUCCESS) {
+                return err;
+            }
+            data_pos += data_size;
+            remain_size -= data_size;
+        }
+    }
+
+    err = esp_loader_mem_finish(stub->header.entrypoint);
+    if (err != ESP_LOADER_SUCCESS) {
+        return err;
+    }
+
+    // stub loader sends a custom SLIP packet of the sequence OHAI
+    uint8_t buff[4];
+    err = SLIP_receive_packet(buff, sizeof(buff) / sizeof(buff[0]));
+    if (err != ESP_LOADER_SUCCESS) {
+        return err;
+    }
+    else if (memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
+#endif
 
 __attribute__ ((weak)) void loader_port_debug_print(const char *str)
 {
