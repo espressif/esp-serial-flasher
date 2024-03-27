@@ -41,6 +41,7 @@ hfile.write(
     "#pragma once\n"
     "\n"
     "#include <stdint.h>\n"
+    "#include <stdbool.h>\n"
     '#include "esp_loader.h"\n'
     "\n"
     "#ifdef __cplusplus\n"
@@ -53,6 +54,7 @@ hfile.write(
     "} esp_stub_t;\n"
     "\n"
     "#if STUB_ENABLED\n"
+    "extern bool esp_no_stub;\n"
     "extern const esp_stub_t esp_stub[ESP_MAX_CHIP];\n"
     "#endif\n"
     "\n"
@@ -83,6 +85,8 @@ cfile.write(
     + str(len(files_to_download))
     + ', "Stub order matches target_chip_t enumeration");\n'
     "#endif\n"
+    "\n"
+    "bool esp_no_stub = false;\n"
     "\n"
     "const esp_stub_t esp_stub[ESP_MAX_CHIP] = {\n"
     "\n"

@@ -61,6 +61,13 @@ esp_loader_error_t loader_flash_begin_cmd(uint32_t offset,
         uint32_t blocks_to_write,
         bool encryption)
 {
+// stub does not support encryption
+#if STUB_ENABLED
+    if (!esp_no_stub) {
+        encryption = false;
+    }
+#endif
+
     flash_begin_command_t flash_begin_cmd = {
         .common = {
             .direction = WRITE_DIRECTION,
@@ -240,7 +247,14 @@ esp_loader_error_t loader_spi_attach_cmd(uint32_t config)
         .zero = 0
     };
 
-    return send_cmd(&attach_cmd, sizeof(attach_cmd), NULL);
+// On ESP32 ROM loader only, there is an additional 4 bytes in the data payload of this command.
+#if STUB_ENABLED
+    const uint32_t attach_cmd_size = esp_no_stub ? sizeof(attach_cmd) : sizeof(attach_cmd) - sizeof(attach_cmd.zero);
+#else
+    const uint32_t attach_cmd_size = sizeof(attach_cmd);
+#endif
+
+    return send_cmd(&attach_cmd, attach_cmd_size, NULL);
 }
 
 esp_loader_error_t loader_change_baudrate_cmd(uint32_t baudrate)
@@ -299,14 +313,20 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
 
 #if STUB_ENABLED
 
-esp_loader_error_t loader_no_stub(bool no_stub) {
+esp_loader_error_t loader_no_stub(bool no_stub)
+{
+    esp_no_stub = no_stub;
     return ESP_LOADER_SUCCESS;
 }
 
 esp_loader_error_t loader_run_stub(target_chip_t target)
 {
+    if (esp_no_stub) {
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
     esp_loader_error_t err;
-    const esp_stub_t* stub = &esp_stub[target];
+    const esp_stub_t *stub = &esp_stub[target];
 
     // Download segments
     for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
@@ -338,8 +358,7 @@ esp_loader_error_t loader_run_stub(target_chip_t target)
     err = SLIP_receive_packet(buff, sizeof(buff) / sizeof(buff[0]));
     if (err != ESP_LOADER_SUCCESS) {
         return err;
-    }
-    else if (memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
+    } else if (memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "esp_loader.h"
 
 #ifdef __cplusplus
@@ -15,6 +16,7 @@ typedef struct {
 } esp_stub_t;
 
 #if STUB_ENABLED
+extern bool esp_no_stub;
 extern const esp_stub_t esp_stub[ESP_MAX_CHIP];
 #endif
 

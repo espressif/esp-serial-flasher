@@ -310,6 +310,21 @@ esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rat
 #if MD5_ENABLED
 esp_loader_error_t esp_loader_flash_verify(void);
 #endif
+
+/**
+  * @brief Disable launching the flasher stub, only talk to ROM bootloader.
+  *
+  * @note  This function is only available if STUB_ENABLED is set.
+  *
+  * @param no_stub[in]      Disable launching the flasher stub if true.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  */
+#if STUB_ENABLED
+esp_loader_error_t esp_loader_no_stub(bool no_stub);
+#endif
+
 /**
   * @brief Toggles reset pin.
   */
