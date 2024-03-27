@@ -16,6 +16,8 @@
 #include "protocol.h"
 #include "protocol_prv.h"
 #include "esp_loader_io.h"
+#include "esp_stubs.h"
+#include "slip.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -59,6 +61,13 @@ esp_loader_error_t loader_flash_begin_cmd(uint32_t offset,
         uint32_t blocks_to_write,
         bool encryption)
 {
+// stub does not support encryption
+#if STUB_ENABLED
+    if (!esp_no_stub) {
+        encryption = false;
+    }
+#endif
+
     flash_begin_command_t flash_begin_cmd = {
         .common = {
             .direction = WRITE_DIRECTION,
@@ -238,7 +247,14 @@ esp_loader_error_t loader_spi_attach_cmd(uint32_t config)
         .zero = 0
     };
 
-    return send_cmd(&attach_cmd, sizeof(attach_cmd), NULL);
+// On ESP32 ROM loader only, there is an additional 4 bytes in the data payload of this command.
+#if STUB_ENABLED
+    const uint32_t attach_cmd_size = esp_no_stub ? sizeof(attach_cmd) : sizeof(attach_cmd) - sizeof(attach_cmd.zero);
+#else
+    const uint32_t attach_cmd_size = sizeof(attach_cmd);
+#endif
+
+    return send_cmd(&attach_cmd, attach_cmd_size, NULL);
 }
 
 esp_loader_error_t loader_change_baudrate_cmd(uint32_t baudrate)
@@ -294,6 +310,62 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
 
     return send_cmd(&spi_cmd, sizeof(spi_cmd), NULL);
 }
+
+#if STUB_ENABLED
+
+esp_loader_error_t loader_no_stub(bool no_stub)
+{
+    esp_no_stub = no_stub;
+    return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t loader_run_stub(target_chip_t target)
+{
+    if (esp_no_stub) {
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
+    esp_loader_error_t err;
+    const esp_stub_t *stub = &esp_stub[target];
+
+    // Download segments
+    for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+        err = esp_loader_mem_start(stub->segments[seg].addr, stub->segments[seg].size, ESP_RAM_BLOCK);
+        if (err != ESP_LOADER_SUCCESS) {
+            return err;
+        }
+
+        size_t remain_size = stub->segments[seg].size;
+        uint8_t *data_pos = stub->segments[seg].data;
+        while (remain_size > 0) {
+            size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
+            err = esp_loader_mem_write(data_pos, data_size);
+            if (err != ESP_LOADER_SUCCESS) {
+                return err;
+            }
+            data_pos += data_size;
+            remain_size -= data_size;
+        }
+    }
+
+    err = esp_loader_mem_finish(stub->header.entrypoint);
+    if (err != ESP_LOADER_SUCCESS) {
+        return err;
+    }
+
+    // stub loader sends a custom SLIP packet of the sequence OHAI
+    uint8_t buff[4];
+    err = SLIP_receive_packet(buff, sizeof(buff) / sizeof(buff[0]));
+    if (err != ESP_LOADER_SUCCESS) {
+        return err;
+    } else if (memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
+#endif
 
 __attribute__ ((weak)) void loader_port_debug_print(const char *str)
 {
