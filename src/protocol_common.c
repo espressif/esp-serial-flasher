@@ -295,7 +295,9 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
     return send_cmd(&spi_cmd, sizeof(spi_cmd), NULL);
 }
 
+#ifndef _MSC_VER
 __attribute__ ((weak)) void loader_port_debug_print(const char *str)
 {
     (void) str;
 }
+#endif

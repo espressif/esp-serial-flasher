@@ -17,10 +17,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
+#if !defined(WIN32)
 #include <sys/param.h>
+#endif
 #include "esp_loader_io.h"
 #include "esp_loader.h"
 #include "example_common.h"
+
+#ifndef MAX
+#define MAX(a, b) ((a) > (b)) ? (a) : (b)
+#endif
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
+#endif
 
 #ifndef SINGLE_TARGET_SUPPORT
 
@@ -31,6 +41,7 @@
 #define BOOTLOADER_ADDRESS_V1       0x0
 #define PARTITION_ADDRESS           0x8000
 #define APPLICATION_ADDRESS         0x10000
+#define MAX_BIN_HEADER_SEGMENTS     16
 
 extern const uint8_t  ESP32_bootloader_bin[];
 extern const uint32_t ESP32_bootloader_bin_size;
@@ -336,7 +347,12 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     printf("Start loading\n");
     esp_loader_error_t err;
     const esp_loader_bin_header_t *header = (const esp_loader_bin_header_t *)bin;
-    esp_loader_bin_segment_t segments[header->segments];
+    if(header->segments > MAX_BIN_HEADER_SEGMENTS) {
+        printf("Too many segments in binary header\n");
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    esp_loader_bin_segment_t segments[MAX_BIN_HEADER_SEGMENTS];
 
     // Parse segments
     uint32_t seg;
