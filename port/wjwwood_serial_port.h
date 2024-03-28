@@ -26,9 +26,10 @@ typedef struct {
     char* portName;
     int baudrate;
     int timeout;
-} loader_serial_config_t;
+} loader_wjwwood_serial_config_t;
 
-esp_loader_error_t loader_port_serial_init(const loader_serial_config_t *config);
+esp_loader_error_t loader_port_wjwwood_serial_deinit();
+esp_loader_error_t loader_port_wjwwood_serial_init(const loader_wjwwood_serial_config_t *config);
 
 #ifdef __cplusplus
 }

@@ -10,7 +10,7 @@
 #include "stdio.h"
 #include <string.h>
 
-#include "serial_port.h"
+#include "wjwwood_serial_port.h"
 #include "esp_loader.h"
 #include "esp_loader_io.h"
 extern "C" {
@@ -31,13 +31,13 @@ int main(int argv, char **argc)
 
     example_binaries_t bin;
 
-    loader_serial_config_t config;
+    loader_wjwwood_serial_config_t config;
     config.portName = argc[1];
-    // config.portName = "COM4";
+    //config.portName = "COM4";
     config.baudrate = 115200;
-    config.timeout = 1000;
+    config.timeout = 600;
 
-    if (loader_port_serial_init((const loader_serial_config_t*)&config) != ESP_LOADER_SUCCESS) {
+    if (loader_port_wjwwood_serial_init((const loader_wjwwood_serial_config_t*)&config) != ESP_LOADER_SUCCESS) {
         printf("Serial initialization failed.\n");
         return -1;
     }
@@ -54,8 +54,10 @@ int main(int argv, char **argc)
         printf("Loading app...\n");
         flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
         printf("Done!\n");
+        loader_port_wjwwood_serial_deinit();
     } else {
         printf("Connect failed\n");
+        loader_port_wjwwood_serial_deinit();
         return -1;
     }
 

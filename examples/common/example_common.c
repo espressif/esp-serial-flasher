@@ -41,6 +41,7 @@
 #define BOOTLOADER_ADDRESS_V1       0x0
 #define PARTITION_ADDRESS           0x8000
 #define APPLICATION_ADDRESS         0x10000
+#define MAX_BIN_HEADER_SEGMENTS     16
 
 extern const uint8_t  ESP32_bootloader_bin[];
 extern const uint32_t ESP32_bootloader_bin_size;
@@ -346,8 +347,12 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     printf("Start loading\n");
     esp_loader_error_t err;
     const esp_loader_bin_header_t *header = (const esp_loader_bin_header_t *)bin;
-    //esp_loader_bin_segment_t segments[header->segments];
-    esp_loader_bin_segment_t* segments = malloc(header->segments * sizeof(esp_loader_bin_segment_t));
+    if(header->segments > MAX_BIN_HEADER_SEGMENTS) {
+        printf("Too many segments in binary header\n");
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    esp_loader_bin_segment_t segments[MAX_BIN_HEADER_SEGMENTS];
 
     // Parse segments
     uint32_t seg;
@@ -368,7 +373,6 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
         err = esp_loader_mem_start(segments[seg].addr, segments[seg].size, ESP_RAM_BLOCK);
         if (err != ESP_LOADER_SUCCESS) {
             printf("Loading ram start with error %d.\n", err);
-            free(segments);
             return err;
         }
 
@@ -379,7 +383,6 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
             err = esp_loader_mem_write(data_pos, data_size);
             if (err != ESP_LOADER_SUCCESS) {
                 printf("\nPacket could not be written! Error %d.\n", err);
-                free(segments);
                 return err;
             }
             data_pos += data_size;
@@ -390,11 +393,9 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     err = esp_loader_mem_finish(header->entrypoint);
     if (err != ESP_LOADER_SUCCESS) {
         printf("\nLoad ram finish with Error %d.\n", err);
-        free(segments);
         return err;
     }
     printf("\nFinished loading\n");
 
-    free(segments);
     return ESP_LOADER_SUCCESS;
 }

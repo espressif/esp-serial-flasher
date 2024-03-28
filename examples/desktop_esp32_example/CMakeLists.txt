@@ -1,31 +1,11 @@
+
+cmake_minimum_required(VERSION 3.5)
+project(esp-serial-flasher)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../submodules)
+find_package(WjwwoodSerial REQUIRED)
+
 set(ESPSERIAL_PATH ${CMAKE_CURRENT_LIST_DIR}/../../)
-
-# LIB serial
-
-SET(serial_path ${ESPSERIAL_PATH}submodules/serial)
-SET(serial_SRCS ${serial_path}/src/serial.cc)
-
-if(APPLE)
-    # If OSX
-    list(APPEND serial_SRCS ${serial_path}/src/impl/unix.cc)
-    list(APPEND serial_SRCS ${serial_path}/src/impl/list_ports/list_ports_osx.cc)
-elseif(UNIX)
-    # If unix
-    list(APPEND serial_SRCS ${serial_path}/src/impl/unix.cc)
-    list(APPEND serial_SRCS ${serial_path}/src/impl/list_ports/list_ports_linux.cc)
-else()
-    # If windows
-    list(APPEND serial_SRCS ${serial_path}/src/impl/win.cc)
-    list(APPEND serial_SRCS ${serial_path}/src/impl/list_ports/list_ports_win.cc)
-endif()
-
-add_library(serial
-    ${serial_SRCS}
-)
-
-target_include_directories(serial PUBLIC
-    ${serial_path}/include
-)
 
 # LIB esp_serial
 
@@ -37,7 +17,7 @@ set_property(SOURCE ${CMAKE_BINARY_DIR}/binaries_2.c PROPERTY GENERATED 1)
 
 
 add_library(esp_serial
-    ${ESPSERIAL_PATH}port/serial_port.cpp
+    ${ESPSERIAL_PATH}port/wjwwood_serial_port.cpp
     ${ESPSERIAL_PATH}src/esp_loader.c
     ${ESPSERIAL_PATH}src/esp_targets.c
     ${ESPSERIAL_PATH}src/md5_hash.c
@@ -63,11 +43,10 @@ target_compile_definitions(esp_serial PUBLIC
     -DSERIAL_FLASHER_INTERFACE_USB
     -DMD5_ENABLED
     -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=4
+    -DSERIAL_FLASHER_DEBUG_TRACE
 )
 
-target_link_libraries(esp_serial PUBLIC
-    serial
-)
+target_link_libraries(esp_serial PUBLIC wjwwood_serial)
 
 # EXECUTABLE desktop_esp32_example
 

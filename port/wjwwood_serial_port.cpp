@@ -21,7 +21,7 @@
 #include <memory>
 #include "serial/serial.h"
 
-#include "serial_port.h"
+#include "wjwwood_serial_port.h"
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
@@ -29,9 +29,12 @@ using std::chrono::duration;
 using std::chrono::milliseconds;
 using namespace std::chrono_literals;
 
-loader_serial_config_t serial_config;
+loader_wjwwood_serial_config_t serial_config;
 std::unique_ptr<serial::Serial> serial_port;
 std::chrono::steady_clock::time_point serial_timer;
+
+// During the connection process a small delay is needed between write operations.
+static bool write_delay = true;
 
 #ifdef SERIAL_FLASHER_DEBUG_TRACE
 static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
@@ -55,7 +58,10 @@ void setTimeout(uint32_t timeout)
         return;
 
     if(!serial_port || !serial_port->isOpen())
+    {
+        loader_port_debug_print("Port not open\n");
         return;
+    }
 
     serial_port->setTimeout(serial::Timeout::simpleTimeout(timeout));
     serial_config.timeout = timeout;
@@ -63,38 +69,18 @@ void setTimeout(uint32_t timeout)
 
 esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_t timeout)
 {
-    try {
-        if(!serial_port || !serial_port->isOpen())
-            return ESP_LOADER_ERROR_FAIL;
-
-        setTimeout(timeout);
-        size_t result = serial_port->write(data, size);
-        if (result != size) {
-            return ESP_LOADER_ERROR_FAIL;
-        }
-    } catch (std::exception &e){
-        loader_port_debug_print(e.what());
+    if(!serial_port || !serial_port->isOpen())
+    {
+        loader_port_debug_print("loader_port_write: Port not open\n");
         return ESP_LOADER_ERROR_FAIL;
     }
 
-    #ifdef SERIAL_FLASHER_DEBUG_TRACE
-            transfer_debug_print(data, size, true);
-    #endif
-
-    return ESP_LOADER_SUCCESS;
-}
-
-
-esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeout)
-{
     try {
-        if(!serial_port || !serial_port->isOpen())
-            return ESP_LOADER_ERROR_FAIL;
-
         setTimeout(timeout);
-        size_t result = serial_port->read(data, size);
+        size_t result = serial_port->write(data, size);
         if (result != size) {
-            return ESP_LOADER_ERROR_FAIL;
+            loader_port_debug_print("Could not write requested data\n");
+            return ESP_LOADER_ERROR_TIMEOUT;
         }
     } catch (std::exception &e){
         loader_port_debug_print(e.what());
@@ -105,16 +91,51 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
         transfer_debug_print(data, size, true);
     #endif
 
+    if(write_delay)
+        std::this_thread::sleep_for(std::chrono::microseconds(200));
+
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t loader_port_serial_init(const loader_serial_config_t *config)
+
+esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeout)
+{
+    if(!serial_port || !serial_port->isOpen())
+    {
+        loader_port_debug_print("loader_port_read: Port not open\n");
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
+    try {
+        setTimeout(timeout);
+        size_t result = serial_port->read(data, size);
+        if (result != size) {
+            loader_port_debug_print("Could not read requested data\n");
+            return ESP_LOADER_ERROR_TIMEOUT;
+        }
+    } catch (std::exception &e){
+        loader_port_debug_print(e.what());
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
+    #ifdef SERIAL_FLASHER_DEBUG_TRACE
+        transfer_debug_print(data, size, false);
+    #endif
+
+    return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t loader_port_wjwwood_serial_init(const loader_wjwwood_serial_config_t *config)
 {
     serial_config = *config;
 
     try {
         serial_port = std::make_unique<serial::Serial>(serial_config.portName, config->baudrate, serial::Timeout::simpleTimeout(config->timeout));
+        serial_port->setRTS(false);
+        serial_port->setDTR(false);
+        serial_port->setFlowcontrol(serial::flowcontrol_hardware);
         if ( serial_port->isOpen() == false ) {
+            loader_port_debug_print("Port open failed\n");
             return ESP_LOADER_ERROR_FAIL;
         }
     } catch (std::exception &e){
@@ -125,32 +146,53 @@ esp_loader_error_t loader_port_serial_init(const loader_serial_config_t *config)
     return ESP_LOADER_SUCCESS;
 }
 
-// Set GPIO0 LOW, then
-// assert reset pin for 100 milliseconds.
+esp_loader_error_t loader_port_wjwwood_serial_deinit()
+{
+    if(!serial_port || !serial_port->isOpen())
+        return ESP_LOADER_ERROR_FAIL;
+
+    try {
+        serial_port->close();
+        serial_port.reset();
+        serial_config = {};
+    } catch (std::exception &e){
+        loader_port_debug_print(e.what());
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
 void loader_port_enter_bootloader(void)
 {
-    // todo
     loader_port_reset_target();
 }
 
-
 void loader_port_reset_target(void)
 {
-    // todo
-}
+    if(!serial_port || !serial_port->isOpen())
+    {
+        loader_port_debug_print("loader_port_reset_target: Port not open\n");
+        return;
+    }
 
+    // This might be the best we can do without GPIO
+    serial_port->setDTR(true);
+    serial_port->setRTS(true);
+    loader_port_delay_ms(50);
+    serial_port->setDTR(false);
+    serial_port->setRTS(false);
+}
 
 void loader_port_delay_ms(uint32_t ms)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-
 void loader_port_start_timer(uint32_t ms)
 {
     serial_timer = high_resolution_clock::now() + (ms * 1ms);
 }
-
 
 uint32_t loader_port_remaining_time(void)
 {
@@ -158,7 +200,6 @@ uint32_t loader_port_remaining_time(void)
     int32_t remaining = (duration_cast<milliseconds>(serial_timer - time_now)).count();
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
-
 
 void loader_port_debug_print(const char *str)
 {
@@ -168,10 +209,14 @@ void loader_port_debug_print(const char *str)
 esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
 {
     if(!serial_port || !serial_port->isOpen())
+    {
+        loader_port_debug_print("loader_port_change_transmission_rate: Port not open\n");
         return ESP_LOADER_ERROR_FAIL;
+    }
     
     try {
         serial_port->setBaudrate(baudrate);
+        write_delay = false;
     } catch (std::exception &e){
         loader_port_debug_print(e.what());
         return ESP_LOADER_ERROR_FAIL;
