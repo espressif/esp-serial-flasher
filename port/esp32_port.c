@@ -21,7 +21,7 @@
 #include "esp_idf_version.h"
 #include <unistd.h>
 
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
 static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 {
     static bool write_prev = false;
@@ -106,7 +106,7 @@ esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_
     esp_err_t err = uart_wait_tx_done(s_uart_port, pdMS_TO_TICKS(timeout));
 
     if (err == ESP_OK) {
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
         transfer_debug_print(data, size, true);
 #endif
         return ESP_LOADER_SUCCESS;
@@ -125,12 +125,12 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
     if (read < 0) {
         return ESP_LOADER_ERROR_FAIL;
     } else if (read < size) {
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
         transfer_debug_print(data, read, false);
 #endif
         return ESP_LOADER_ERROR_TIMEOUT;
     } else {
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
         transfer_debug_print(data, read, false);
 #endif
         return ESP_LOADER_SUCCESS;
