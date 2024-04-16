@@ -33,7 +33,7 @@ const uint32_t PORT = 5555;
 static int sock = 0;
 ofstream file;
 
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
 static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 {
     static bool write_prev = false;
@@ -105,7 +105,7 @@ esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_
             cout << "Socket send failed\n";
             return ESP_LOADER_ERROR_FAIL;
         }
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
         transfer_debug_print(data, bytes_written, true);
 #endif
         written += bytes_written;
@@ -125,7 +125,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
             return ESP_LOADER_ERROR_FAIL;
         }
 
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
         transfer_debug_print(data, bytes_read, false);
 #endif
 

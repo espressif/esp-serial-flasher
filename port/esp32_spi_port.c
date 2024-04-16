@@ -29,7 +29,7 @@
 
 #define WORD_ALIGNED(ptr) ((size_t)ptr % sizeof(size_t) == 0)
 
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
 static void dec_to_hex_str(const uint8_t dec, uint8_t hex_str[3])
 {
     static const uint8_t dec_to_hex[] = {
@@ -152,7 +152,7 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
     serial_debug_print(data, size, true);
 #endif
 
@@ -166,7 +166,7 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
     esp_err_t err = spi_device_transmit(s_device_h, &transaction);
 
     if (err == ESP_OK) {
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
         serial_debug_print(data, size, false);
 #endif
         return ESP_LOADER_SUCCESS;
@@ -188,7 +188,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
     serial_debug_print(data, size, true);
 #endif
 
@@ -201,7 +201,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
     esp_err_t err = spi_device_transmit(s_device_h, &transaction);
 
     if (err == ESP_OK) {
-#ifdef SERIAL_FLASHER_DEBUG_TRACE
+#if SERIAL_FLASHER_DEBUG_TRACE
         serial_debug_print(data, size, false);
 #endif
         return ESP_LOADER_SUCCESS;
