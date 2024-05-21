@@ -16,22 +16,11 @@
 #include "protocol.h"
 #include "esp_loader_io.h"
 #include "esp_loader.h"
+#include "esp_stubs.h"
 #include "esp_targets.h"
 #include "md5_hash.h"
 #include <string.h>
 #include <assert.h>
-
-#ifndef MAX
-#define MAX(a, b) ((a) > (b)) ? (a) : (b)
-#endif
-
-#ifndef MIN
-#define MIN(a, b) ((a) < (b)) ? (a) : (b)
-#endif
-
-#ifndef ROUNDUP
-#define ROUNDUP(a, b) (((int)a + (int)b - 1) / (int)b)
-#endif
 
 static const uint32_t DEFAULT_TIMEOUT = 1000;
 static const uint32_t DEFAULT_FLASH_TIMEOUT = 3000;
@@ -86,16 +75,14 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
     RETURN_ON_ERROR(loader_detect_chip(&s_target, &s_reg));
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
-    esp_loader_error_t err;
-    uint32_t spi_config;
     if (s_target == ESP8266_CHIP) {
-        err = loader_flash_begin_cmd(0, 0, 0, 0, s_target);
+        return loader_flash_begin_cmd(0, 0, 0, 0, s_target);
     } else {
+        uint32_t spi_config;
         RETURN_ON_ERROR( loader_read_spi_config(s_target, &spi_config) );
         loader_port_start_timer(DEFAULT_TIMEOUT);
-        err = loader_spi_attach_cmd(spi_config);
+        return loader_spi_attach_cmd(spi_config);
     }
-    return err;
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
     return ESP_LOADER_SUCCESS;
 }
@@ -342,10 +329,56 @@ esp_loader_error_t esp_loader_flash_finish(bool reboot)
 
     return loader_flash_end_cmd(!reboot);
 }
+
+esp_loader_error_t esp_loader_connect_to_stub(esp_loader_connect_args_t *connect_args)
+{
+    loader_port_enter_bootloader();
+
+    RETURN_ON_ERROR(loader_initialize_conn(connect_args));
+
+    RETURN_ON_ERROR(loader_detect_chip(&s_target, &s_reg));
+
+    RETURN_ON_ERROR(loader_run_stub(s_target));
+
+    if (s_target == ESP8266_CHIP) {
+        return loader_flash_begin_cmd(0, 0, 0, 0, s_target);
+    } else {
+        return ESP_LOADER_SUCCESS;
+    }
+}
+
+esp_loader_error_t esp_loader_change_transmission_rate_stub(uint32_t new_transmission_rate, uint32_t old_transmission_rate)
+{
+    if (s_target == ESP8266_CHIP || !esp_stub_running) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    }
+
+    loader_port_start_timer(DEFAULT_TIMEOUT);
+
+    return loader_change_baudrate_cmd(new_transmission_rate, old_transmission_rate);
+}
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 esp_loader_error_t esp_loader_mem_start(uint32_t offset, uint32_t size, uint32_t block_size)
 {
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+    if (esp_stub_running) {
+        const esp_stub_t *stub = &esp_stub[s_target];
+
+        // check we're not going to overwrite a running stub with this data
+        const uint32_t load_start = offset;
+        const uint32_t load_end = offset + size;
+        for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+            const uint32_t stub_start = stub->segments[seg].addr;
+            const uint32_t stub_end = stub->segments[seg].addr + stub->segments[seg].size;
+            if (load_start < stub_end && load_end > stub_start) {
+                loader_port_debug_print("Software loader is resident at the requested address, can't load binary at overlapping address range");
+                return ESP_LOADER_ERROR_INVALID_PARAM;
+            }
+        }
+    }
+#endif
+
     uint32_t blocks_to_write = ROUNDUP(size, block_size);
     loader_port_start_timer(timeout_per_mb(size, LOAD_RAM_TIMEOUT_PER_MB));
     return loader_mem_begin_cmd(offset, size, blocks_to_write, block_size);
@@ -401,13 +434,13 @@ esp_loader_error_t esp_loader_write_register(uint32_t address, uint32_t reg_valu
 
 esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rate)
 {
-    if (s_target == ESP8266_CHIP) {
+    if (s_target == ESP8266_CHIP || esp_stub_running) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
     loader_port_start_timer(DEFAULT_TIMEOUT);
 
-    return loader_change_baudrate_cmd(transmission_rate);
+    return loader_change_baudrate_cmd(transmission_rate, 0);
 }
 
 #if MD5_ENABLED
@@ -466,5 +499,6 @@ esp_loader_error_t esp_loader_flash_verify(void)
 
 void esp_loader_reset_target(void)
 {
+    esp_stub_running = false;
     loader_port_reset_target();
 }
