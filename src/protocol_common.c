@@ -59,11 +59,6 @@ esp_loader_error_t loader_flash_begin_cmd(uint32_t offset,
         uint32_t blocks_to_write,
         bool encryption)
 {
-    // stub does not support encryption
-    if (esp_stub_running) {
-        encryption = false;
-    }
-
     flash_begin_command_t flash_begin_cmd = {
         .common = {
             .direction = WRITE_DIRECTION,
@@ -154,7 +149,7 @@ esp_loader_error_t loader_spi_attach_cmd(uint32_t config)
         .zero = 0
     };
 
-    return send_cmd(&attach_cmd, esp_stub_running ? sizeof(attach_cmd) - sizeof(attach_cmd.zero) : sizeof(attach_cmd), NULL);
+    return send_cmd(&attach_cmd, esp_stub_get_running() ? sizeof(attach_cmd) - sizeof(attach_cmd.zero) : sizeof(attach_cmd), NULL);
 }
 
 

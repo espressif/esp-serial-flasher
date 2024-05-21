@@ -5,6 +5,7 @@ add_executable( ${PROJECT_NAME}
 	test_main.cpp
 	../src/esp_loader.c
 	../src/esp_targets.c
+	../src/esp_stubs.c
 	../src/md5_hash.c
 	../src/protocol_common.c
 	../src/protocol_uart.c

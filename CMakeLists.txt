@@ -144,6 +144,15 @@ endif()
 
 target_compile_definitions(${target} PUBLIC ${defs})
 
-# esp_stubs.[ch] codegen
-include(cmake/add_gen_esp_stubs_target.cmake)
-add_gen_esp_stubs_target(VERSION 4.7.0)
+# This segment pulls the flasher stubs at a specified version at wish, and generates the
+# esp_stubs.c/h files, overwriting the library provided ones.
+# It is also possible to override stub generation to use a custom url or a local folder.
+# Please check if the license under which the custom stub sources are released fits your usecase.
+if (DEFINED SERIAL_FLASHER_STUB_PULL_VERSION OR DEFINED SERIAL_FLASHER_STUB_PULL_OVERRIDE_PATH)
+    include(cmake/serial_flasher_pull_stubs.cmake)
+    serial_flasher_pull_stubs(
+        VERSION ${SERIAL_FLASHER_STUB_PULL_VERSION}
+        SOURCE ${SERIAL_FLASHER_STUB_PULL_SOURCE}
+        PATH_OVERRIDE ${SERIAL_FLASHER_STUB_PULL_OVERRIDE_PATH}
+    )
+endif()

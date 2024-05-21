@@ -1,4 +1,4 @@
-/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-{current_year} Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// auto-generated stubs from esp-flasher-stub v0.3.0
+// auto-generated stubs from esp-flasher-stub v{stub_version}
 
 #pragma once
 
@@ -22,7 +22,7 @@
 #include "esp_loader.h"
 
 #ifdef __cplusplus
-extern "C" {
+extern "C" {{
 #endif
 
 bool esp_stub_get_running(void);
@@ -30,15 +30,15 @@ void esp_stub_set_running(bool stub_status);
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 
-typedef struct {
+typedef struct {{
     esp_loader_bin_header_t header;
     esp_loader_bin_segment_t segments[2];
-} esp_stub_t;
+}} esp_stub_t;
 
 extern const esp_stub_t esp_stub[ESP_MAX_CHIP];
 
 #endif
 
 #ifdef __cplusplus
-}
+}}
 #endif

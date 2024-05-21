@@ -83,7 +83,7 @@ esp_loader_error_t loader_run_stub(target_chip_t target)
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
-    esp_stub_running = true;
+    esp_stub_set_running(true);
 
     return ESP_LOADER_SUCCESS;
 }
@@ -102,6 +102,9 @@ esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_v
     for (uint8_t recv_cnt = 0; recv_cnt < response_cnt; recv_cnt++) {
         RETURN_ON_ERROR(check_response(command, reg_value, &response, sizeof(response)));
     }
+
+    // This delay is added to give time to the ROM or the stub to prepare for the next command.
+    loader_port_delay_ms(1);
 
     return ESP_LOADER_SUCCESS;
 }

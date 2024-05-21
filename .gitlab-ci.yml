@@ -36,6 +36,8 @@ variables:
     - cd $CI_PROJECT_DIR/examples/esp32_example
     - idf.py build -DMD5_ENABLED=1
     - idf.py build -DMD5_ENABLED=0
+    - cd $CI_PROJECT_DIR/examples/esp32_stub_example
+    - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_load_ram_example
     - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
@@ -55,6 +57,16 @@ run_pre_commit:
     - pip install pre-commit
     - pre-commit run --show-diff-on-failure --from-ref origin/master --to-ref HEAD
 
+check_stub_source_correctness:
+  stage: pre_check
+  image: espressif/idf:latest
+  tags:
+    - internet
+  script:
+    - cd $CI_PROJECT_DIR/examples/esp32_stub_example
+    - idf.py reconfigure -DSERIAL_FLASHER_STUB_PULL_VERSION='0.3.0'
+    - git diff --exit-code
+
 # Special case as ESP-IDF v4.3 is not supported by the usb_host_cdc_acm component
 # required by the USB CDC ACM interface port and its example
 build_idf_v4.3:
@@ -71,6 +83,8 @@ build_idf_v4.3:
     - cd $CI_PROJECT_DIR/examples/esp32_example
     - idf.py build -DMD5_ENABLED=1
     - idf.py build -DMD5_ENABLED=0
+    - cd $CI_PROJECT_DIR/examples/esp32_stub_example
+    - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_load_ram_example
     - idf.py build
     - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example

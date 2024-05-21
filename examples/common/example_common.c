@@ -277,6 +277,41 @@ esp_loader_error_t connect_to_target(uint32_t higher_transmission_rate)
 }
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+esp_loader_error_t connect_to_target_with_stub(const uint32_t current_transmission_rate,
+        const uint32_t higher_transmission_rate)
+{
+    esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+
+    esp_loader_error_t err = esp_loader_connect_with_stub(&connect_config);
+    if (err != ESP_LOADER_SUCCESS) {
+        printf("Cannot connect to target. Error: %u\n", err);
+        return err;
+    }
+    printf("Connected to target\n");
+
+    if (higher_transmission_rate != current_transmission_rate) {
+        err = esp_loader_change_transmission_rate_stub(current_transmission_rate,
+                higher_transmission_rate);
+
+        if (err == ESP_LOADER_ERROR_UNSUPPORTED_FUNC) {
+            printf("ESP8266 does not support change transmission rate command.");
+            return err;
+        } else if (err != ESP_LOADER_SUCCESS) {
+            printf("Unable to change transmission rate on target.");
+            return err;
+        } else {
+            err = loader_port_change_transmission_rate(higher_transmission_rate);
+            if (err != ESP_LOADER_SUCCESS) {
+                printf("Unable to change transmission rate.");
+                return err;
+            }
+            printf("Transmission rate changed changed\n");
+        }
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
 esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 {
     esp_loader_error_t err;
