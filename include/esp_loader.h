@@ -184,6 +184,35 @@ esp_loader_error_t esp_loader_flash_finish(bool reboot);
   *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP The target flash chip is not known
   */
 esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size);
+
+/**
+  * @brief Connects to the stub running on the target
+  *
+  * @param connect_args[in] Timing parameters to be used for connecting to target.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  */
+esp_loader_error_t esp_loader_connect_to_stub(esp_loader_connect_args_t *connect_args);
+
+/**
+  * @brief Change baud rate of the stub running on the target
+  *
+  * @note  Baud rate has to be also adjusted accordingly on host MCU, as
+  *        target's baud rate is changed upon return from this function.
+  *
+  * @param new_transmission_rate[in]     new baud rate to be set.
+  * @param old_transmission_rate[in]     old baud rate to be replaced.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
+  */
+esp_loader_error_t esp_loader_change_transmission_rate_stub(uint32_t new_transmission_rate, uint32_t old_transmission_rate);
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 

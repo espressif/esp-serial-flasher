@@ -46,6 +46,7 @@ endif()
 
 if (DEFINED SERIAL_FLASHER_INTERFACE_UART OR CONFIG_SERIAL_FLASHER_INTERFACE_UART STREQUAL "y")
     list(APPEND srcs
+        src/esp_stubs.c
         src/protocol_uart.c
         src/slip.c
     )
@@ -58,6 +59,7 @@ if (DEFINED SERIAL_FLASHER_INTERFACE_UART OR CONFIG_SERIAL_FLASHER_INTERFACE_UAR
 
 elseif(DEFINED SERIAL_FLASHER_INTERFACE_USB OR CONFIG_SERIAL_FLASHER_INTERFACE_USB STREQUAL "y")
     list(APPEND srcs
+        src/esp_stubs.c
         src/protocol_uart.c
         src/slip.c
     )
@@ -141,3 +143,7 @@ else()
 endif()
 
 target_compile_definitions(${target} PUBLIC ${defs})
+
+# esp_stubs.[ch] codegen
+include(cmake/add_gen_esp_stubs_target.cmake)
+add_gen_esp_stubs_target(VERSION 4.7.0)

@@ -16,6 +16,7 @@
 #include "protocol.h"
 #include "protocol_prv.h"
 #include "esp_loader_io.h"
+#include "esp_stubs.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -52,13 +53,17 @@ void log_loader_internal_error(error_code_t error)
     loader_port_debug_print("\n");
 }
 
-
 esp_loader_error_t loader_flash_begin_cmd(uint32_t offset,
         uint32_t erase_size,
         uint32_t block_size,
         uint32_t blocks_to_write,
         bool encryption)
 {
+    // stub does not support encryption
+    if (esp_stub_running) {
+        encryption = false;
+    }
+
     flash_begin_command_t flash_begin_cmd = {
         .common = {
             .direction = WRITE_DIRECTION,
@@ -114,6 +119,85 @@ esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader)
 }
 
 
+esp_loader_error_t loader_sync_cmd(void)
+{
+    sync_command_t sync_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = SYNC,
+            .size = CMD_SIZE(sync_cmd),
+            .checksum = 0
+        },
+        .sync_sequence = {
+            0x07, 0x07, 0x12, 0x20,
+            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+        }
+    };
+
+    return send_cmd(&sync_cmd, sizeof(sync_cmd), NULL);
+}
+
+
+esp_loader_error_t loader_spi_attach_cmd(uint32_t config)
+{
+    spi_attach_command_t attach_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = SPI_ATTACH,
+            .size = CMD_SIZE(attach_cmd),
+            .checksum = 0
+        },
+        .configuration = config,
+        .zero = 0
+    };
+
+    return send_cmd(&attach_cmd, esp_stub_running ? sizeof(attach_cmd) - sizeof(attach_cmd.zero) : sizeof(attach_cmd), NULL);
+}
+
+
+esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out)
+{
+    spi_flash_md5_command_t md5_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = SPI_FLASH_MD5,
+            .size = CMD_SIZE(md5_cmd),
+            .checksum = 0
+        },
+        .address = address,
+        .size = size,
+        .reserved_0 = 0,
+        .reserved_1 = 0
+    };
+
+    return send_cmd_md5(&md5_cmd, sizeof(md5_cmd), md5_out);
+}
+
+
+esp_loader_error_t loader_spi_parameters(uint32_t total_size)
+{
+    write_spi_command_t spi_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = SPI_SET_PARAMS,
+            .size = 24,
+            .checksum = 0
+        },
+        .id = 0,
+        .total_size = total_size,
+        .block_size = 64 * 1024,
+        .sector_size = 4 * 1024,
+        .page_size = 0x100,
+        .status_mask = 0xFFFF,
+    };
+
+    return send_cmd(&spi_cmd, sizeof(spi_cmd), NULL);
+}
+
+
 esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t blocks_to_write, uint32_t block_size)
 {
 
@@ -151,6 +235,7 @@ esp_loader_error_t loader_mem_data_cmd(const uint8_t *data, uint32_t size)
     return send_cmd_with_data(&data_cmd, sizeof(data_cmd), data, size);
 }
 
+
 esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint)
 {
     mem_end_command_t end_cmd = {
@@ -164,28 +249,6 @@ esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint)
     };
 
     return send_cmd(&end_cmd, sizeof(end_cmd), NULL);
-}
-
-
-esp_loader_error_t loader_sync_cmd(void)
-{
-    sync_command_t sync_cmd = {
-        .common = {
-            .direction = WRITE_DIRECTION,
-            .command = SYNC,
-            .size = CMD_SIZE(sync_cmd),
-            .checksum = 0
-        },
-        .sync_sequence = {
-            0x07, 0x07, 0x12, 0x20,
-            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
-        }
-    };
-
-    return send_cmd(&sync_cmd, sizeof(sync_cmd), NULL);
 }
 
 
@@ -225,23 +288,7 @@ esp_loader_error_t loader_read_reg_cmd(uint32_t address, uint32_t *reg)
 }
 
 
-esp_loader_error_t loader_spi_attach_cmd(uint32_t config)
-{
-    spi_attach_command_t attach_cmd = {
-        .common = {
-            .direction = WRITE_DIRECTION,
-            .command = SPI_ATTACH,
-            .size = CMD_SIZE(attach_cmd),
-            .checksum = 0
-        },
-        .configuration = config,
-        .zero = 0
-    };
-
-    return send_cmd(&attach_cmd, sizeof(attach_cmd), NULL);
-}
-
-esp_loader_error_t loader_change_baudrate_cmd(uint32_t baudrate)
+esp_loader_error_t loader_change_baudrate_cmd(uint32_t new_baudrate, uint32_t old_baudrate)
 {
     change_baudrate_command_t baudrate_cmd = {
         .common = {
@@ -250,50 +297,13 @@ esp_loader_error_t loader_change_baudrate_cmd(uint32_t baudrate)
             .size = CMD_SIZE(baudrate_cmd),
             .checksum = 0
         },
-        .new_baudrate = baudrate,
-        .old_baudrate = 0 // ESP32 ROM only
+        .new_baudrate = new_baudrate,
+        .old_baudrate = old_baudrate
     };
 
     return send_cmd(&baudrate_cmd, sizeof(baudrate_cmd), NULL);
 }
 
-esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out)
-{
-    spi_flash_md5_command_t md5_cmd = {
-        .common = {
-            .direction = WRITE_DIRECTION,
-            .command = SPI_FLASH_MD5,
-            .size = CMD_SIZE(md5_cmd),
-            .checksum = 0
-        },
-        .address = address,
-        .size = size,
-        .reserved_0 = 0,
-        .reserved_1 = 0
-    };
-
-    return send_cmd_md5(&md5_cmd, sizeof(md5_cmd), md5_out);
-}
-
-esp_loader_error_t loader_spi_parameters(uint32_t total_size)
-{
-    write_spi_command_t spi_cmd = {
-        .common = {
-            .direction = WRITE_DIRECTION,
-            .command = SPI_SET_PARAMS,
-            .size = 24,
-            .checksum = 0
-        },
-        .id = 0,
-        .total_size = total_size,
-        .block_size = 64 * 1024,
-        .sector_size = 4 * 1024,
-        .page_size = 0x100,
-        .status_mask = 0xFFFF,
-    };
-
-    return send_cmd(&spi_cmd, sizeof(spi_cmd), NULL);
-}
 
 __attribute__ ((weak)) void loader_port_debug_print(const char *str)
 {
