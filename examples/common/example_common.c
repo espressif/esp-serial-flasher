@@ -268,7 +268,7 @@ esp_loader_error_t connect_to_target(uint32_t higher_transmission_rate)
                 printf("Unable to change transmission rate.");
                 return err;
             }
-            printf("Transmission rate changed changed\n");
+            printf("Transmission rate changed.\n");
         }
     }
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
