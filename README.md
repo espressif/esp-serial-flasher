@@ -9,7 +9,7 @@ Supported **host** microcontrollers:
 
 - STM32
 - Raspberry Pi SBC
-- ESP32
+- ESP32 Series
 - Any MCU running Zephyr OS
 
 Supported **target** microcontrollers:
@@ -28,7 +28,7 @@ Supported hardware interfaces:
 - SPI (only for RAM download)
 - USB CDC ACM (experimental)
 
-For example usage check the `examples` directory.
+For example usage check the [examples](/examples) directory.
 
 ## Configuration
 
@@ -71,6 +71,11 @@ Configuration can be passed to `cmake` via command line:
 cmake -DMD5_ENABLED=1 .. && cmake --build .
 ```
 
+### ESP support
+
+#### Supported ESP-IDF versions
+- v4.3 or later
+
 ### STM32 support
 
 The STM32 port makes use of STM32 HAL libraries, and these do not come with CMake support. In order to compile the project, `stm32-cmake` (a `CMake` support package) has to be pulled as submodule.
@@ -85,7 +90,7 @@ If you have cloned this repository without the `--recursive` flag, you can initi
 git submodule update --init
 ```
 
-In addition to configuration parameters mentioned above, following definitions has to be set:
+In addition to the configuration parameters mentioned above, the following definitions have to be set:
 
 - STM32_TOOLCHAIN_PATH: path to arm toolchain (i.e /home/user/gcc-arm-none-eabi-9-2019-q4-major)
 - STM32_CUBE_<CHIP_FAMILY>_PATH: path to STM32 Cube libraries (i.e /home/user/STM32Cube/Repository/STM32Cube_FW_F4_V1.25.0)
