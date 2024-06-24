@@ -81,7 +81,8 @@ static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value);
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args)
 {
     for (uint8_t trial = 0; trial < connect_args->trials; trial++) {
-        uint8_t slave_ready_flag;
+        /* The alignment requirement comes from the esp port DMA requirements */
+        uint8_t slave_ready_flag __attribute__((aligned(4)));
         RETURN_ON_ERROR(read_slave_reg(&slave_ready_flag, SLAVE_REGISTER_CMD,
                                        sizeof(slave_ready_flag)));
 
@@ -97,7 +98,7 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
     RETURN_ON_ERROR(write_slave_reg(&reg_val, SLAVE_REGISTER_CMD, sizeof(reg_val)));
 
     for (uint8_t trial = 0; trial < connect_args->trials; trial++) {
-        uint8_t slave_ready_flag;
+        uint8_t slave_ready_flag __attribute__((aligned(4)));
         RETURN_ON_ERROR(read_slave_reg(&slave_ready_flag, SLAVE_REGISTER_CMD,
                                        sizeof(slave_ready_flag)));
 
@@ -262,7 +263,7 @@ static esp_loader_error_t handle_slave_state(const uint32_t status_reg_addr, uin
 
 static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value)
 {
-    response_t resp;
+    response_t resp  __attribute__((aligned(4)));
 
     uint32_t buf_size;
     bool slave_ready = false;
