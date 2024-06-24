@@ -2,7 +2,6 @@
 
 `esp-serial-flasher` is a portable C library for flashing or loading apps to RAM of Espressif SoCs from other host microcontrollers.
 
-## Using the library
 `esp-serial-flasher` supports a variety of host/target/interface combinations:
 
 Supported **host** microcontrollers:
