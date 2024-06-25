@@ -146,9 +146,7 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
 {
     (void) timeout;
 
-    /* Due to the fact that the SPI driver uses DMA for larger transfers,
-       and the DMA requirements, the buffer must be word aligned */
-    if (data == NULL || !WORD_ALIGNED(data)) {
+    if (data == NULL) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
@@ -182,8 +180,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
 {
     (void) timeout;
 
-    /* Due to the fact that the SPI driver uses DMA for larger transfers,
-       and the DMA requirements, the buffer must be word aligned */
+    /* The rx data buffer must be aligned to 32 bits due to DMA requirements */
     if (data == NULL || !WORD_ALIGNED(data)) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
