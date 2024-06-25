@@ -150,10 +150,6 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-    serial_debug_print(data, size, true);
-#endif
-
     spi_transaction_t transaction = {
         .tx_buffer = data,
         .rx_buffer = NULL,
@@ -165,7 +161,7 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
 
     if (err == ESP_OK) {
 #if SERIAL_FLASHER_DEBUG_TRACE
-        serial_debug_print(data, size, false);
+        serial_debug_print(data, size, true);
 #endif
         return ESP_LOADER_SUCCESS;
     } else if (err == ESP_ERR_TIMEOUT) {
@@ -184,10 +180,6 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
     if (data == NULL || !WORD_ALIGNED(data)) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-    serial_debug_print(data, size, true);
-#endif
 
     spi_transaction_t transaction = {
         .tx_buffer = NULL,
