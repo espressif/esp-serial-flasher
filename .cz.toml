@@ -1,5 +1,5 @@
 [tool.commitizen]
-version = "1.3.0"
+version = "1.3.1"
 update_changelog_on_bump = true
 version_scheme = "semver"
 tag_format = "v$version"

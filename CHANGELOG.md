@@ -1,3 +1,11 @@
+## v1.3.1 (2024-06-26)
+
+### Bug Fixes
+
+- Fix ESP SPI port duplicate tracing
+- SPI interface/esp port alignment requirements fix
+- Upload to RAM examples monitor task priority fix
+
 ## v1.3.0 (2024-03-22)
 
 ### New Features
