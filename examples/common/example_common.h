@@ -59,5 +59,7 @@ typedef struct example_bin_segment {
 void get_example_binaries(target_chip_t target, example_binaries_t *binaries);
 void get_example_ram_app_binary(target_chip_t target, example_ram_app_binary_t *bin);
 esp_loader_error_t connect_to_target(uint32_t higher_transmission_rate);
+esp_loader_error_t connect_to_target_with_stub(uint32_t current_transmission_rate,
+        uint32_t higher_transmission_rate);
 esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address);
 esp_loader_error_t load_ram_binary(const uint8_t *bin);

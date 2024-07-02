@@ -46,6 +46,7 @@ endif()
 
 if (DEFINED SERIAL_FLASHER_INTERFACE_UART OR CONFIG_SERIAL_FLASHER_INTERFACE_UART STREQUAL "y")
     list(APPEND srcs
+        src/esp_stubs.c
         src/protocol_uart.c
         src/slip.c
     )
@@ -58,6 +59,7 @@ if (DEFINED SERIAL_FLASHER_INTERFACE_UART OR CONFIG_SERIAL_FLASHER_INTERFACE_UAR
 
 elseif(DEFINED SERIAL_FLASHER_INTERFACE_USB OR CONFIG_SERIAL_FLASHER_INTERFACE_USB STREQUAL "y")
     list(APPEND srcs
+        src/esp_stubs.c
         src/protocol_uart.c
         src/slip.c
     )
@@ -141,3 +143,16 @@ else()
 endif()
 
 target_compile_definitions(${target} PUBLIC ${defs})
+
+# This segment pulls the flasher stubs at a specified version at wish, and generates the
+# esp_stubs.c/h files, overwriting the library provided ones.
+# It is also possible to override stub generation to use a custom url or a local folder.
+# Please check if the license under which the custom stub sources are released fits your usecase.
+if (DEFINED SERIAL_FLASHER_STUB_PULL_VERSION OR DEFINED SERIAL_FLASHER_STUB_PULL_OVERRIDE_PATH)
+    include(cmake/serial_flasher_pull_stubs.cmake)
+    serial_flasher_pull_stubs(
+        VERSION ${SERIAL_FLASHER_STUB_PULL_VERSION}
+        SOURCE ${SERIAL_FLASHER_STUB_PULL_SOURCE}
+        PATH_OVERRIDE ${SERIAL_FLASHER_STUB_PULL_OVERRIDE_PATH}
+    )
+endif()

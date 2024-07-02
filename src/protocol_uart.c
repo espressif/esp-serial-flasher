@@ -16,6 +16,7 @@
 #include "protocol.h"
 #include "protocol_prv.h"
 #include "esp_loader_io.h"
+#include "esp_stubs.h"
 #include "slip.h"
 #include <stddef.h>
 #include <string.h>
@@ -43,6 +44,50 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
     return err;
 }
 
+esp_loader_error_t loader_run_stub(target_chip_t target)
+{
+    esp_loader_error_t err;
+    const esp_stub_t *stub = &esp_stub[target];
+
+    // Download segments
+    for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+        err = esp_loader_mem_start(stub->segments[seg].addr, stub->segments[seg].size, ESP_RAM_BLOCK);
+        if (err != ESP_LOADER_SUCCESS) {
+            return err;
+        }
+
+        size_t remain_size = stub->segments[seg].size;
+        uint8_t *data_pos = stub->segments[seg].data;
+        while (remain_size > 0) {
+            size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
+            err = esp_loader_mem_write(data_pos, data_size);
+            if (err != ESP_LOADER_SUCCESS) {
+                return err;
+            }
+            data_pos += data_size;
+            remain_size -= data_size;
+        }
+    }
+
+    err = esp_loader_mem_finish(stub->header.entrypoint);
+    if (err != ESP_LOADER_SUCCESS) {
+        return err;
+    }
+
+    // stub loader sends a custom SLIP packet of the sequence OHAI
+    uint8_t buff[4];
+    err = SLIP_receive_packet(buff, sizeof(buff) / sizeof(buff[0]));
+    if (err != ESP_LOADER_SUCCESS) {
+        return err;
+    } else if (memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    esp_stub_set_running(true);
+
+    return ESP_LOADER_SUCCESS;
+}
+
 esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_value)
 {
     response_t response;
@@ -57,6 +102,9 @@ esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_v
     for (uint8_t recv_cnt = 0; recv_cnt < response_cnt; recv_cnt++) {
         RETURN_ON_ERROR(check_response(command, reg_value, &response, sizeof(response)));
     }
+
+    // This delay is added to give time to the ROM or the stub to prepare for the next command.
+    loader_port_delay_ms(1);
 
     return ESP_LOADER_SUCCESS;
 }
