@@ -1,3 +1,13 @@
+## v1.4.0 (2024-07-02)
+
+### New Features
+
+- Add stub-support
+
+### Bug Fixes
+
+- Fix MD5 option handling
+
 ## v1.3.1 (2024-06-26)
 
 ### Bug Fixes
