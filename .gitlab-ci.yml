@@ -55,11 +55,12 @@ run_pre_commit:
   script:
     - apt-get update
     - pip install pre-commit
+    - git fetch origin master
     - pre-commit run --show-diff-on-failure --from-ref origin/master --to-ref HEAD
 
 check_stub_source_correctness:
   stage: pre_check
-  image: espressif/idf:latest
+  image: espressif/idf:v5.2.2
   tags:
     - internet
   script:
