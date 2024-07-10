@@ -2,24 +2,24 @@
 
 ## Overview
 
-This sample code demonstrates how to flash an Espressif SoC from another (host) MCU using
-esp_serial_flash component API. In this case, the ESP32 is used as host MCU.
-Binaries to be flashed from host MCU to another Espressif SoC can be found in `binaries` folder
+This sample code demonstrates how to flash an Espressif SoC (target) from another MCU (host) using
+`esp_serial_flasher`. In this case, the ESP32 is used as the host MCU.
+Binaries to be flashed from the host MCU to another Espressif SoC can be found in [binaries](../binaries/) folder
 and are converted into C-array during build process.
 
-Following steps are performed in order to re-program target's memory:
+The following steps are performed in order to re-program targets memory:
 
 1. Peripherals are initialized (GPIO for BOOT and EN pins and UART).
 2. UART1 (can be changed) through which new binary will be transfered is initialized.
-3. Host puts target device into boot mode tries to connect by calling `esp_loader_connect()`.
-4. Binary file is opened and its size is acquired, as it has to be known before flashing.
-5. Then `esp_loader_flash_start()` is called to enter flashing mode and erase amount of memory to be flashed.
+3. The host puts the target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
+4. The binary file is opened and its size is acquired, as it has to be known before flashing.
+5. Then `esp_loader_flash_start()` is called to enter the flashing mode and erase amount of memory to be flashed.
 6. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
 
-Note: In addition, to steps mentioned above, `esp_loader_change_transmission_rate`  is called after connection
-is established in order to increase flashing speed. This does not apply for ESP8266, as its bootloader
-does not support this command. However, ESP8266 is capable of detecting baud rate during connection
-phase, and can be changed before calling `esp_loader_connect`, if necessary.
+Note: In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection
+is established in order to increase the flashing speed. This does not apply for ESP8266, as its bootloader
+does not support this command. However, ESP8266 is capable of detecting the baud rate during connection
+phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
 ## Hardware Required
 
@@ -60,7 +60,7 @@ For more information, check [Zephyr's Getting Started](https://docs.zephyrprojec
 For details about available configuration option, please refer to top level [README.md](../../README.md).
 Compile definitions can be specified in `prj.conf` file.
 
-Binaries to be flashed are placed in separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
+Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
 
 ## Example output
 
