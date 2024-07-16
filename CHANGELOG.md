@@ -1,3 +1,10 @@
+## v1.4.1 (2024-07-16)
+
+### Bug Fixes
+
+- Add correct MD5 calculation with stub enabled
+- Remove duplicate word in logging
+
 ## v1.4.0 (2024-07-02)
 
 ### New Features
