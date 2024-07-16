@@ -462,37 +462,40 @@ static void hexify(const uint8_t raw_md5[16], uint8_t hex_md5_out[32])
     }
 }
 
-
 esp_loader_error_t esp_loader_flash_verify(void)
 {
     if (s_target == ESP8266_CHIP && !esp_stub_get_running()) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
+    /* Zero termination require 1 byte */
+    uint8_t received_md5[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
+    uint8_t calculated_md5[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
+
     uint8_t raw_md5[16] = {0};
-
-    /* Zero termination and new line character require 2 bytes */
-    uint8_t hex_md5[MD5_SIZE + 2] = {0};
-    uint8_t received_md5[MD5_SIZE + 2] = {0};
-
     md5_final(raw_md5);
-    hexify(raw_md5, hex_md5);
 
     loader_port_start_timer(timeout_per_mb(s_image_size, MD5_TIMEOUT_PER_MB));
 
     RETURN_ON_ERROR( loader_md5_cmd(s_start_address, s_image_size, received_md5) );
 
-    bool md5_match = memcmp(hex_md5, received_md5, MD5_SIZE) == 0;
+    bool md5_match;
+    if (esp_stub_get_running()) {
+        md5_match = memcmp(raw_md5, received_md5, MD5_SIZE_STUB) == 0;
+        memcpy(calculated_md5, raw_md5, MD5_SIZE_STUB);
+    } else {
+        hexify(raw_md5, calculated_md5);
+        md5_match = memcmp(calculated_md5, received_md5, MD5_SIZE_ROM) == 0;
+    }
 
     if (!md5_match) {
-        hex_md5[MD5_SIZE] = '\n';
-        received_md5[MD5_SIZE] = '\n';
-
         loader_port_debug_print("Error: MD5 checksum does not match:\n");
         loader_port_debug_print("Expected:\n");
         loader_port_debug_print((char *)received_md5);
+        loader_port_debug_print("\n");
         loader_port_debug_print("Actual:\n");
-        loader_port_debug_print((char *)hex_md5);
+        loader_port_debug_print((char *)calculated_md5);
+        loader_port_debug_print("\n");
 
         return ESP_LOADER_ERROR_INVALID_MD5;
     }

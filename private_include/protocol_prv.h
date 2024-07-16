@@ -28,4 +28,4 @@ esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_v
 esp_loader_error_t send_cmd_with_data(const void *cmd_data, size_t cmd_size,
                                       const void *data, size_t data_size);
 
-esp_loader_error_t send_cmd_md5(const void *cmd_data, size_t cmd_size, uint8_t md5_out[MD5_SIZE]);
+esp_loader_error_t send_cmd_md5(const void *cmd_data, size_t cmd_size, uint8_t *md5_out);

@@ -125,22 +125,25 @@ esp_loader_error_t send_cmd_with_data(const void *cmd_data, size_t cmd_size,
 }
 
 
-esp_loader_error_t send_cmd_md5(const void *cmd_data, size_t cmd_size, uint8_t md5_out[MD5_SIZE])
+esp_loader_error_t send_cmd_md5(const void *cmd_data, size_t cmd_size, uint8_t *md5_out)
 {
-    rom_md5_response_t response;
     command_t command = ((const command_common_t *)cmd_data)->command;
 
     RETURN_ON_ERROR( SLIP_send_delimiter() );
     RETURN_ON_ERROR( SLIP_send((const uint8_t *)cmd_data, cmd_size) );
     RETURN_ON_ERROR( SLIP_send_delimiter() );
 
-    RETURN_ON_ERROR( check_response(command, NULL, &response, sizeof(response)) );
-
-    memcpy(md5_out, response.md5, MD5_SIZE);
-
+    if (esp_stub_get_running()) {
+        stub_md5_response_t response;
+        RETURN_ON_ERROR( check_response(command, NULL, &response, sizeof(response)) );
+        memcpy(md5_out, response.md5, MD5_SIZE_STUB);
+    } else {
+        rom_md5_response_t response;
+        RETURN_ON_ERROR( check_response(command, NULL, &response, sizeof(response)) );
+        memcpy(md5_out, response.md5, MD5_SIZE_ROM);
+    }
     return ESP_LOADER_SUCCESS;
 }
-
 
 static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void *resp, uint32_t resp_size)
 {

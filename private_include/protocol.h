@@ -29,17 +29,18 @@ extern "C" {
 #define READ_DIRECTION  1
 #define WRITE_DIRECTION 0
 
-#define MD5_SIZE 32
+#define MD5_SIZE_ROM  32
+#define MD5_SIZE_STUB 16
 
 // Maximum block sized for RAM and Flash writes, respectively.
 #define ESP_RAM_BLOCK 0x1800
 
 #ifndef MAX
-#define MAX(a, b) ((a) > (b)) ? (a) : (b)
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
 #ifndef MIN
-#define MIN(a, b) ((a) < (b)) ? (a) : (b)
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #ifndef ROUNDUP
@@ -195,9 +196,16 @@ typedef struct __attribute__((packed))
 typedef struct __attribute__((packed))
 {
     common_response_t common;
-    uint8_t md5[MD5_SIZE];     // ROM only
+    uint8_t md5[MD5_SIZE_ROM];
     response_status_t status;
 } rom_md5_response_t;
+
+typedef struct __attribute__((packed))
+{
+    common_response_t common;
+    uint8_t md5[MD5_SIZE_STUB];
+    response_status_t status;
+} stub_md5_response_t;
 
 typedef struct __attribute__((packed))
 {
