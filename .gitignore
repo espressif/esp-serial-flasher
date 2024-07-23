@@ -1,4 +1,4 @@
-build
+build*/
 sdkconfig
 sdkconfig.old
 empty_file.bin
@@ -6,3 +6,6 @@ binaries.c
 *.lock
 python_venv
 managed_components
+__pycache__
+.pytest_cache
+pytest_embedded_log

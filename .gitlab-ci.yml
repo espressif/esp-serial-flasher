@@ -21,32 +21,6 @@ variables:
   ZEPHYR_TOOLCHAIN: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/toolchain_linux-x86_64_xtensa-espressif_esp32_zephyr-elf.tar.xz
   ZEPHYR_SDK: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-aarch64_minimal.tar.xz
 
-
-.build_idf_template:
-  stage: build
-  image: espressif/idf:latest
-  tags:
-    - build
-    - internet
-  variables:
-    PEDANTIC_FLAGS: "-Werror -Wall -Wextra"
-    EXTRA_CFLAGS: "${PEDANTIC_FLAGS}"
-    EXTRA_CXXFLAGS: "${PEDANTIC_FLAGS}"
-  script:
-    - cd $CI_PROJECT_DIR/examples/esp32_example
-    - idf.py build -DMD5_ENABLED=1
-    - idf.py build -DMD5_ENABLED=0
-    - cd $CI_PROJECT_DIR/examples/esp32_stub_example
-    - idf.py build
-    - cd $CI_PROJECT_DIR/examples/esp32_load_ram_example
-    - idf.py build
-    - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
-    - idf.py build
-    - cd $CI_PROJECT_DIR/examples/esp32_get_target_info_example
-    - idf.py build
-    - cd $CI_PROJECT_DIR/examples/esp32_usb_cdc_acm_example
-    - idf.py build
-
 run_pre_commit:
   stage: pre_check
   image: python:3.11-bookworm
@@ -68,54 +42,99 @@ check_stub_source_correctness:
     - idf.py reconfigure -DSERIAL_FLASHER_STUB_PULL_VERSION='0.3.0'
     - git diff --exit-code
 
-# Special case as ESP-IDF v4.3 is not supported by the usb_host_cdc_acm component
-# required by the USB CDC ACM interface port and its example
-build_idf_v4.3:
+.build_idf_template:
   stage: build
-  image: espressif/idf:release-v4.3
   tags:
     - build
     - internet
+  before_script:
+    - pip install -U idf-build-apps
   variables:
     PEDANTIC_FLAGS: "-Werror -Wall -Wextra"
     EXTRA_CFLAGS: "${PEDANTIC_FLAGS}"
     EXTRA_CXXFLAGS: "${PEDANTIC_FLAGS}"
+    BUILD_DIR: "build"
   script:
-    - cd $CI_PROJECT_DIR/examples/esp32_example
-    - idf.py build -DMD5_ENABLED=1
-    - idf.py build -DMD5_ENABLED=0
-    - cd $CI_PROJECT_DIR/examples/esp32_stub_example
-    - idf.py build
-    - cd $CI_PROJECT_DIR/examples/esp32_load_ram_example
-    - idf.py build
-    - cd $CI_PROJECT_DIR/examples/esp32_spi_load_ram_example
-    - idf.py build
-    - cd $CI_PROJECT_DIR/examples/esp32_get_target_info_example
-    - idf.py build
+    - python -m idf_build_apps build -v -p .
+      --recursive
+      --exclude ./examples/binaries
+      --config "sdkconfig.defaults*"
+      --build-dir ${BUILD_DIR}
+      --check-warnings
+
+build_idf_v4.3:
+  image: espressif/idf:release-v4.3
+  stage: build
+  tags:
+    - build
+    - internet
+  before_script:
+    - pip install -U idf-build-apps
+  variables:
+    PEDANTIC_FLAGS: "-Werror -Wall -Wextra"
+    EXTRA_CFLAGS: "${PEDANTIC_FLAGS}"
+    EXTRA_CXXFLAGS: "${PEDANTIC_FLAGS}"
+    BUILD_DIR: "build"
+  script:
+    - python -m idf_build_apps build -v -p .
+      --recursive
+      --exclude ./examples/binaries
+      --target "esp32"
+      --config "sdkconfig.defaults*"
+      --build-dir ${BUILD_DIR}
+      --check-warnings
 
 build_idf_v4.4:
-  extends: .build_idf_template
   image: espressif/idf:release-v4.4
+  extends: .build_idf_template
 
 build_idf_v5.0:
-  extends: .build_idf_template
   image: espressif/idf:release-v5.0
+  extends: .build_idf_template
 
 build_idf_v5.1:
-  extends: .build_idf_template
   image: espressif/idf:release-v5.1
+  extends: .build_idf_template
 
 build_idf_v5.2:
-  extends: .build_idf_template
   image: espressif/idf:release-v5.2
+  extends: .build_idf_template
 
 build_idf_v5.3:
-  extends: .build_idf_template
   image: espressif/idf:release-v5.3
+  variables:
+    BUILD_DIR: "build_stable"
+  artifacts:
+    paths:
+      - "**/build*/*.bin"
+      - "**/build*/*.elf"
+      - "**/build*/*.map"
+      - "**/build*/flasher_args.json"
+      - "**/build*/flash_project_args"
+      - "**/build*/config/sdkconfig.json"
+      - "**/build*/bootloader/*.bin"
+      - "**/build*/partition_table/*.bin"
+    when: always
+    expire_in: 3 days
+  extends: .build_idf_template
 
 build_idf_master:
-  extends: .build_idf_template
   image: espressif/idf:latest
+  variables:
+    BUILD_DIR: "build_master"
+  artifacts:
+    paths:
+      - "**/build*/*.bin"
+      - "**/build*/*.elf"
+      - "**/build*/*.map"
+      - "**/build*/flasher_args.json"
+      - "**/build*/flash_project_args"
+      - "**/build*/config/sdkconfig.json"
+      - "**/build*/bootloader/*.bin"
+      - "**/build*/partition_table/*.bin"
+    when: always
+    expire_in: 3 days
+  extends: .build_idf_template
 
 build_stm32:
   stage: build
