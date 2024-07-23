@@ -19,6 +19,24 @@
 
 static const char *TAG = "serial_stub_flasher";
 
+// Max line size
+#define BUF_LEN 128
+static uint8_t buf[BUF_LEN] = {0};
+
+void slave_monitor(void *arg)
+{
+#if (HIGHER_BAUDRATE != 115200)
+    uart_flush_input(UART_NUM_1);
+    uart_flush(UART_NUM_1);
+    uart_set_baudrate(UART_NUM_1, 115200);
+#endif
+    while (1) {
+        int rxBytes = uart_read_bytes(UART_NUM_1, buf, BUF_LEN, 100 / portTICK_PERIOD_MS);
+        buf[rxBytes] = '\0';
+        printf("%s", buf);
+    }
+}
+
 void app_main(void)
 {
     example_binaries_t bin;
@@ -48,5 +66,16 @@ void app_main(void)
         ESP_LOGI(TAG, "Loading app...");
         flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
         ESP_LOGI(TAG, "Done!");
+        esp_loader_reset_target();
+
+        // Delay for skipping the boot message of the targets
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        // Forward slave's serial output
+        ESP_LOGI(TAG, "********************************************");
+        ESP_LOGI(TAG, "*** Logs below are print from slave .... ***");
+        ESP_LOGI(TAG, "********************************************");
+        xTaskCreate(slave_monitor, "slave_monitor", 2048, NULL, configMAX_PRIORITIES - 1, NULL);
     }
+    vTaskDelete(NULL);
 }

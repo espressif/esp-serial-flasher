@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pigpio.h>
 #include <sys/param.h>
 #include "raspberry_port.h"
 #include "esp_loader.h"
@@ -22,6 +23,8 @@
 #define DEFAULT_BAUD_RATE 115200
 #define HIGHER_BAUD_RATE  460800
 #define SERIAL_DEVICE     "/dev/ttyS0"
+
+
 
 int main(void)
 {
@@ -48,6 +51,31 @@ int main(void)
         flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
         printf("Done!\n");
         esp_loader_reset_target();
+        loader_port_deinit();
+
+
+        if (gpioInitialise() < 0) {
+            fprintf(stderr, "pigpio initialization failed\n");
+            return 1;
+        }
+
+        int serial = serOpen(SERIAL_DEVICE, DEFAULT_BAUD_RATE, 0);
+        if (serial < 0) {
+            printf("Serial port could not be opened!\n");
+        }
+
+        printf("********************************************\n");
+        printf("*** Logs below are print from slave .... ***\n");
+        printf("********************************************\n");
+
+        // Delay for skipping the boot message of the targets
+        gpioDelay(500000);
+        while (1) {
+            int byte = serReadByte(serial);
+            if (byte != PI_SER_READ_NO_DATA) {
+                printf("%c", byte);
+            }
+        }
     }
 
 }

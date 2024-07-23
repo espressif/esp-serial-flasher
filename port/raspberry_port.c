@@ -221,6 +221,11 @@ esp_loader_error_t loader_port_raspberry_init(const loader_raspberry_config_t *c
     return ESP_LOADER_SUCCESS;
 }
 
+void loader_port_deinit(void)
+{
+    close(serial);
+    gpioTerminate();
+}
 
 esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_t timeout)
 {
