@@ -20,6 +20,8 @@ variables:
   ZEPHYR_REPO_REV: v3.5.0
   ZEPHYR_TOOLCHAIN: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/toolchain_linux-x86_64_xtensa-espressif_esp32_zephyr-elf.tar.xz
   ZEPHYR_SDK: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-aarch64_minimal.tar.xz
+  PI_PICO_SDK_REV: 1.5.1
+  PI_PICO_SDK: https://github.com/raspberrypi/pico-sdk
 
 
 .build_idf_template:
@@ -166,6 +168,25 @@ build_zephyr:
     - west zephyr-export
     - west update hal_espressif
     - west build -p -b esp32_devkitc_wroom $CI_PROJECT_DIR/examples/zephyr_example -DZEPHYR_EXTRA_MODULES=$CI_PROJECT_DIR
+
+build_pi_pico:
+  stage: build
+  image: espressif/idf:latest
+  tags:
+    - build
+    - internet
+  script:
+    - git clone --single-branch --depth=1 -b ${PI_PICO_SDK_REV} ${PI_PICO_SDK}
+    - export PICO_SDK_PATH=$(pwd)/pico-sdk
+    - wget --no-verbose -O gcc-arm-none-eabi.tar.xz ${ARM_TOOLCHAIN_URL}
+    - tar xf gcc-arm-none-eabi.tar.xz
+    - mv arm-gnu-toolchain-* gcc-arm-none-eabi
+    - export PATH="$(pwd)/gcc-arm-none-eabi/bin:$PATH"
+    - cd $CI_PROJECT_DIR/examples/pi_pico_example
+    - mkdir build
+    - cd build
+    - cmake ..
+    - cmake --build .
 
 run_tests:
   stage: test
