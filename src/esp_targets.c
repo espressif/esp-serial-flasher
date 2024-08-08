@@ -16,7 +16,7 @@
 #include "esp_targets.h"
 #include <stddef.h>
 
-#define MAX_MAGIC_VALUES 2
+#define MAX_MAGIC_VALUES 4
 
 typedef esp_loader_error_t (*read_spi_config_t)(uint32_t efuse_base, uint32_t *spi_config);
 
@@ -59,7 +59,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen  = 0,
         },
         .efuse_base = 0,            // Not used
-        .chip_magic_value  = { 0xfff0c101, 0 },
+        .chip_magic_value  = { 0xfff0c101, 0, 0, 0 },
         .read_spi_config = NULL,    // Not used
         .mac_efuse_offset = 0, // Not used
         .encryption_in_begin_flash_cmd = false,
@@ -78,7 +78,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen = ESP32_SPI_REG_BASE + 0x2c,
         },
         .efuse_base = 0x3ff5A000,
-        .chip_magic_value  = { 0x00f01d83, 0 },
+        .chip_magic_value  = { 0x00f01d83, 0, 0, 0 },
         .read_spi_config = spi_config_esp32,
         .mac_efuse_offset = 0x04,
         .encryption_in_begin_flash_cmd = false,
@@ -97,7 +97,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen = ESP32S2_SPI_REG_BASE + 0x28,
         },
         .efuse_base = 0x3f41A000,
-        .chip_magic_value  = { 0x000007c6, 0 },
+        .chip_magic_value  = { 0x000007c6, 0, 0, 0},
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
@@ -116,7 +116,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen = ESP32xx_SPI_REG_BASE + 0x28,
         },
         .efuse_base = 0x60008800,
-        .chip_magic_value = { 0x6921506f, 0x1b31506f },
+        .chip_magic_value = { 0x6921506f, 0x1b31506f, 0x4881606F, 0x4361606F },
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
@@ -135,7 +135,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen = ESP32xx_SPI_REG_BASE + 0x28,
         },
         .efuse_base = 0x60007000,
-        .chip_magic_value = { 0x00000009, 0 },
+        .chip_magic_value = { 0x00000009, 0, 0, 0 },
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
@@ -154,7 +154,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen = ESP32xx_SPI_REG_BASE + 0x28,
         },
         .efuse_base = 0x60008800,
-        .chip_magic_value = { 0x6f51306f, 0x7c41a06f },
+        .chip_magic_value = { 0x6f51306f, 0x7c41a06f, 0, 0 },
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x40,
         .encryption_in_begin_flash_cmd = true,
@@ -178,7 +178,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen = ESP32xx_SPI_REG_BASE + 0x28,
         },
         .efuse_base = 0x6001A000,
-        .chip_magic_value = {0xd7b73e80, 0},
+        .chip_magic_value = { 0xd7b73e80, 0, 0, 0 },
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
@@ -197,7 +197,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
             .miso_dlen = ESP32C6_SPI_REG_BASE + 0x28,
         },
         .efuse_base = 0x600B0800,
-        .chip_magic_value = { 0x2CE0806F, 0 },
+        .chip_magic_value = { 0x2CE0806F, 0, 0, 0 },
         .read_spi_config = spi_config_unsupported,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
