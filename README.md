@@ -10,6 +10,7 @@ Supported **host** microcontrollers:
 - Raspberry Pi SBC
 - ESP32 Series
 - Any MCU running Zephyr OS
+- Raspberry Pi Pico
 
 Supported **target** microcontrollers:
 
