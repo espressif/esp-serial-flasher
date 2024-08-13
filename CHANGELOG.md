@@ -1,3 +1,9 @@
+## v1.5.0 (2024-08-13)
+
+### New Features
+
+- Add the Raspberry Pi Pico port
+
 ## v1.4.1 (2024-07-16)
 
 ### Bug Fixes
