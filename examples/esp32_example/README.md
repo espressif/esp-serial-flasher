@@ -85,5 +85,8 @@ Start programming
 Progress: 100 %
 Finished programming
 I (11934) serial_flasher: Done!
-I (11934) main_task: Returned from app_main()
+I (11273) serial_flasher: ********************************************
+I (11273) serial_flasher: *** Logs below are print from slave .... ***
+I (11273) serial_flasher: ********************************************
+Hello world!
 ```

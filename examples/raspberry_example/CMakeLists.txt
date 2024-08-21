@@ -5,9 +5,14 @@ set(PORT RASPBERRY_PI)
 
 project(raspberry_flasher)
 
-add_executable(${CMAKE_PROJECT_NAME} Src/main.c ../common/example_common.c)
+add_compile_definitions(SERIAL_FLASHER_INTERFACE_UART)
 
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ../common/)
+include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)
+create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/Hello-world Src/binaries_flash.c)
+create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/RAM_APP Src/binaries_ram.c)
+
+add_executable(${CMAKE_PROJECT_NAME} ../common/example_common.c Src/main.c Src/binaries_flash.c Src/binaries_ram.c)
+target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ../common)
 
 add_subdirectory(${FLASHER_DIR} ${CMAKE_BINARY_DIR}/flasher)
 
@@ -18,6 +23,3 @@ PRIVATE
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE flasher)
-
-# This example only supports one target (ESP32) and uses specific binary to be flashed.
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE -DSINGLE_TARGET_SUPPORT=1)

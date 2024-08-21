@@ -27,10 +27,10 @@ Table below shows connection between STM32 and ESP32.
 |:------------:|:-------------:|
 |    PB12      |      IO0      |
 |    PB13      |      RST      |
-|    PB14      |      RX0      |
-|    PB15      |      TX0      |
+|    PA2       |      RX0      |
+|    PA3       |      TX0      |
 
-Optionally, UART-to-USB bridge can be connected to PA3(RX) and PA2(TX) for the debug purposes.
+Optionally, UART-to-USB bridge can be connected to PA9(TX) and PA10 (RX) for the debug purposes (same pins can be used to flash STM32 in bootloader).
 
 ## Build and flash
 

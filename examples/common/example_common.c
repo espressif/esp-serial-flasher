@@ -305,7 +305,7 @@ esp_loader_error_t connect_to_target_with_stub(const uint32_t current_transmissi
                 printf("Unable to change transmission rate.");
                 return err;
             }
-            printf("Transmission rate changed changed\n");
+            printf("Transmission rate changed.\n");
         }
     }
 

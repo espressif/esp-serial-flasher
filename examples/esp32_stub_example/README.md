@@ -84,4 +84,8 @@ Start programming
 Progress: 100 %
 Finished programming
 I (5011) serial_stub_flasher: Done!
+I (5095) serial_stub_flasher: ********************************************
+I (5095) serial_stub_flasher: *** Logs below are print from slave .... ***
+I (5096) serial_stub_flasher: ********************************************
+Hello world!
 ```
