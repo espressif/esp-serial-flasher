@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,10 +76,11 @@ esp_loader_error_t loader_run_stub(target_chip_t target)
 
     // stub loader sends a custom SLIP packet of the sequence OHAI
     uint8_t buff[4];
-    err = SLIP_receive_packet(buff, sizeof(buff) / sizeof(buff[0]));
+    size_t recv_size = 0;
+    err = SLIP_receive_packet(buff, sizeof(buff) / sizeof(buff[0]), &recv_size);
     if (err != ESP_LOADER_SUCCESS) {
         return err;
-    } else if (memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
+    } else if (recv_size != sizeof(buff) || memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
@@ -150,12 +151,15 @@ static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, voi
     esp_loader_error_t err;
     common_response_t *response = (common_response_t *)resp;
 
+    size_t recv_size = 0;
     do {
-        err = SLIP_receive_packet(resp, resp_size);
+        err = SLIP_receive_packet(resp, resp_size, &recv_size);
         if (err != ESP_LOADER_SUCCESS) {
             return err;
         }
-    } while ((response->direction != READ_DIRECTION) || (response->command != cmd));
+    } while ((response->direction != READ_DIRECTION) ||
+             (response->command != cmd) ||
+             recv_size < resp_size);
 
     response_status_t *status = (response_status_t *)((uint8_t *)resp + resp_size - sizeof(response_status_t));
 
