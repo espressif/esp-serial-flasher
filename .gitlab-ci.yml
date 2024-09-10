@@ -195,7 +195,7 @@ build_pi_pico:
     - build
     - internet
   script:
-    - git clone --single-branch --depth=1 -b ${PI_PICO_SDK_REV} ${PI_PICO_SDK}
+    - git clone --recursive --single-branch --depth=1 -b ${PI_PICO_SDK_REV} ${PI_PICO_SDK}
     - export PICO_SDK_PATH=$(pwd)/pico-sdk
     - wget --no-verbose -O gcc-arm-none-eabi.tar.xz ${ARM_TOOLCHAIN_URL}
     - tar xf gcc-arm-none-eabi.tar.xz
