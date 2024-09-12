@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "hardware/uart.h"
 #include "pi_pico_port.h"
 #include "esp_loader.h"
 #include "example_common.h"
@@ -49,6 +50,28 @@ int main(void)
         printf("Loading app...");
         flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
         printf("Done!");
+
+        esp_loader_reset_target();
+        loader_port_pi_pico_deinit();
+
+        // Delay for skipping the boot message of the targets
+        sleep_ms(500);
+        uart_init(uart1, 115200);
+        gpio_set_function(20, GPIO_FUNC_UART);
+        gpio_set_function(21, GPIO_FUNC_UART);
+
+        printf("********************************************\n");
+        printf("*** Logs below are print from slave .... ***\n");
+        printf("********************************************\n");
+        char ch;
+        while (true) {
+            if (uart_is_readable(uart1)) {
+                ch = uart_getc(uart1);
+                printf("%c", ch);
+            } else {
+                tight_loop_contents();
+            }
+        }
     }
 
     while (true) {
