@@ -120,28 +120,35 @@ int main(void)
     flash_binary(bin.part.data, bin.part.size, bin.part.addr);
     flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
     esp_loader_reset_target();
-  }
-
+    
 #if (HIGHER_BAUDRATE != 115200)
-  HAL_UART_DeInit(&huart2);
-  huart2.Init.BaudRate = 115200;
-  if (HAL_UART_Init(&huart2) != HAL_OK) {
-    Error_Handler();
-  }
+    HAL_UART_DeInit(&huart2);
+    huart2.Init.BaudRate = 115200;
+    if (HAL_UART_Init(&huart2) != HAL_OK) {
+      Error_Handler();
+    }
 #endif
 
-  // Delay for skipping the boot message of the targets
-  HAL_Delay(500);
+    // Delay for skipping the boot message of the targets
+    HAL_Delay(500);
+
+    printf("********************************************\n");
+    printf("*** Logs below are print from slave .... ***\n");
+    printf("********************************************\n");
+    while (1)
+    {
+      HAL_UART_Receive(&huart2, (uint8_t *)buf, BUF_LEN - 1, 100);
+      printf("%s", buf);
+      memset(buf, 0, BUF_LEN);
+    }
   
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_UART_Receive(&huart2, (uint8_t *)buf, BUF_LEN - 1, 100);
-    printf("%s", buf);
-    memset(buf, 0, BUF_LEN);
 
     /* USER CODE END WHILE */
 
