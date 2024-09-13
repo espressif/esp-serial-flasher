@@ -24,3 +24,11 @@ repos:
     hooks:
       - id: conventional-precommit-linter
         stages: [commit-msg]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.14
+    hooks:
+      - id: ruff # Runs ruff linter
+        args: [--fix, --exit-non-zero-on-fix] # --fix for fixing errors
+        types: [python]
+      - id: ruff-format
+        types: [python]

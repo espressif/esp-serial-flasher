@@ -40,6 +40,7 @@ files_to_download = [
     "esp32c6.json",  # ESP32C6_CHIP
 ]
 
+
 def read_stub_json(json_file):
     stub = json.load(json_file)
     entry = stub["entry"]
@@ -83,7 +84,10 @@ def read_stub_json(json_file):
 
 if __name__ == "__main__":
     # .h and .c file templates
-    with open(h_template_path, "r") as h_template_file, open(c_template_path, "r") as c_template_file:
+    with (
+        open(h_template_path, "r") as h_template_file,
+        open(c_template_path, "r") as c_template_file,
+    ):
         h_template = h_template_file.read()
         c_template = c_template_file.read()
 
@@ -112,7 +116,9 @@ if __name__ == "__main__":
                     with open(f"{stub_override_path}/{file_to_download}") as file_path:
                         cfile.write(read_stub_json(file_path))
                 else:
-                    with urllib.request.urlopen(f"{stub_download_url}/v{stub_version}/{file_to_download}") as url:
+                    with urllib.request.urlopen(
+                        f"{stub_download_url}/v{stub_version}/{file_to_download}"
+                    ) as url:
                         cfile.write(read_stub_json(url))
 
         cfile.write("};\n" "\n" "#endif\n")
