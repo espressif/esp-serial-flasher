@@ -108,9 +108,6 @@ esp_loader_error_t send_cmd(const send_cmd_config *config)
         RETURN_ON_ERROR(check_response(config));
     }
 
-    // This delay is added to give time to the ROM or the stub to prepare for the next command.
-    loader_port_delay_ms(1);
-
     return ESP_LOADER_SUCCESS;
 }
 
