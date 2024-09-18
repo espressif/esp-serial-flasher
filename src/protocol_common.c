@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,9 +75,12 @@ esp_loader_error_t loader_flash_begin_cmd(uint32_t offset,
 
     s_sequence_number = 0;
 
-    return send_cmd(&flash_begin_cmd,
-                    sizeof(flash_begin_cmd) - (encryption ? 0 : sizeof(uint32_t)),
-                    NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &flash_begin_cmd,
+        .cmd_size = sizeof(flash_begin_cmd) - (encryption ? 0 : sizeof(uint32_t)),
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -94,7 +97,14 @@ esp_loader_error_t loader_flash_data_cmd(const uint8_t *data, uint32_t size)
         .sequence_number = s_sequence_number++,
     };
 
-    return send_cmd_with_data(&data_cmd, sizeof(data_cmd), data, size);
+    const send_cmd_config cmd_config = {
+        .cmd = &data_cmd,
+        .cmd_size = sizeof(data_cmd),
+        .data = data,
+        .data_size = size,
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -110,7 +120,12 @@ esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader)
         .stay_in_loader = stay_in_loader
     };
 
-    return send_cmd(&end_cmd, sizeof(end_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &end_cmd,
+        .cmd_size = sizeof(end_cmd)
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -132,7 +147,12 @@ esp_loader_error_t loader_sync_cmd(void)
         }
     };
 
-    return send_cmd(&sync_cmd, sizeof(sync_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &sync_cmd,
+        .cmd_size = sizeof(sync_cmd)
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -149,7 +169,12 @@ esp_loader_error_t loader_spi_attach_cmd(uint32_t config)
         .zero = 0
     };
 
-    return send_cmd(&attach_cmd, esp_stub_get_running() ? sizeof(attach_cmd) - sizeof(attach_cmd.zero) : sizeof(attach_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &attach_cmd,
+        .cmd_size = esp_stub_get_running() ? sizeof(attach_cmd) - sizeof(attach_cmd.zero) : sizeof(attach_cmd),
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -168,7 +193,14 @@ esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_
         .reserved_1 = 0
     };
 
-    return send_cmd_md5(&md5_cmd, sizeof(md5_cmd), md5_out);
+    const send_cmd_config cmd_config = {
+        .cmd = &md5_cmd,
+        .cmd_size = sizeof(md5_cmd),
+        .resp_data = md5_out,
+        .resp_data_size = esp_stub_get_running() ? MD5_SIZE_STUB : MD5_SIZE_ROM,
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -189,7 +221,12 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
         .status_mask = 0xFFFF,
     };
 
-    return send_cmd(&spi_cmd, sizeof(spi_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &spi_cmd,
+        .cmd_size = sizeof(spi_cmd),
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -211,7 +248,12 @@ esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t
 
     s_sequence_number = 0;
 
-    return send_cmd(&mem_begin_cmd, sizeof(mem_begin_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &mem_begin_cmd,
+        .cmd_size = sizeof(mem_begin_cmd),
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -227,7 +269,15 @@ esp_loader_error_t loader_mem_data_cmd(const uint8_t *data, uint32_t size)
         .data_size = size,
         .sequence_number = s_sequence_number++,
     };
-    return send_cmd_with_data(&data_cmd, sizeof(data_cmd), data, size);
+
+    const send_cmd_config cmd_config = {
+        .cmd = &data_cmd,
+        .cmd_size = sizeof(data_cmd),
+        .data = data,
+        .data_size = size,
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -243,7 +293,12 @@ esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint)
         .entry_point_address = entrypoint
     };
 
-    return send_cmd(&end_cmd, sizeof(end_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &end_cmd,
+        .cmd_size = sizeof(end_cmd),
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -263,7 +318,12 @@ esp_loader_error_t loader_write_reg_cmd(uint32_t address, uint32_t value,
         .delay_us = delay_us
     };
 
-    return send_cmd(&write_cmd, sizeof(write_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &write_cmd,
+        .cmd_size = sizeof(write_cmd),
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -279,7 +339,13 @@ esp_loader_error_t loader_read_reg_cmd(uint32_t address, uint32_t *reg)
         .address = address,
     };
 
-    return send_cmd(&read_cmd, sizeof(read_cmd), reg);
+    const send_cmd_config cmd_config = {
+        .cmd = &read_cmd,
+        .cmd_size = sizeof(read_cmd),
+        .reg_value = reg,
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 
@@ -296,7 +362,12 @@ esp_loader_error_t loader_change_baudrate_cmd(uint32_t new_baudrate, uint32_t ol
         .old_baudrate = old_baudrate
     };
 
-    return send_cmd(&baudrate_cmd, sizeof(baudrate_cmd), NULL);
+    const send_cmd_config cmd_config = {
+        .cmd = &baudrate_cmd,
+        .cmd_size = sizeof(baudrate_cmd),
+    };
+
+    return send_cmd(&cmd_config);
 }
 
 

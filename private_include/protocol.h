@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,8 @@ extern "C" {
 #ifndef ROUNDUP
 #define ROUNDUP(a, b) (((int)a + (int)b - 1) / (int)b)
 #endif
+
+#define MAX_RESP_DATA_SIZE 64
 
 typedef enum __attribute__((packed))
 {
@@ -186,26 +188,6 @@ typedef struct __attribute__((packed))
     uint8_t failed;
     uint8_t error;
 } response_status_t;
-
-typedef struct __attribute__((packed))
-{
-    common_response_t common;
-    response_status_t status;
-} response_t;
-
-typedef struct __attribute__((packed))
-{
-    common_response_t common;
-    uint8_t md5[MD5_SIZE_ROM];
-    response_status_t status;
-} rom_md5_response_t;
-
-typedef struct __attribute__((packed))
-{
-    common_response_t common;
-    uint8_t md5[MD5_SIZE_STUB];
-    response_status_t status;
-} stub_md5_response_t;
 
 typedef struct __attribute__((packed))
 {

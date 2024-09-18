@@ -24,6 +24,7 @@
 #include <map>
 #include <iostream>
 #include <algorithm>
+#include <cassert>
 
 using namespace std;
 
@@ -64,35 +65,37 @@ static void arrays_match(void *array_1, void *array_2, size_t size)
 
 
 // Wrapper around command_t for convenience
-struct __attribute__((packed)) expected_response {
-    expected_response(command_t cmd)
+struct expected_response {
+    expected_response(command_t cmd, uint32_t reg_val = 0, uint8_t *data = NULL, size_t data_size = 0)
     {
-        data.common.direction = READ_DIRECTION;
-        data.common.command = cmd;
-        data.common.size = 16;
-        data.common.value = 0;
-        data.status.failed = STATUS_SUCCESS;
-        data.status.error = 0;
+        assert(data_size <= MAX_RESP_DATA_SIZE);
+
+        common_response_t *common = (common_response_t *)&buf[0];
+        common->direction = READ_DIRECTION;
+        common->command = cmd;
+        common->size = sizeof(response_status_t) + data_size;
+        common->value = reg_val;
+
+        if (data != NULL && data_size != 0) {
+            memcpy(&buf[sizeof(common_response_t)], data, data_size);
+        }
+
+        response_status_t *status = (response_status_t *)&buf[sizeof(common_response_t) + data_size];
+        status->failed = STATUS_SUCCESS;
+        status->error = 0;
+
+        size = sizeof(common_response_t) + data_size + sizeof(response_status_t);
     }
 
-    response_t data;
+    size_t size;
+    uint8_t buf[sizeof(common_response_t) + MAX_RESP_DATA_SIZE + sizeof(response_status_t)];
 };
 
-static_assert(sizeof(expected_response) == sizeof(response_t), "Size NOT equal");
 
-inline void queue_response(expected_response &response, size_t size = sizeof(expected_response))
+inline void queue_response(expected_response &response)
 {
-    set_read_buffer(&response, size);
+    set_read_buffer(response.buf, response.size);
 }
-
-expected_response set_params_response(SPI_SET_PARAMS);
-expected_response flash_begin_response(FLASH_BEGIN);
-expected_response flash_data_response(FLASH_DATA);
-expected_response flash_end_response(FLASH_END);
-expected_response write_reg_response(WRITE_REG);
-expected_response read_reg_response(READ_REG);
-expected_response attach_response(SPI_ATTACH);
-expected_response sync_response(SYNC);
 
 const uint32_t reg_address = 0x1000;
 const uint32_t reg_value = 55;
@@ -129,10 +132,12 @@ map<target_chip_t, uint32_t> chip_magic_value = {
 void queue_connect_response(target_chip_t target = ESP32_CHIP, uint32_t magic_value = 0)
 {
     // Set magic value register used for detection of attached chip
-    auto magic_value_response = read_reg_response;
-    magic_value_response.data.common.value = magic_value ? magic_value : chip_magic_value[target];
+
+    expected_response magic_value_response(READ_REG,
+                                           magic_value ? magic_value : chip_magic_value[target]);
     clear_buffers();
 
+    expected_response sync_response(SYNC);
     for (uint8_t resp = 0; resp < 8; resp++) {
         queue_response(sync_response);
     }
@@ -140,13 +145,14 @@ void queue_connect_response(target_chip_t target = ESP32_CHIP, uint32_t magic_va
     queue_response(magic_value_response);
 
     if (target == ESP8266_CHIP) {
+        expected_response flash_begin_response(FLASH_BEGIN);
         queue_response(flash_begin_response);
     } else {
-        auto efuse_pin_config_reg_1 = read_reg_response;
-        auto efuse_pin_config_reg_2 = read_reg_response;
+        expected_response efuse_pin_config_reg(READ_REG);
+        queue_response(efuse_pin_config_reg);
+        queue_response(efuse_pin_config_reg);
 
-        queue_response(efuse_pin_config_reg_1);
-        queue_response(efuse_pin_config_reg_2);
+        expected_response attach_response(SPI_ATTACH);
         queue_response(attach_response);
     }
 
@@ -251,7 +257,7 @@ TEST_CASE( "Register can be read correctly" )
 {
     clear_buffers();
     uint32_t reg_value = 0;
-    read_reg_response.data.common.value = 55;
+    expected_response read_reg_response(READ_REG, 55);
 
     queue_response(read_reg_response);
 
@@ -264,7 +270,7 @@ TEST_CASE( "Register can be read correctly" )
 TEST_CASE( "Register can be written correctly" )
 {
     write_reg_cmd_response expected;
-    write_reg_response.data.common.value = 55;
+    expected_response write_reg_response(WRITE_REG, 55);
 
     clear_buffers();
     queue_response(write_reg_response);
@@ -300,6 +306,8 @@ TEST_CASE ( "SLIP is encoded correctly" )
     // print_array(expected, sizeof(expected));
 
     clear_buffers();
+
+    expected_response flash_data_response(FLASH_DATA);
     queue_response(flash_data_response);
 
     REQUIRE_SUCCESS( loader_flash_data_cmd(data, sizeof(data)) );
@@ -326,6 +334,7 @@ TEST_CASE( "Sync command is constructed correctly" )
 
     clear_buffers();
 
+    expected_response sync_response(SYNC);
     for (uint8_t resp = 0; resp < 8; resp++) {
         queue_response(sync_response);
     }
@@ -338,7 +347,7 @@ TEST_CASE( "Sync command is constructed correctly" )
 TEST_CASE( "Register can be read and decoded correctly" )
 {
     clear_buffers();
-    read_reg_response.data.common.value = 55;
+    expected_response read_reg_response(READ_REG, 55);
     queue_response(read_reg_response);
 
     uint32_t reg_value = 0;
@@ -350,7 +359,7 @@ TEST_CASE( "Register can be read and decoded correctly" )
 TEST_CASE( "Received response (in SLIP format) is decoded correctly" )
 {
     clear_buffers();
-    read_reg_response.data.common.value = 0xC0BD; // C0, BD has to be replaced
+    expected_response read_reg_response(READ_REG, 0xC0BD); // C0, BD has to be replaced
     queue_response(read_reg_response);
 
     uint32_t reg_value = 0;

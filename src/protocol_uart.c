@@ -21,7 +21,7 @@
 #include <stddef.h>
 #include <string.h>
 
-static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void *resp, uint32_t resp_size);
+static esp_loader_error_t check_response(const send_cmd_config *config);
 
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args)
 {
@@ -89,19 +89,23 @@ esp_loader_error_t loader_run_stub(target_chip_t target)
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_value)
+esp_loader_error_t send_cmd(const send_cmd_config *config)
 {
-    response_t response;
-    command_t command = ((const command_common_t *)cmd_data)->command;
+    RETURN_ON_ERROR(SLIP_send_delimiter());
 
-    RETURN_ON_ERROR( SLIP_send_delimiter() );
-    RETURN_ON_ERROR( SLIP_send((const uint8_t *)cmd_data, size) );
-    RETURN_ON_ERROR( SLIP_send_delimiter() );
+    RETURN_ON_ERROR(SLIP_send((const uint8_t *)config->cmd, config->cmd_size));
 
+    if (config->data != NULL && config->data_size != 0) {
+        RETURN_ON_ERROR(SLIP_send((const uint8_t *)config->data, config->data_size));
+    }
+
+    RETURN_ON_ERROR(SLIP_send_delimiter());
+
+    command_t command = ((const command_common_t *)config->cmd)->command;
     const uint8_t response_cnt = command == SYNC ? 8 : 1;
 
     for (uint8_t recv_cnt = 0; recv_cnt < response_cnt; recv_cnt++) {
-        RETURN_ON_ERROR(check_response(command, reg_value, &response, sizeof(response)));
+        RETURN_ON_ERROR(check_response(config));
     }
 
     // This delay is added to give time to the ROM or the stub to prepare for the next command.
@@ -110,66 +114,46 @@ esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_v
     return ESP_LOADER_SUCCESS;
 }
 
-
-esp_loader_error_t send_cmd_with_data(const void *cmd_data, size_t cmd_size,
-                                      const void *data, size_t data_size)
+static esp_loader_error_t check_response(const send_cmd_config *config)
 {
-    response_t response;
-    command_t command = ((const command_common_t *)cmd_data)->command;
+    uint8_t buf[sizeof(common_response_t) + sizeof(response_status_t) + MAX_RESP_DATA_SIZE];
 
-    RETURN_ON_ERROR( SLIP_send_delimiter() );
-    RETURN_ON_ERROR( SLIP_send((const uint8_t *)cmd_data, cmd_size) );
-    RETURN_ON_ERROR( SLIP_send(data, data_size) );
-    RETURN_ON_ERROR( SLIP_send_delimiter() );
+    common_response_t *response = (common_response_t *)&buf[0];
+    command_t command = ((const command_common_t *)config->cmd)->command;
 
-    return check_response(command, NULL, &response, sizeof(response));
-}
-
-
-esp_loader_error_t send_cmd_md5(const void *cmd_data, size_t cmd_size, uint8_t *md5_out)
-{
-    command_t command = ((const command_common_t *)cmd_data)->command;
-
-    RETURN_ON_ERROR( SLIP_send_delimiter() );
-    RETURN_ON_ERROR( SLIP_send((const uint8_t *)cmd_data, cmd_size) );
-    RETURN_ON_ERROR( SLIP_send_delimiter() );
-
-    if (esp_stub_get_running()) {
-        stub_md5_response_t response;
-        RETURN_ON_ERROR( check_response(command, NULL, &response, sizeof(response)) );
-        memcpy(md5_out, response.md5, MD5_SIZE_STUB);
-    } else {
-        rom_md5_response_t response;
-        RETURN_ON_ERROR( check_response(command, NULL, &response, sizeof(response)) );
-        memcpy(md5_out, response.md5, MD5_SIZE_ROM);
+    // If the command has fixed response data size, require all of it to be received
+    uint32_t minimum_packet_recv = sizeof(common_response_t) + sizeof(response_status_t);
+    if (config->resp_data_recv_size == NULL) {
+        minimum_packet_recv += config->resp_data_size;
     }
-    return ESP_LOADER_SUCCESS;
-}
 
-static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value, void *resp, uint32_t resp_size)
-{
-    esp_loader_error_t err;
-    common_response_t *response = (common_response_t *)resp;
-
-    size_t recv_size = 0;
+    size_t packet_recv = 0;
     do {
-        err = SLIP_receive_packet(resp, resp_size, &recv_size);
-        if (err != ESP_LOADER_SUCCESS) {
-            return err;
-        }
-    } while ((response->direction != READ_DIRECTION) ||
-             (response->command != cmd) ||
-             recv_size < resp_size);
+        RETURN_ON_ERROR(SLIP_receive_packet(buf,
+                                            sizeof(common_response_t) + sizeof(response_status_t) + config->resp_data_size,
+                                            &packet_recv));
+    } while ((response->direction != READ_DIRECTION) || (response->command != command) ||
+             packet_recv < minimum_packet_recv);
 
-    response_status_t *status = (response_status_t *)((uint8_t *)resp + resp_size - sizeof(response_status_t));
+    response_status_t *status = (response_status_t *)&buf[packet_recv - sizeof(response_status_t)];
 
     if (status->failed) {
         log_loader_internal_error(status->error);
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
-    if (reg_value != NULL) {
-        *reg_value = response->value;
+    if (config->reg_value != NULL) {
+        *config->reg_value = response->value;
+    }
+
+    if (config->resp_data != NULL) {
+        const size_t resp_data_size = packet_recv - sizeof(common_response_t) - sizeof(response_status_t);
+
+        memcpy(config->resp_data, &buf[sizeof(common_response_t)], resp_data_size);
+
+        if (config->resp_data_recv_size != NULL) {
+            *config->resp_data_recv_size = resp_data_size;
+        }
     }
 
     return ESP_LOADER_SUCCESS;
