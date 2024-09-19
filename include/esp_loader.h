@@ -154,6 +154,30 @@ target_chip_t esp_loader_get_target(void);
   */
 esp_loader_error_t esp_loader_connect_with_stub(esp_loader_connect_args_t *connect_args);
 
+#ifdef SERIAL_FLASHER_INTERFACE_UART
+/**
+  * @brief Connects to the target running in secure download mode
+  *
+  * Secure download mode is a special mode in which the commands accepted by the boot ROM
+  * are limited to a safe subset. It is enabled by burning an efuse on the target.
+  * Read more about it here:
+  * https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig.html#config-secure-uart-rom-dl-mode
+  *
+  * @param connect_args[in] Timing parameters to be used for connecting to target.
+  * @param flash_size Flash size of the target chip.
+  * @param target_chip Target chip. Used for the ESP32 and ESP8266, which do not support the
+  *                    GET_SECURITY_INFO command required to identify the target in secure
+  *                    download mode. Leave as ESP_UNKNOWN_CHIP for autodetection of newer chips.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  */
+esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_connect_args_t *connect_args,
+        uint32_t flash_size, target_chip_t target_chip);
+#endif /* SERIAL_FLASHER_INTERFACE_UART */
+
 /**
   * @brief Initiates flash operation
   *
@@ -209,6 +233,7 @@ esp_loader_error_t esp_loader_flash_finish(bool reboot);
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP The target flash chip is not known
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target chip is running in secure download mode
   */
 esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size);
 
@@ -262,6 +287,7 @@ esp_loader_error_t esp_loader_get_security_info(esp_loader_target_security_info_
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
 esp_loader_error_t esp_loader_mem_start(uint32_t offset, uint32_t size, uint32_t block_size);
 
@@ -280,6 +306,7 @@ esp_loader_error_t esp_loader_mem_start(uint32_t offset, uint32_t size, uint32_t
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
 esp_loader_error_t esp_loader_mem_write(const void *payload, uint32_t size);
 
@@ -294,6 +321,7 @@ esp_loader_error_t esp_loader_mem_write(const void *payload, uint32_t size);
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
 esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint);
 
@@ -307,6 +335,7 @@ esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint);
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
 esp_loader_error_t esp_loader_read_mac(uint8_t *mac);
 
@@ -320,6 +349,7 @@ esp_loader_error_t esp_loader_read_mac(uint8_t *mac);
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
 esp_loader_error_t esp_loader_write_register(uint32_t address, uint32_t reg_value);
 
@@ -333,6 +363,7 @@ esp_loader_error_t esp_loader_write_register(uint32_t address, uint32_t reg_valu
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
 esp_loader_error_t esp_loader_read_register(uint32_t address, uint32_t *reg_value);
 
@@ -348,7 +379,8 @@ esp_loader_error_t esp_loader_read_register(uint32_t address, uint32_t *reg_valu
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Either the target is running in secure download
+  *       mode or the stub is running on the target.
   */
 esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rate);
 
