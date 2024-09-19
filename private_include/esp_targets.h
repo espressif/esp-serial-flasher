@@ -32,3 +32,4 @@ esp_loader_error_t loader_detect_chip(target_chip_t *target, const target_regist
 esp_loader_error_t loader_read_spi_config(target_chip_t target_chip, uint32_t *spi_config);
 bool encryption_in_begin_flash_cmd(target_chip_t target);
 esp_loader_error_t loader_read_mac(target_chip_t target_code, uint8_t *mac);
+target_chip_t target_from_chip_id(uint32_t chip_id);

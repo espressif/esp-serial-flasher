@@ -371,6 +371,30 @@ esp_loader_error_t loader_change_baudrate_cmd(uint32_t new_baudrate, uint32_t ol
 }
 
 
+esp_loader_error_t loader_get_security_info_cmd(get_security_info_response_data_t *response,
+        uint32_t *response_recv_size)
+{
+    const get_security_info_command_t get_security_info_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = GET_SECURITY_INFO,
+            .size = CMD_SIZE(get_security_info_cmd),
+            .checksum = 0
+        },
+    };
+
+    const send_cmd_config cmd_config = {
+        .cmd = &get_security_info_cmd,
+        .cmd_size = sizeof(get_security_info_cmd),
+        .resp_data = response,
+        .resp_data_size = sizeof(get_security_info_response_data_t),
+        .resp_data_recv_size = response_recv_size,
+    };
+
+    return send_cmd(&cmd_config);
+}
+
+
 __attribute__ ((weak)) void loader_port_debug_print(const char *str)
 {
     (void) str;

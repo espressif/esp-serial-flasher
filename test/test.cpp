@@ -129,6 +129,18 @@ map<target_chip_t, uint32_t> chip_magic_value = {
     {ESP32C6_CHIP,  0x2ce0806f},
 };
 
+map<target_chip_t, uint32_t> chip_chip_id = {
+    {ESP8266_CHIP,  0xff},
+    {ESP32_CHIP,    0},
+    {ESP32S2_CHIP,  2},
+    {ESP32C2_CHIP,  12},
+    {ESP32C3_CHIP,  5},
+    {ESP32S3_CHIP,  9},
+    {ESP32_RESERVED0_CHIP, 0xff},
+    {ESP32H2_CHIP,  16},
+    {ESP32C6_CHIP,  13},
+};
+
 void queue_connect_response(target_chip_t target = ESP32_CHIP, uint32_t magic_value = 0)
 {
     // Set magic value register used for detection of attached chip
@@ -140,6 +152,18 @@ void queue_connect_response(target_chip_t target = ESP32_CHIP, uint32_t magic_va
     expected_response sync_response(SYNC);
     for (uint8_t resp = 0; resp < 8; resp++) {
         queue_response(sync_response);
+    }
+
+    // Set GET_SECURITY_INFO response, for chips that do not support it set the response to SYNC
+    // response, resulting in a timeout.
+    if (target == ESP32_CHIP || target == ESP8266_CHIP) {
+        expected_response sync_response(SYNC);
+        queue_response(sync_response);
+    } else {
+        get_security_info_response_data_t resp_data = { .chip_id = chip_chip_id[target] };
+        expected_response get_security_info_response(GET_SECURITY_INFO, 0, (uint8_t *)&resp_data,
+                sizeof(resp_data));
+        queue_response(get_security_info_response);
     }
 
     queue_response(magic_value_response);

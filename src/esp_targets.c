@@ -25,6 +25,7 @@ typedef struct {
     uint32_t efuse_base;
     uint32_t chip_magic_value[MAX_MAGIC_VALUES];
     uint32_t mac_efuse_offset;
+    uint32_t chip_id;
     read_spi_config_t read_spi_config;
     bool encryption_in_begin_flash_cmd;
 } esp_target_t;
@@ -37,6 +38,8 @@ typedef struct {
 #define ESP32C6_SPI_REG_BASE 0x60003000
 #define ESP32xx_SPI_REG_BASE 0x60002000
 #define ESP32_SPI_REG_BASE   0x3ff42000
+
+#define CHIP_ID_NONE 0xFF
 
 static esp_loader_error_t spi_config_esp32(uint32_t efuse_base, uint32_t *spi_config);
 static esp_loader_error_t spi_config_esp32xx(uint32_t efuse_base, uint32_t *spi_config);
@@ -60,6 +63,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = NULL,    // Not used
         .mac_efuse_offset = 0, // Not used
         .encryption_in_begin_flash_cmd = false,
+        .chip_id = CHIP_ID_NONE,
     },
 
     // ESP32
@@ -78,6 +82,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = spi_config_esp32,
         .mac_efuse_offset = 0x04,
         .encryption_in_begin_flash_cmd = false,
+        .chip_id = 0,
     },
 
     // ESP32S2
@@ -96,6 +101,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
+        .chip_id = 2,
     },
 
     // ESP32C3
@@ -114,6 +120,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
+        .chip_id = 5,
     },
 
     // ESP32S3
@@ -132,6 +139,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
+        .chip_id = 9,
     },
 
     // ESP32C2
@@ -150,10 +158,13 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x40,
         .encryption_in_begin_flash_cmd = true,
+        .chip_id = 12,
     },
 
     // Reserved for future use
-    {},
+    {
+        .chip_id = CHIP_ID_NONE,
+    },
 
     // ESP32H2
     {
@@ -171,7 +182,9 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = spi_config_esp32xx,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
+        .chip_id = 16,
     },
+
     // ESP32C6
     {
         .regs = {
@@ -188,6 +201,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .read_spi_config = spi_config_unsupported,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
+        .chip_id = 13,
     },
 };
 
@@ -198,6 +212,18 @@ const target_registers_t *get_esp_target_data(target_chip_t chip)
 
 esp_loader_error_t loader_detect_chip(target_chip_t *target_chip, const target_registers_t **target_data)
 {
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+    /* First, attempt to get the target info using GET_SECURITY_INFO command.
+       This won't work if the target does not support the command. */
+    esp_loader_target_security_info_t security_info;
+
+    if (esp_loader_get_security_info(&security_info) == ESP_LOADER_SUCCESS) {
+        *target_chip = security_info.target_chip;
+        *target_data = (target_registers_t *)&esp_target[security_info.target_chip];
+        return ESP_LOADER_SUCCESS;
+    }
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
+
     uint32_t magic_value;
     RETURN_ON_ERROR( esp_loader_read_register(CHIP_DETECT_MAGIC_REG_ADDR,  &magic_value) );
 
@@ -312,4 +338,15 @@ static esp_loader_error_t spi_config_unsupported(uint32_t efuse_base, uint32_t *
 bool encryption_in_begin_flash_cmd(const target_chip_t target)
 {
     return esp_target[target].encryption_in_begin_flash_cmd;
+}
+
+target_chip_t target_from_chip_id(const uint32_t chip_id)
+{
+    for (size_t chip = 0; chip < ESP_MAX_CHIP; chip++) {
+        if (chip_id == esp_target[chip].chip_id) {
+            return (target_chip_t)chip;
+        }
+    }
+
+    return ESP_UNKNOWN_CHIP;
 }

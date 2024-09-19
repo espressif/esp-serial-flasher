@@ -89,6 +89,21 @@ typedef struct {
     uint8_t *data;
 } esp_loader_bin_segment_t;
 
+typedef struct {
+    target_chip_t target_chip;
+    uint32_t eco_version; // Not present on ESP32-S2
+    bool secure_boot_enabled;
+    bool secure_boot_aggressive_revoke_enabled;
+    bool secure_download_mode_enabled;
+    bool secure_boot_revoked_keys[3];
+    bool jtag_software_disabled;
+    bool jtag_hardware_disabled;
+    bool usb_disabled;
+    bool flash_encryption_enabled;
+    bool dcache_in_uart_download_disabled;
+    bool icache_in_uart_download_disabled;
+} esp_loader_target_security_info_t;
+
 /**
  * @brief Connection arguments
  */
@@ -214,6 +229,22 @@ esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size);
   */
 esp_loader_error_t esp_loader_change_transmission_rate_stub(uint32_t old_transmission_rate,
         uint32_t new_transmission_rate);
+
+/**
+  * @brief Get the security info of the target chip
+  *
+  * @note  The ESP32 and ESP8266 do not support this command.
+  *
+  * @param security_info[out] The security info structure
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Either a timeout event or the target chip responded with
+  *                                a different command code, due to not supporting the command.
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE The target reply is malformed.
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target chip does not support this command.
+  */
+esp_loader_error_t esp_loader_get_security_info(esp_loader_target_security_info_t *security_info);
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 

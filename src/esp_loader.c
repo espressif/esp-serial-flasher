@@ -362,6 +362,67 @@ esp_loader_error_t esp_loader_change_transmission_rate_stub(const uint32_t old_t
 
     return err;
 }
+
+static uint32_t byte_popcnt(uint8_t byte)
+{
+    uint32_t cnt = 0;
+    for (uint32_t bit = 0; bit < 8; bit++) {
+        cnt += byte & 0x01;
+        byte >>= 1;
+    }
+
+    return cnt;
+}
+
+esp_loader_error_t esp_loader_get_security_info(esp_loader_target_security_info_t *security_info)
+{
+    get_security_info_response_data_t resp;
+
+    uint32_t response_received_size = 0;
+    RETURN_ON_ERROR(loader_get_security_info_cmd(&resp, &response_received_size));
+
+    if (response_received_size == sizeof(get_security_info_response_data_t)) {
+        security_info->target_chip = target_from_chip_id(resp.chip_id);
+        security_info->eco_version = resp.eco_version;
+    } else if (response_received_size == sizeof(get_security_info_response_data_t) - 8) {
+        security_info->target_chip = ESP32S2_CHIP;
+        security_info->eco_version = 0;
+    } else {
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    security_info->secure_boot_enabled =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_EN) != 0;
+    security_info->secure_boot_aggressive_revoke_enabled =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_AGGRESSIVE_REVOKE) != 0;
+    security_info->secure_download_mode_enabled =
+        (resp.flags & GET_SECURITY_INFO_SECURE_DOWNLOAD_ENABLE) != 0;
+    security_info->secure_boot_revoked_keys[0] =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE0) != 0;
+    security_info->secure_boot_revoked_keys[1] =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE1) != 0;
+    security_info->secure_boot_revoked_keys[2] =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE2) != 0;
+    security_info->jtag_software_disabled =
+        (resp.flags & GET_SECURITY_INFO_SOFT_DIS_JTAG) != 0;
+    security_info->jtag_hardware_disabled =
+        (resp.flags & GET_SECURITY_INFO_HARD_DIS_JTAG) != 0;
+    security_info->usb_disabled = (resp.flags & GET_SECURITY_INFO_DIS_USB) != 0;
+
+    // If the number of set bits in key_purposes is odd, flash is encrypted
+    uint32_t key_purposes_bit_cnt = 0;
+    for (size_t byte = 0; byte < sizeof(resp.key_purposes); byte++) {
+        key_purposes_bit_cnt += byte_popcnt(resp.key_purposes[byte]);
+    }
+    security_info->flash_encryption_enabled = key_purposes_bit_cnt % 2;
+
+    security_info->dcache_in_uart_download_disabled =
+        (resp.flags & GET_SECURITY_INFO_DIS_DOWNLOAD_DCACHE) != 0;
+    security_info->icache_in_uart_download_disabled =
+        (resp.flags & GET_SECURITY_INFO_DIS_DOWNLOAD_ICACHE) != 0;
+
+    return ESP_LOADER_SUCCESS;
+}
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 esp_loader_error_t esp_loader_mem_start(uint32_t offset, uint32_t size, uint32_t block_size)
