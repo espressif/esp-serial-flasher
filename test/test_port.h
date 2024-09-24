@@ -1,4 +1,4 @@
-/* Copyright 2018-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2018-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,20 +19,9 @@
 #include <stddef.h>
 #include "esp_loader.h"
 
-void clear_buffers();
-
-void write_buffer_print();
-size_t write_buffer_size();
-int8_t *write_buffer_data();
-
-void set_read_buffer(const void *data, size_t size);
-void print_array(int8_t *data, uint32_t size);
-void serial_set_time_delay(uint32_t miliseconds);
-
-
 typedef struct {
     uint32_t dummy;
 } loader_serial_config_t;
 
-esp_loader_error_t loader_port_mock_init(const loader_serial_config_t *config);
-void loader_port_mock_deinit();
+esp_loader_error_t loader_port_test_init(const loader_serial_config_t *config);
+void loader_port_test_deinit();
