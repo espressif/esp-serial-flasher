@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,25 +47,27 @@ extern "C" {
 #define ROUNDUP(a, b) (((int)a + (int)b - 1) / (int)b)
 #endif
 
+#define MAX_RESP_DATA_SIZE 64
+
 typedef enum __attribute__((packed))
 {
     FLASH_BEGIN = 0x02,
-    FLASH_DATA  = 0x03,
-    FLASH_END   = 0x04,
-    MEM_BEGIN   = 0x05,
-    MEM_END     = 0x06,
-    MEM_DATA    = 0x07,
-    SYNC        = 0x08,
-    WRITE_REG   = 0x09,
-    READ_REG    = 0x0a,
-
-    SPI_SET_PARAMS   = 0x0b,
-    SPI_ATTACH       = 0x0d,
-    CHANGE_BAUDRATE  = 0x0f,
+    FLASH_DATA = 0x03,
+    FLASH_END = 0x04,
+    MEM_BEGIN = 0x05,
+    MEM_END = 0x06,
+    MEM_DATA = 0x07,
+    SYNC = 0x08,
+    WRITE_REG = 0x09,
+    READ_REG = 0x0a,
+    SPI_SET_PARAMS = 0x0b,
+    SPI_ATTACH = 0x0d,
+    CHANGE_BAUDRATE = 0x0f,
     FLASH_DEFL_BEGIN = 0x10,
-    FLASH_DEFL_DATA  = 0x11,
-    FLASH_DEFL_END   = 0x12,
-    SPI_FLASH_MD5    = 0x13,
+    FLASH_DEFL_DATA = 0x11,
+    FLASH_DEFL_END = 0x12,
+    SPI_FLASH_MD5 = 0x13,
+    GET_SECURITY_INFO = 0x14,
 } command_t;
 
 typedef enum __attribute__((packed))
@@ -175,6 +177,11 @@ typedef struct __attribute__((packed))
 
 typedef struct __attribute__((packed))
 {
+    command_common_t common;
+} get_security_info_command_t;
+
+typedef struct __attribute__((packed))
+{
     uint8_t direction;
     uint8_t command;    // One of command_t
     uint16_t size;
@@ -189,26 +196,6 @@ typedef struct __attribute__((packed))
 
 typedef struct __attribute__((packed))
 {
-    common_response_t common;
-    response_status_t status;
-} response_t;
-
-typedef struct __attribute__((packed))
-{
-    common_response_t common;
-    uint8_t md5[MD5_SIZE_ROM];
-    response_status_t status;
-} rom_md5_response_t;
-
-typedef struct __attribute__((packed))
-{
-    common_response_t common;
-    uint8_t md5[MD5_SIZE_STUB];
-    response_status_t status;
-} stub_md5_response_t;
-
-typedef struct __attribute__((packed))
-{
     command_common_t common;
     uint32_t id;
     uint32_t total_size;
@@ -217,6 +204,27 @@ typedef struct __attribute__((packed))
     uint32_t page_size;
     uint32_t status_mask;
 } write_spi_command_t;
+
+#define GET_SECURITY_INFO_SECURE_BOOT_EN (1 << 0)
+#define GET_SECURITY_INFO_SECURE_BOOT_AGGRESSIVE_REVOKE (1 << 1)
+#define GET_SECURITY_INFO_SECURE_DOWNLOAD_ENABLE (1 << 2)
+#define GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE0 (1 << 3)
+#define GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE1 (1 << 4)
+#define GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE2 (1 << 5)
+#define GET_SECURITY_INFO_SOFT_DIS_JTAG (1 << 6)
+#define GET_SECURITY_INFO_HARD_DIS_JTAG (1 << 7)
+#define GET_SECURITY_INFO_DIS_USB (1 << 8)
+#define GET_SECURITY_INFO_DIS_DOWNLOAD_DCACHE (1 << 9)
+#define GET_SECURITY_INFO_DIS_DOWNLOAD_ICACHE (1 << 10)
+
+typedef struct __attribute__((packed))
+{
+    uint32_t flags;
+    uint8_t flash_crypt_cnt;
+    uint8_t key_purposes[7];
+    uint32_t chip_id;
+    uint32_t eco_version;
+} get_security_info_response_data_t;
 
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args);
 
@@ -236,6 +244,9 @@ esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_
 esp_loader_error_t loader_spi_parameters(uint32_t total_size);
 
 esp_loader_error_t loader_run_stub(target_chip_t target);
+
+esp_loader_error_t loader_get_security_info_cmd(get_security_info_response_data_t *response,
+        uint32_t *response_recv_size);
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
 esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t blocks_to_write, uint32_t block_size);

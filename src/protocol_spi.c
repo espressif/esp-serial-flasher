@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,18 +114,21 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
 }
 
 
-esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_value)
+esp_loader_error_t send_cmd(const send_cmd_config *config)
 {
-    command_t command = ((const command_common_t *)cmd_data)->command;
+    // Commands with response data are not supported by the ROM for the SPI interface
+    if (config->resp_data != NULL) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
 
-    uint32_t buf_size;
+    uint32_t target_buf_size;
     bool slave_ready = false;
     while (!slave_ready) {
         RETURN_ON_ERROR(handle_slave_state(SLAVE_REGISTER_RXSTA, &s_slave_seq_rx, &slave_ready,
-                                           &buf_size));
+                                           &target_buf_size));
     }
 
-    if (size > buf_size) {
+    if (config->cmd_size + config->data_size > target_buf_size) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
@@ -135,8 +138,13 @@ esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_v
     loader_port_spi_set_cs(0);
     RETURN_ON_ERROR(loader_port_write((const uint8_t *)&preamble, sizeof(preamble),
                                       loader_port_remaining_time()));
-    RETURN_ON_ERROR(loader_port_write((const uint8_t *)cmd_data, size,
+    RETURN_ON_ERROR(loader_port_write((const uint8_t *)config->cmd, config->cmd_size,
                                       loader_port_remaining_time()));
+    if (config->data != NULL && config->data_size != 0) {
+        RETURN_ON_ERROR(loader_port_write((const uint8_t *)config->data, config->data_size,
+                                          loader_port_remaining_time()));
+    }
+
     loader_port_spi_set_cs(1);
 
     /* Terminate the write */
@@ -146,45 +154,8 @@ esp_loader_error_t send_cmd(const void *cmd_data, uint32_t size, uint32_t *reg_v
                                       loader_port_remaining_time()));
     loader_port_spi_set_cs(1);
 
-    return check_response(command, reg_value);
-}
-
-
-esp_loader_error_t send_cmd_with_data(const void *cmd_data, size_t cmd_size,
-                                      const void *data, size_t data_size)
-{
-    uint32_t buf_size;
-    bool slave_ready = false;
-    while (!slave_ready) {
-        RETURN_ON_ERROR(handle_slave_state(SLAVE_REGISTER_RXSTA, &s_slave_seq_rx, &slave_ready,
-                                           &buf_size));
-    }
-
-    if (cmd_size + data_size > buf_size) {
-        return ESP_LOADER_ERROR_INVALID_PARAM;
-    }
-
-    /* Start and write the command and the data */
-    transaction_preamble_t preamble = {.cmd = TRANS_CMD_WRDMA};
-
-    loader_port_spi_set_cs(0);
-    RETURN_ON_ERROR(loader_port_write((const uint8_t *)&preamble, sizeof(preamble),
-                                      loader_port_remaining_time()));
-    RETURN_ON_ERROR(loader_port_write((const uint8_t *)cmd_data, cmd_size,
-                                      loader_port_remaining_time()));
-    RETURN_ON_ERROR(loader_port_write((const uint8_t *)data, data_size,
-                                      loader_port_remaining_time()));
-    loader_port_spi_set_cs(1);
-
-    /* Terminate the write */
-    loader_port_spi_set_cs(0);
-    preamble.cmd = TRANS_CMD_WR_DONE;
-    RETURN_ON_ERROR(loader_port_write((const uint8_t *)&preamble, sizeof(preamble),
-                                      loader_port_remaining_time()));
-    loader_port_spi_set_cs(1);
-
-    command_t command = ((const command_common_t *)cmd_data)->command;
-    return check_response(command, NULL);
+    command_t command = ((const command_common_t *)config->cmd)->command;
+    return check_response(command, config->reg_value);
 }
 
 
@@ -261,19 +232,19 @@ static esp_loader_error_t handle_slave_state(const uint32_t status_reg_addr, uin
 }
 
 
-static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value)
+static esp_loader_error_t check_response(const command_t cmd, uint32_t *reg_value)
 {
-    response_t resp  __attribute__((aligned(4)));
+    uint8_t buf[sizeof(common_response_t) + sizeof(response_status_t)] __attribute__((aligned(4)));
 
-    uint32_t buf_size;
+    uint32_t target_buf_size;
     bool slave_ready = false;
     while (!slave_ready) {
         RETURN_ON_ERROR(handle_slave_state(SLAVE_REGISTER_TXSTA, &s_slave_seq_tx, &slave_ready,
-                                           &buf_size));
+                                           &target_buf_size));
     }
 
-    if (sizeof(resp) > buf_size) {
-        return ESP_LOADER_ERROR_INVALID_PARAM;
+    if (sizeof(buf) > target_buf_size) {
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
     transaction_preamble_t preamble = {
@@ -283,8 +254,9 @@ static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value)
     loader_port_spi_set_cs(0);
     RETURN_ON_ERROR(loader_port_write((const uint8_t *)&preamble, sizeof(preamble),
                                       loader_port_remaining_time()));
-    RETURN_ON_ERROR(loader_port_read((uint8_t *)&resp, sizeof(resp),
+    RETURN_ON_ERROR(loader_port_read(buf, sizeof(buf),
                                      loader_port_remaining_time()));
+
     loader_port_spi_set_cs(1);
 
     /* Terminate the read */
@@ -294,13 +266,12 @@ static esp_loader_error_t check_response(command_t cmd, uint32_t *reg_value)
                                       loader_port_remaining_time()));
     loader_port_spi_set_cs(1);
 
-    common_response_t *common = (common_response_t *)&resp;
+    common_response_t *common = (common_response_t *)&buf[0];
     if ((common->direction != READ_DIRECTION) || (common->command != cmd)) {
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
-    response_status_t *status =
-        (response_status_t *)((uint8_t *)&resp + sizeof(resp) - sizeof(response_status_t));
+    response_status_t *status = (response_status_t *)&buf[sizeof(buf) - sizeof(response_status_t)];
     if (status->failed) {
         log_loader_internal_error(status->error);
         return ESP_LOADER_ERROR_INVALID_RESPONSE;

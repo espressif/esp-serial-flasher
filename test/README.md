@@ -1,30 +1,17 @@
-
 # Serial flasher Tests
 
-##Overview
+## Qemu tests
 
-Two kinds of tests are written for serial flasher:
+Qemu tests use an emulated esp32 to test the correctness of the library. 
 
-* Host tests 
-* Qemu tests
-
-Qemu tests uses emulated esp32 to test correctness of the library. 
-
-## Installation (Only for qemu tests)
+### Installation
 
 Please refer to [building qemu](https://github.com/espressif/qemu) for instructions how to compile.
 
-## Build and run
-
-### Qemu test
+### Build and run
 
 QEMU_PATH environment variable pointing to compiled `qemu/build/xtensa-softmmu/qemu-system-xtensa` has to be defined.
 ```
 export QEMU_PATH=path_to_qemu-system-xtensa
 ./run_test.sh qemu
-```
-
-### Host test
-```
-./run_test.sh host
 ```

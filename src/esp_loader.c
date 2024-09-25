@@ -32,6 +32,7 @@ typedef enum {
 
 static const target_registers_t *s_reg = NULL;
 static target_chip_t s_target = ESP_UNKNOWN_CHIP;
+static uint32_t s_target_flash_size = 0;
 
 #if MD5_ENABLED
 
@@ -75,6 +76,8 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
     RETURN_ON_ERROR(loader_detect_chip(&s_target, &s_reg));
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+    s_target_flash_size = 0;
+
     if (s_target == ESP8266_CHIP) {
         return loader_flash_begin_cmd(0, 0, 0, 0, s_target);
     } else {
@@ -84,6 +87,7 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
         return loader_spi_attach_cmd(spi_config);
     }
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
+
     return ESP_LOADER_SUCCESS;
 }
 
@@ -97,6 +101,8 @@ static uint32_t s_flash_write_size = 0;
 
 esp_loader_error_t esp_loader_connect_with_stub(esp_loader_connect_args_t *connect_args)
 {
+    s_target_flash_size = 0;
+
     loader_port_enter_bootloader();
 
     RETURN_ON_ERROR(loader_initialize_conn(connect_args));
@@ -107,6 +113,34 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_connect_args_t *conne
 
     return ESP_LOADER_SUCCESS;
 }
+
+#ifdef SERIAL_FLASHER_INTERFACE_UART
+esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_connect_args_t *connect_args,
+        const uint32_t flash_size, const target_chip_t target_chip)
+{
+    s_target_flash_size = flash_size;
+    s_target = target_chip;
+
+    loader_port_enter_bootloader();
+
+    RETURN_ON_ERROR(loader_initialize_conn(connect_args));
+
+    if (s_target == ESP_UNKNOWN_CHIP) {
+        RETURN_ON_ERROR(loader_detect_chip(&s_target, &s_reg));
+    }
+
+    if (s_target == ESP8266_CHIP) {
+        return loader_flash_begin_cmd(0, 0, 0, 0, s_target);
+    } else {
+        uint32_t spi_config;
+        RETURN_ON_ERROR( loader_read_spi_config(s_target, &spi_config) );
+        loader_port_start_timer(DEFAULT_TIMEOUT);
+        return loader_spi_attach_cmd(spi_config);
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+#endif /* SERIAL_FLASHER_INTERFACE_UART */
 
 static esp_loader_error_t spi_set_data_lengths(size_t mosi_bits, size_t miso_bits)
 {
@@ -280,15 +314,18 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
 {
     s_flash_write_size = block_size;
 
-    uint32_t flash_size = 0;
-    if (esp_loader_flash_detect_size(&flash_size) == ESP_LOADER_SUCCESS) {
-        if (image_size + offset > flash_size) {
-            return ESP_LOADER_ERROR_IMAGE_SIZE;
+    /* Flash size will be known in advance if we're in secure download mode or we already read it*/
+    if (s_target_flash_size == 0) {
+        if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
+            loader_port_start_timer(DEFAULT_TIMEOUT);
+            RETURN_ON_ERROR(loader_spi_parameters(s_target_flash_size));
+        } else {
+            loader_port_debug_print("Flash size detection failed, falling back to default");
         }
-        loader_port_start_timer(DEFAULT_TIMEOUT);
-        RETURN_ON_ERROR( loader_spi_parameters(flash_size) );
-    } else {
-        loader_port_debug_print("Flash size detection failed, falling back to default");
+    }
+
+    if (image_size + offset > s_target_flash_size) {
+        return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
 #if MD5_ENABLED
@@ -361,6 +398,67 @@ esp_loader_error_t esp_loader_change_transmission_rate_stub(const uint32_t old_t
     }
 
     return err;
+}
+
+static uint32_t byte_popcnt(uint8_t byte)
+{
+    uint32_t cnt = 0;
+    for (uint32_t bit = 0; bit < 8; bit++) {
+        cnt += byte & 0x01;
+        byte >>= 1;
+    }
+
+    return cnt;
+}
+
+esp_loader_error_t esp_loader_get_security_info(esp_loader_target_security_info_t *security_info)
+{
+    get_security_info_response_data_t resp;
+
+    uint32_t response_received_size = 0;
+    RETURN_ON_ERROR(loader_get_security_info_cmd(&resp, &response_received_size));
+
+    if (response_received_size == sizeof(get_security_info_response_data_t)) {
+        security_info->target_chip = target_from_chip_id(resp.chip_id);
+        security_info->eco_version = resp.eco_version;
+    } else if (response_received_size == sizeof(get_security_info_response_data_t) - 8) {
+        security_info->target_chip = ESP32S2_CHIP;
+        security_info->eco_version = 0;
+    } else {
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    security_info->secure_boot_enabled =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_EN) != 0;
+    security_info->secure_boot_aggressive_revoke_enabled =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_AGGRESSIVE_REVOKE) != 0;
+    security_info->secure_download_mode_enabled =
+        (resp.flags & GET_SECURITY_INFO_SECURE_DOWNLOAD_ENABLE) != 0;
+    security_info->secure_boot_revoked_keys[0] =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE0) != 0;
+    security_info->secure_boot_revoked_keys[1] =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE1) != 0;
+    security_info->secure_boot_revoked_keys[2] =
+        (resp.flags & GET_SECURITY_INFO_SECURE_BOOT_KEY_REVOKE2) != 0;
+    security_info->jtag_software_disabled =
+        (resp.flags & GET_SECURITY_INFO_SOFT_DIS_JTAG) != 0;
+    security_info->jtag_hardware_disabled =
+        (resp.flags & GET_SECURITY_INFO_HARD_DIS_JTAG) != 0;
+    security_info->usb_disabled = (resp.flags & GET_SECURITY_INFO_DIS_USB) != 0;
+
+    // If the number of set bits in key_purposes is odd, flash is encrypted
+    uint32_t key_purposes_bit_cnt = 0;
+    for (size_t byte = 0; byte < sizeof(resp.key_purposes); byte++) {
+        key_purposes_bit_cnt += byte_popcnt(resp.key_purposes[byte]);
+    }
+    security_info->flash_encryption_enabled = key_purposes_bit_cnt % 2;
+
+    security_info->dcache_in_uart_download_disabled =
+        (resp.flags & GET_SECURITY_INFO_DIS_DOWNLOAD_DCACHE) != 0;
+    security_info->icache_in_uart_download_disabled =
+        (resp.flags & GET_SECURITY_INFO_DIS_DOWNLOAD_ICACHE) != 0;
+
+    return ESP_LOADER_SUCCESS;
 }
 #endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
