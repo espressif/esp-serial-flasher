@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,11 @@
 #include <string.h>
 #include <assert.h>
 
-static const uint32_t DEFAULT_TIMEOUT = 1000;
-static const uint32_t DEFAULT_FLASH_TIMEOUT = 3000;
-static const uint32_t LOAD_RAM_TIMEOUT_PER_MB = 2000000;
+#define SHORT_TIMEOUT 100
+#define DEFAULT_TIMEOUT 1000
+#define DEFAULT_FLASH_TIMEOUT 3000
+#define LOAD_RAM_TIMEOUT_PER_MB 2000000
+#define MD5_TIMEOUT_PER_MB 8000
 
 typedef enum {
     SPI_FLASH_READ_ID = 0x9F
@@ -40,7 +42,6 @@ static uint32_t s_target_flash_size = 0;
 
 #if MD5_ENABLED
 
-static const uint32_t MD5_TIMEOUT_PER_MB = 8000;
 static struct MD5Context s_md5_context;
 static uint32_t s_start_address;
 static uint32_t s_image_size;
@@ -83,6 +84,7 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args)
     s_target_flash_size = 0;
 
     if (s_target == ESP8266_CHIP) {
+        loader_port_start_timer(DEFAULT_TIMEOUT);
         return loader_flash_begin_cmd(0, 0, 0, 0, s_target);
     } else {
         uint32_t spi_config;
@@ -132,6 +134,7 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_connect_ar
     }
 
     if (s_target == ESP8266_CHIP) {
+        loader_port_start_timer(DEFAULT_TIMEOUT);
         return loader_flash_begin_cmd(0, 0, 0, 0, s_target);
     } else {
         uint32_t spi_config;
@@ -415,8 +418,9 @@ static uint32_t byte_popcnt(uint8_t byte)
 
 esp_loader_error_t esp_loader_get_security_info(esp_loader_target_security_info_t *security_info)
 {
-    get_security_info_response_data_t resp;
+    loader_port_start_timer(SHORT_TIMEOUT);
 
+    get_security_info_response_data_t resp;
     uint32_t response_received_size = 0;
     RETURN_ON_ERROR(loader_get_security_info_cmd(&resp, &response_received_size));
 
