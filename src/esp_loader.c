@@ -32,7 +32,11 @@ typedef enum {
 
 static const target_registers_t *s_reg = NULL;
 static target_chip_t s_target = ESP_UNKNOWN_CHIP;
+
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+static uint32_t s_flash_write_size = 0;
 static uint32_t s_target_flash_size = 0;
+#endif
 
 #if MD5_ENABLED
 
@@ -97,8 +101,6 @@ target_chip_t esp_loader_get_target(void)
 }
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
-static uint32_t s_flash_write_size = 0;
-
 esp_loader_error_t esp_loader_connect_with_stub(esp_loader_connect_args_t *connect_args)
 {
     s_target_flash_size = 0;
@@ -317,15 +319,15 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
     /* Flash size will be known in advance if we're in secure download mode or we already read it*/
     if (s_target_flash_size == 0) {
         if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
+            if (image_size + offset > s_target_flash_size) {
+                return ESP_LOADER_ERROR_IMAGE_SIZE;
+            }
+
             loader_port_start_timer(DEFAULT_TIMEOUT);
             RETURN_ON_ERROR(loader_spi_parameters(s_target_flash_size));
         } else {
             loader_port_debug_print("Flash size detection failed, falling back to default");
         }
-    }
-
-    if (image_size + offset > s_target_flash_size) {
-        return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
 #if MD5_ENABLED
