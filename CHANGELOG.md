@@ -1,3 +1,25 @@
+## v1.6.0 (2024-09-26)
+
+### New Features
+
+- Add support for Secure Download Mode
+- Add support for getting target security info
+- Add logging from target to rpi pico port
+
+### Bug Fixes
+
+- Add delay to usb example to ensure connection
+- Do not enable logging if flashing error - STM
+- Add missing esp32c3 chip magic numbers
+- Multiple timeout fixes
+- Only check if image fits into flash when we know flash size
+- Duplicate word in logging message
+
+### Code Refactoring
+
+- **protocol**: Rework command and response handling code
+- **protocol**: Add support for receiving variably sized SLIP packets
+
 ## v1.5.0 (2024-08-13)
 
 ### New Features
