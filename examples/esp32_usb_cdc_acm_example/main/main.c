@@ -96,6 +96,9 @@ void app_main(void)
         device_disconnected_sem = xSemaphoreCreateBinary();
         assert(device_disconnected_sem);
 
+        // Delay as target may not be ready to accept commands immediately after connection
+        loader_port_delay_ms(100);
+
         /* The ESP32-S3 ignores the line coding set commands,
            so we don't set the higher baudrate argument */
         if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
