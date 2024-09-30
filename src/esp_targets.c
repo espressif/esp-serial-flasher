@@ -35,6 +35,7 @@ typedef struct {
 
 #define ESP8266_SPI_REG_BASE 0x60000200
 #define ESP32S2_SPI_REG_BASE 0x3f402000
+#define ESP32H2_SPI_REG_BASE 0x60003000
 #define ESP32C6_SPI_REG_BASE 0x60003000
 #define ESP32xx_SPI_REG_BASE 0x60002000
 #define ESP32_SPI_REG_BASE   0x3ff42000
@@ -169,17 +170,17 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
     // ESP32H2
     {
         .regs = {
-            .cmd  = ESP32xx_SPI_REG_BASE + 0x00,
-            .usr  = ESP32xx_SPI_REG_BASE + 0x18,
-            .usr1 = ESP32xx_SPI_REG_BASE + 0x1c,
-            .usr2 = ESP32xx_SPI_REG_BASE + 0x20,
-            .w0   = ESP32xx_SPI_REG_BASE + 0x58,
-            .mosi_dlen = ESP32xx_SPI_REG_BASE + 0x24,
-            .miso_dlen = ESP32xx_SPI_REG_BASE + 0x28,
+            .cmd  = ESP32H2_SPI_REG_BASE + 0x00,
+            .usr  = ESP32H2_SPI_REG_BASE + 0x18,
+            .usr1 = ESP32H2_SPI_REG_BASE + 0x1c,
+            .usr2 = ESP32H2_SPI_REG_BASE + 0x20,
+            .w0   = ESP32H2_SPI_REG_BASE + 0x58,
+            .mosi_dlen = ESP32H2_SPI_REG_BASE + 0x24,
+            .miso_dlen = ESP32H2_SPI_REG_BASE + 0x28,
         },
-        .efuse_base = 0x6001A000,
+        .efuse_base = 0x600B0800,
         .chip_magic_value = { 0xd7b73e80, 0, 0, 0 },
-        .read_spi_config = spi_config_esp32xx,
+        .read_spi_config = spi_config_unsupported,
         .mac_efuse_offset = 0x44,
         .encryption_in_begin_flash_cmd = true,
         .chip_id = 16,
