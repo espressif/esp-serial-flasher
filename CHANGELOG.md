@@ -1,3 +1,9 @@
+## v1.6.1 (2024-10-15)
+
+### Bug Fixes
+
+- Fix ESP32-H2 flash detection
+
 ## v1.6.0 (2024-09-26)
 
 ### New Features
