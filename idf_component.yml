@@ -1,4 +1,4 @@
-version: "1.6.1"
+version: "1.6.2"
 description: esp-serial-flasher is a portable C library for flashing or loading apps to RAM of Espressif SoCs from other host microcontrollers
 url: https://github.com/espressif/esp-serial-flasher
 dependencies:

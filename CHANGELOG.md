@@ -1,3 +1,9 @@
+## v1.6.2 (2024-10-18)
+
+### Bug Fixes
+
+- Fix the ESP USB CDC ACM port read return value
+
 ## v1.6.1 (2024-10-15)
 
 ### Bug Fixes
