@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2024 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <sys/param.h>
+#include <assert.h>
 #include "esp_loader_io.h"
 #include "esp_loader.h"
 #include "example_common.h"
@@ -242,13 +243,35 @@ void get_example_ram_app_binary(target_chip_t target, example_ram_app_binary_t *
 
 #endif
 
+static const char *get_error_string(const esp_loader_error_t error)
+{
+    const char *mapping[ESP_LOADER_ERROR_INVALID_RESPONSE + 1] = {
+        "NONE", "UNKNOWN", "TIMEOUT", "IMAGE SIZE",
+        "INVALID MD5", "INVALID PARAMETER", "INVALID TARGET",
+        "UNSUPPORTED CHIP", "UNSUPPORTED FUNCTION", "INVALID RESPONSE"
+    };
+
+    assert(error <= ESP_LOADER_ERROR_INVALID_RESPONSE);
+
+    return mapping[error];
+}
+
 esp_loader_error_t connect_to_target(uint32_t higher_transmission_rate)
 {
     esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
 
     esp_loader_error_t err = esp_loader_connect(&connect_config);
     if (err != ESP_LOADER_SUCCESS) {
-        printf("Cannot connect to target. Error: %u\n", err);
+        printf("Cannot connect to target. Error: %s\n", get_error_string(err));
+
+        if (err == ESP_LOADER_ERROR_TIMEOUT) {
+            printf("Check if the host and the target are properly connected.\n");
+        } else if (err == ESP_LOADER_ERROR_INVALID_TARGET) {
+            printf("You could be using an unsupported chip, or chip revision.\n");
+        } else if (err == ESP_LOADER_ERROR_INVALID_RESPONSE) {
+            printf("Try lowering the transmission rate or using shorter wires to connect the host and the target.\n");
+        }
+
         return err;
     }
     printf("Connected to target\n");
@@ -284,7 +307,16 @@ esp_loader_error_t connect_to_target_with_stub(const uint32_t current_transmissi
 
     esp_loader_error_t err = esp_loader_connect_with_stub(&connect_config);
     if (err != ESP_LOADER_SUCCESS) {
-        printf("Cannot connect to target. Error: %u\n", err);
+        printf("Cannot connect to target. Error: %s\n", get_error_string(err));
+
+        if (err == ESP_LOADER_ERROR_TIMEOUT) {
+            printf("Check if the host and the target are properly connected.\n");
+        } else if (err == ESP_LOADER_ERROR_INVALID_TARGET) {
+            printf("You could be using an unsupported chip, or chip revision.\n");
+        } else if (err == ESP_LOADER_ERROR_INVALID_RESPONSE) {
+            printf("Try lowering the transmission rate or using shorter wires to connect the host and the target.\n");
+        }
+
         return err;
     }
     printf("Connected to target\n");
@@ -321,7 +353,12 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
     printf("Erasing flash (this may take a while)...\n");
     err = esp_loader_flash_start(address, size, sizeof(payload));
     if (err != ESP_LOADER_SUCCESS) {
-        printf("Erasing flash failed with error %d.\n", err);
+        printf("Erasing flash failed with error: %s.\n", get_error_string(err));
+
+        if (err == ESP_LOADER_ERROR_INVALID_PARAM) {
+            printf("If using Secure Download Mode, double check that the specified\
+                    target flash size is correct.\n");
+        }
         return err;
     }
     printf("Start programming\n");
@@ -335,7 +372,7 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 
         err = esp_loader_flash_write(payload, to_read);
         if (err != ESP_LOADER_SUCCESS) {
-            printf("\nPacket could not be written! Error %d.\n", err);
+            printf("\nPacket could not be written! Error %s.\n", get_error_string(err));
             return err;
         }
 
@@ -356,7 +393,7 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
         printf("ESP8266 does not support flash verify command.");
         return err;
     } else if (err != ESP_LOADER_SUCCESS) {
-        printf("MD5 does not match. err: %d\n", err);
+        printf("MD5 does not match. Error: %s\n", get_error_string(err));
         return err;
     }
     printf("Flash verified\n");
@@ -391,7 +428,11 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
 
         err = esp_loader_mem_start(segments[seg].addr, segments[seg].size, ESP_RAM_BLOCK);
         if (err != ESP_LOADER_SUCCESS) {
-            printf("Loading ram start with error %d.\n", err);
+            printf("Loading to RAM could not be started. Error: %s.\n", get_error_string(err));
+
+            if (err == ESP_LOADER_ERROR_INVALID_PARAM) {
+                printf("Check if the chip has Secure Download Mode enabled.\n");
+            }
             return err;
         }
 
@@ -401,7 +442,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
             size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
             err = esp_loader_mem_write(data_pos, data_size);
             if (err != ESP_LOADER_SUCCESS) {
-                printf("\nPacket could not be written! Error %d.\n", err);
+                printf("\nPacket could not be written! Error: %s.\n", get_error_string(err));
                 return err;
             }
             data_pos += data_size;
@@ -411,7 +452,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
 
     err = esp_loader_mem_finish(header->entrypoint);
     if (err != ESP_LOADER_SUCCESS) {
-        printf("\nLoad ram finish with Error %d.\n", err);
+        printf("\nLoading to RAM finished with error: %s.\n", get_error_string(err));
         return err;
     }
     printf("\nFinished loading\n");
