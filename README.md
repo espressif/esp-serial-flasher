@@ -26,7 +26,7 @@ Supported **target** microcontrollers:
 Supported hardware interfaces:
 - UART
 - SPI (only for RAM download)
-- USB CDC ACM (experimental)
+- USB CDC ACM
 
 For example usage check the [examples](/examples) directory.
 

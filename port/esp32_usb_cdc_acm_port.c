@@ -64,11 +64,11 @@ static void handle_usb_event(const cdc_acm_host_dev_event_data_t *event, void *u
 
     case CDC_ACM_HOST_DEVICE_DISCONNECTED:
         ESP_LOGI(TAG, "Device disconnected");
-        esp_loader_error_t deinit_status = loader_port_esp32_usb_cdc_acm_deinit();
-        assert(deinit_status == ESP_LOADER_SUCCESS);
         if (s_device_disconnected_callback != NULL) {
             s_device_disconnected_callback();
         }
+        esp_loader_error_t deinit_status = loader_port_esp32_usb_cdc_acm_deinit();
+        assert(deinit_status == ESP_LOADER_SUCCESS);
         break;
 
     case CDC_ACM_HOST_SERIAL_STATE:
