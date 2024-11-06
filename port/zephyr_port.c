@@ -117,17 +117,17 @@ esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config)
 
 void loader_port_reset_target(void)
 {
-    gpio_pin_set_dt(&enable_spec, false);
+    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? true : false);
     loader_port_delay_ms(CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_pin_set_dt(&enable_spec, true);
+    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? false : true);
 }
 
 void loader_port_enter_bootloader(void)
 {
-    gpio_pin_set_dt(&boot_spec, false);
+    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? true : false);
     loader_port_reset_target();
     loader_port_delay_ms(CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    gpio_pin_set_dt(&boot_spec, true);
+    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? false : true);
 }
 
 void loader_port_delay_ms(uint32_t ms)

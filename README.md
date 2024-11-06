@@ -65,6 +65,19 @@ This is the time for which the boot pin is asserted when doing a hard reset in m
 
 Default: 50
 
+* `SERIAL_FLASHER_RESET_INVERT`
+
+This inverts the output of the reset gpio pin. Useful if the hardware has inverting connection
+between the host and the target reset pin. Implemented only for UART interface.
+
+Default: n
+
+* `SERIAL_FLASHER_BOOT_INVERT`
+This inverts the output of the boot (IO0) gpio pin. Useful if the hardware has inverting connection
+between the host and the target boot pin. Implemented only for UART interface.
+
+Default: n
+
 Configuration can be passed to `cmake` via command line:
 
 ```

@@ -38,4 +38,20 @@ menu "ESP serial flasher"
         int "Number of retries when writing blocks either to target flash or RAM"
         default 3
 
+    config SERIAL_FLASHER_RESET_INVERT
+        bool "Invert reset signal"
+        default n
+        depends on SERIAL_FLASHER_INTERFACE_UART
+        help
+           Enable this option if there is an inverting connection between
+           the output of the serial-flasher and the reset pin of the ESP chip.
+
+    config SERIAL_FLASHER_BOOT_INVERT
+        bool "Invert boot signal"
+        default n
+        depends on SERIAL_FLASHER_INTERFACE_UART
+        help
+           Enable this option if there is an inverting connection between
+           the output of the serial-flasher and the boot pin of the ESP chip.
+
 endmenu
