@@ -48,8 +48,7 @@ static void transfer_debug_print(const uint8_t *data, const uint16_t size, const
 
 static bool handle_usb_data(const uint8_t *data, size_t data_len, void *arg)
 {
-    assert(xStreamBufferSend(s_rx_stream_buffer, data, data_len, 0) == data_len);
-    return true;
+    return xStreamBufferSend(s_rx_stream_buffer, data, data_len, 0) == data_len;
 }
 
 static void handle_usb_event(const cdc_acm_host_dev_event_data_t *event, void *user_ctx)
@@ -86,6 +85,7 @@ static void handle_usb_event(const cdc_acm_host_dev_event_data_t *event, void *u
 
 static void usb_serial_jtag_reset_target(void)
 {
+    xStreamBufferReset(s_rx_stream_buffer);
     cdc_acm_host_set_control_line_state(s_acm_device, false, true);
     loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
 }
@@ -102,6 +102,7 @@ static void usb_serial_jtag_enter_booloader(void)
 
 static void usb_serial_converter_reset_target(void)
 {
+    xStreamBufferReset(s_rx_stream_buffer);
     cdc_acm_host_set_control_line_state(s_acm_device, true, true);
     loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
     cdc_acm_host_set_control_line_state(s_acm_device, true, false);
