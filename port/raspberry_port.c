@@ -17,6 +17,7 @@
 #include "protocol.h"
 #include <pigpio.h>
 #include "raspberry_port.h"
+#include "timespec.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -50,7 +51,7 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 #endif
 
 static int serial;
-static int64_t s_time_end;
+static struct timespec s_time_end;
 static int32_t s_reset_trigger_pin;
 static int32_t s_gpio0_trigger_pin;
 
@@ -285,14 +286,26 @@ void loader_port_delay_ms(uint32_t ms)
 
 void loader_port_start_timer(uint32_t ms)
 {
-    s_time_end = clock() + (ms * (CLOCKS_PER_SEC / 1000));
+    struct timespec now, add;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    add = timespec_from_ms(ms);
+    s_time_end = timespec_add(now, add);
 }
 
 
 uint32_t loader_port_remaining_time(void)
 {
-    int64_t remaining = (s_time_end - clock()) / 1000;
-    return (remaining > 0) ? (uint32_t)remaining : 0;
+    struct timespec now, diff;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    if (timespec_ge(s_time_end, now)) {
+        diff = timespec_sub(s_time_end, now);
+        return timespec_to_ms(diff);
+    }
+
+    return 0;
 }
 
 
