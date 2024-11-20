@@ -17,9 +17,9 @@ variables:
   ARM_TOOLCHAIN_URL: https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz?rev=e434b9ea4afc4ed7998329566b764309&hash=CA590209F5774EE1C96E6450E14A3E26
   QEMU_PATH: /opt/qemu/bin/qemu-system-xtensa
   ZEPHYR_REPO: https://github.com/zephyrproject-rtos/zephyr.git
-  ZEPHYR_REPO_REV: v3.5.0
-  ZEPHYR_TOOLCHAIN: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/toolchain_linux-x86_64_xtensa-espressif_esp32_zephyr-elf.tar.xz
-  ZEPHYR_SDK: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.16.3/zephyr-sdk-0.16.3_linux-aarch64_minimal.tar.xz
+  ZEPHYR_REPO_REV: v4.0.0
+  ZEPHYR_TOOLCHAIN: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.0/toolchain_linux-x86_64_xtensa-espressif_esp32_zephyr-elf.tar.xz
+  ZEPHYR_SDK: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.0/zephyr-sdk-0.17.0_linux-aarch64_minimal.tar.xz
   PI_PICO_SDK_REV: 1.5.1
   PI_PICO_SDK: https://github.com/raspberrypi/pico-sdk
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -223,7 +223,7 @@ build_zephyr:
     - unset IDF_PATH
     - west zephyr-export
     - west update hal_espressif
-    - west build -p -b esp32_devkitc_wroom $CI_PROJECT_DIR/examples/zephyr_example -DZEPHYR_EXTRA_MODULES=$CI_PROJECT_DIR
+    - west build -p -b esp32_devkitc_wroom/esp32/procpu $CI_PROJECT_DIR/examples/zephyr_example -DZEPHYR_EXTRA_MODULES=$CI_PROJECT_DIR
 
 build_pi_pico:
   stage: build

@@ -382,7 +382,6 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 
         int progress = (int)(((float)written / binary_size) * 100);
         printf("\rProgress: %d %%", progress);
-        fflush(stdout);
     };
 
     printf("\nFinished programming\n");

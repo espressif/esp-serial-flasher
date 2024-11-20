@@ -33,10 +33,10 @@ Table below shows connection between the two devices:
 
 | ESP32 (host) | Espressif SoC (target) |
 |:------------:|:----------------------:|
-|    IO4       |           IO0          |
-|    IO2       |          RESET         |
-|    IO9       |           TX0          |
-|    IO10      |           RX0          |
+|    IO26      |           IO0          |
+|    IO25      |          RESET         |
+|    IO4       |           TX0          |
+|    IO5       |           RX0          |
 
 ## Build and flash
 

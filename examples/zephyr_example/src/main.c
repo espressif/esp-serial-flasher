@@ -45,17 +45,17 @@ int main(void)
 
     if (!device_is_ready(esp_uart_dev)) {
         printk("ESP UART not ready");
-        return;
+        return -ENODEV;
     }
 
     if (!device_is_ready(esp_boot_spec.port)) {
         printk("ESP boot GPIO not ready");
-        return;
+        return -ENODEV;
     }
 
     if (!device_is_ready(esp_enable_spec.port)) {
-        printk("Bluetooth Enable GPIO not ready");
-        return;
+        printk("ESP enable GPIO not ready");
+        return -ENODEV;
     }
 
     gpio_pin_configure_dt(&esp_boot_spec, GPIO_OUTPUT_ACTIVE);
@@ -63,7 +63,7 @@ int main(void)
 
     if (loader_port_zephyr_init(&config) != ESP_LOADER_SUCCESS) {
         printk("ESP loader init failed");
-        return;
+        return -EIO;
     }
 
     if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
