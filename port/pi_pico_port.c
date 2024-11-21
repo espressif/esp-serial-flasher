@@ -148,20 +148,20 @@ void loader_port_pi_pico_deinit(void)
 
 void loader_port_enter_bootloader(void)
 {
-    gpio_put(s_boot_pin_num, 0);
+    gpio_put(s_boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
 
     loader_port_reset_target();
     loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
 
-    gpio_put(s_boot_pin_num, 1);
+    gpio_put(s_boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
 }
 
 
 void loader_port_reset_target(void)
 {
-    gpio_put(s_reset_trigger_pin_num, 0);
+    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_put(s_reset_trigger_pin_num, 1);
+    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
 }
 
 
