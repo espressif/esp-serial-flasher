@@ -238,6 +238,22 @@ esp_loader_error_t esp_loader_flash_finish(bool reboot);
 esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size);
 
 /**
+  * @brief Reads from the target flash.
+  *
+  * @param buf[out] Buffer to read into
+  * @param address[in] Flash address to read from.
+  * @param length[in] Read length in bytes.
+  *
+  * @note Higher read speeds can be achieved by using the flasher stub.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP The target flash chip is not known
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target chip is running in secure download mode
+  */
+esp_loader_error_t esp_loader_flash_read(uint8_t *buf, uint32_t address, uint32_t length);
+
+/**
   * @brief Change baud rate of the stub running on the target
   *
   * @note  Baud rate has to be also adjusted accordingly on host MCU, as
