@@ -181,9 +181,9 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_connect_ar
 /**
   * @brief Initiates flash operation
   *
-  * @param offset[in]       Address from which flash operation will be performed.
-  * @param image_size[in]   Size of the whole binary to be loaded into flash.
-  * @param block_size[in]   Size of buffer used in subsequent calls to esp_loader_flash_write.
+  * @param offset[in] Address from which flash operation will be performed. Must be 4 byte aligned.
+  * @param image_size[in] Size of the whole binary to be loaded into flash. Must be 4 byte aligned.
+  * @param block_size[in] Size of buffer used in subsequent calls to esp_loader_flash_write.
   *
   * @note  image_size is size of the whole image, whereas, block_size is chunk of data sent
   *        to the target, each time esp_loader_flash_write function is called.

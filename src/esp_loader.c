@@ -320,6 +320,11 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
 {
     s_flash_write_size = block_size;
 
+    // Both the address and image size must be aligned to 4 bytes
+    if (offset % 4 != 0 || image_size % 4 != 0) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
     /* Flash size will be known in advance if we're in secure download mode or we already read it*/
     if (s_target_flash_size == 0) {
         if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
