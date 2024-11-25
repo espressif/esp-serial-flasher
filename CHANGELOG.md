@@ -1,3 +1,20 @@
+## v1.7.0 (2024-11-25)
+
+### New Features
+
+- Add support for reading from target flash
+- Add support for inverting reset and boot pins
+- Update zephyr example to v4.0.0
+- **examples**: Provide more useful error messages
+
+### Bug Fixes
+
+- Clarify and validate alignment requirements for flashing
+- ROUNDUP calculation fix
+- Zephyr example
+- Handling of USB buffer overflow
+- Callback when USB port is disconnected
+
 ## v1.6.2 (2024-10-18)
 
 ### Bug Fixes
