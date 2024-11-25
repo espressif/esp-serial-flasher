@@ -19,6 +19,7 @@
 #include "esp_stubs.h"
 #include "esp_targets.h"
 #include "md5_hash.h"
+#include "slip.h"
 #include <string.h>
 #include <assert.h>
 
@@ -319,6 +320,11 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
 {
     s_flash_write_size = block_size;
 
+    // Both the address and image size must be aligned to 4 bytes
+    if (offset % 4 != 0 || image_size % 4 != 0) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
     /* Flash size will be known in advance if we're in secure download mode or we already read it*/
     if (s_target_flash_size == 0) {
         if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
@@ -463,6 +469,130 @@ esp_loader_error_t esp_loader_get_security_info(esp_loader_target_security_info_
         (resp.flags & GET_SECURITY_INFO_DIS_DOWNLOAD_DCACHE) != 0;
     security_info->icache_in_uart_download_disabled =
         (resp.flags & GET_SECURITY_INFO_DIS_DOWNLOAD_ICACHE) != 0;
+
+    return ESP_LOADER_SUCCESS;
+}
+
+static esp_loader_error_t flash_read_stub(uint8_t *dest, uint32_t address, uint32_t length)
+{
+    uint8_t buf[256]; // Hardcoded for now, decent tradeoff between speed and stack usage
+    size_t recv_size = 0;
+    struct MD5Context md5_context;
+    MD5Init(&md5_context);
+
+    // The flasher stub requires reads to be aligned to 4 bytes.
+    // The solution is to read more than is needed and discard the unecessary bytes.
+    const uint32_t seek_back_len = address % 4;
+    address -= seek_back_len;
+    length += seek_back_len;
+
+    const uint32_t overread_len = ROUNDUP(length, 4) - length;
+    length += overread_len;
+
+    loader_port_start_timer(DEFAULT_TIMEOUT);
+    loader_flash_read_stub_cmd(address, length, sizeof(buf));
+
+    uint32_t copy_dest_start = 0;
+    int32_t remaining = length;
+    while (remaining > 0) {
+        loader_port_start_timer(DEFAULT_TIMEOUT);
+        const uint32_t to_receive = MIN(remaining, sizeof(buf));
+        RETURN_ON_ERROR(SLIP_receive_packet(buf, to_receive, &recv_size));
+
+        if (recv_size != to_receive) {
+            return ESP_LOADER_ERROR_INVALID_RESPONSE;
+        }
+
+        MD5Update(&md5_context, buf, recv_size);
+
+        // Handle seek back and overread.
+        uint32_t copy_start = 0;
+        uint32_t copy_length = recv_size;
+
+        const bool first_read = remaining == length;
+        if (first_read) {
+            copy_start += seek_back_len;
+            copy_length -= seek_back_len;
+        }
+
+        const bool last_read = remaining - recv_size <= 0;
+        if (last_read) {
+            copy_length -= overread_len;
+        }
+
+        memcpy(&dest[copy_dest_start], &buf[copy_start], copy_length);
+        copy_dest_start += copy_length;
+
+        remaining -= recv_size;
+
+        // Ack by sending back total received byte count
+        const uint32_t bytes_recv = length - remaining;
+        loader_port_start_timer(DEFAULT_TIMEOUT);
+        RETURN_ON_ERROR(SLIP_send_delimiter());
+        RETURN_ON_ERROR(SLIP_send((const uint8_t *)&bytes_recv, sizeof(bytes_recv)));
+        RETURN_ON_ERROR(SLIP_send_delimiter());
+    }
+
+    uint8_t md5_calc[16];
+    MD5Final(md5_calc, &md5_context);
+
+    loader_port_start_timer(DEFAULT_TIMEOUT);
+    uint8_t md5_recv[16];
+    RETURN_ON_ERROR(SLIP_receive_packet(md5_recv, sizeof(md5_recv), &recv_size));
+
+    if (recv_size != sizeof(md5_recv) || memcmp(md5_calc, md5_recv, sizeof(md5_calc))) {
+        return ESP_LOADER_ERROR_INVALID_MD5;
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t esp_loader_flash_read(uint8_t *dest, uint32_t address, uint32_t length)
+{
+    /* Flash size will be known in advance if we're in secure download mode or we already read it*/
+    if (s_target_flash_size == 0) {
+        if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
+            if (address + length >= s_target_flash_size) {
+                return ESP_LOADER_ERROR_IMAGE_SIZE;
+            }
+
+            loader_port_start_timer(DEFAULT_TIMEOUT);
+            RETURN_ON_ERROR(loader_spi_parameters(s_target_flash_size));
+        } else {
+            loader_port_debug_print("Flash size detection failed, falling back to default");
+        }
+    }
+
+    if (esp_stub_get_running()) {
+        RETURN_ON_ERROR(flash_read_stub(dest, address, length));
+    } else {
+        // We read from the ROM in 64B chunks, if we want to read anything in the last 64B
+        // we need to ensure that the read is aligned to 64B, so we read more than necessary.
+        const uint32_t seek_back_len = address % READ_FLASH_ROM_DATA_SIZE;
+        address -= seek_back_len;
+        length += seek_back_len;
+
+        uint32_t copy_dest_start = 0;
+        int32_t remaining = length;
+        while (remaining > 0) {
+            uint8_t buf[READ_FLASH_ROM_DATA_SIZE];
+
+            loader_port_start_timer(DEFAULT_TIMEOUT);
+            RETURN_ON_ERROR(loader_flash_read_rom_cmd(address + length - remaining, buf));
+
+            const bool first_read = remaining == length;
+            size_t to_read = MIN(remaining, sizeof(buf));
+            if (first_read) {
+                to_read -= seek_back_len;
+                memcpy(&dest[0], &buf[seek_back_len], to_read);
+            } else {
+                memcpy(&dest[copy_dest_start], &buf[0], to_read);
+            }
+
+            remaining -= READ_FLASH_ROM_DATA_SIZE;
+            copy_dest_start += to_read;
+        }
+    }
 
     return ESP_LOADER_SUCCESS;
 }

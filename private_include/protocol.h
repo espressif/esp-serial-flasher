@@ -44,10 +44,11 @@ extern "C" {
 #endif
 
 #ifndef ROUNDUP
-#define ROUNDUP(a, b) (((int)a + (int)b - 1) / (int)b)
+#define ROUNDUP(a, b) ((((unsigned)a + (unsigned)b - 1) / (unsigned)b) * (unsigned)b)
 #endif
 
 #define MAX_RESP_DATA_SIZE 64
+#define READ_FLASH_ROM_DATA_SIZE 64
 
 typedef enum __attribute__((packed))
 {
@@ -62,12 +63,14 @@ typedef enum __attribute__((packed))
     READ_REG = 0x0a,
     SPI_SET_PARAMS = 0x0b,
     SPI_ATTACH = 0x0d,
+    READ_FLASH_ROM = 0x0e,
     CHANGE_BAUDRATE = 0x0f,
     FLASH_DEFL_BEGIN = 0x10,
     FLASH_DEFL_DATA = 0x11,
     FLASH_DEFL_END = 0x12,
     SPI_FLASH_MD5 = 0x13,
     GET_SECURITY_INFO = 0x14,
+    READ_FLASH_STUB = 0xd2,
 } command_t;
 
 typedef enum __attribute__((packed))
@@ -114,6 +117,22 @@ typedef struct __attribute__((packed))
     command_common_t common;
     uint32_t stay_in_loader;
 } flash_end_command_t;
+
+typedef struct __attribute__((packed))
+{
+    command_common_t common;
+    uint32_t address;
+    uint32_t size;
+} flash_read_rom_cmd;
+
+typedef struct __attribute__((packed))
+{
+    command_common_t common;
+    uint32_t address;
+    uint32_t total_size;
+    uint32_t packet_data_size;
+    uint32_t max_inflight_packets;
+} flash_read_stub_cmd;
 
 typedef struct __attribute__((packed))
 {
@@ -234,6 +253,10 @@ esp_loader_error_t loader_flash_begin_cmd(uint32_t offset, uint32_t erase_size, 
 esp_loader_error_t loader_flash_data_cmd(const uint8_t *data, uint32_t size);
 
 esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader);
+
+esp_loader_error_t loader_flash_read_rom_cmd(uint32_t address, uint8_t *data);
+
+esp_loader_error_t loader_flash_read_stub_cmd(uint32_t address, uint32_t size, uint32_t size_per_packet);
 
 esp_loader_error_t loader_sync_cmd(void);
 
