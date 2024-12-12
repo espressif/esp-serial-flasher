@@ -1,10 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
 set(srcs
-    src/esp_targets.c
     src/md5_hash.c
     src/esp_loader.c
-    src/protocol_common.c
 )
 set(defs)
 
@@ -39,14 +37,17 @@ add_option(SERIAL_FLASHER_WRITE_BLOCK_RETRIES 3)
 if (NOT DEFINED ESP_PLATFORM AND
     NOT DEFINED SERIAL_FLASHER_INTERFACE_UART AND
     NOT DEFINED SERIAL_FLASHER_INTERFACE_SPI AND
-    NOT DEFINED SERIAL_FLASHER_INTERFACE_USB)
+    NOT DEFINED SERIAL_FLASHER_INTERFACE_USB AND
+    NOT DEFINED SERIAL_FLASHER_INTERFACE_SDIO)
 
     set(SERIAL_FLASHER_INTERFACE_UART true)
 endif()
 
 if (DEFINED SERIAL_FLASHER_INTERFACE_UART OR CONFIG_SERIAL_FLASHER_INTERFACE_UART STREQUAL "y")
     list(APPEND srcs
+        src/esp_targets.c
         src/esp_stubs.c
+        src/protocol_serial.c
         src/protocol_uart.c
         src/slip.c
     )
@@ -62,7 +63,9 @@ if (DEFINED SERIAL_FLASHER_INTERFACE_UART OR CONFIG_SERIAL_FLASHER_INTERFACE_UAR
 
 elseif(DEFINED SERIAL_FLASHER_INTERFACE_USB OR CONFIG_SERIAL_FLASHER_INTERFACE_USB STREQUAL "y")
     list(APPEND srcs
+        src/esp_targets.c
         src/esp_stubs.c
+        src/protocol_serial.c
         src/protocol_uart.c
         src/slip.c
     )
@@ -75,10 +78,19 @@ elseif(DEFINED SERIAL_FLASHER_INTERFACE_USB OR CONFIG_SERIAL_FLASHER_INTERFACE_U
 
 elseif(DEFINED SERIAL_FLASHER_INTERFACE_SPI OR CONFIG_SERIAL_FLASHER_INTERFACE_SPI STREQUAL "y")
     list(APPEND srcs
+        src/esp_targets.c
+        src/protocol_serial.c
         src/protocol_spi.c
     )
     list(APPEND defs
         SERIAL_FLASHER_INTERFACE_SPI
+    )
+elseif(DEFINED SERIAL_FLASHER_INTERFACE_SDIO OR CONFIG_SERIAL_FLASHER_INTERFACE_SDIO STREQUAL "y")
+    list(APPEND srcs
+        src/protocol_sdio.c
+    )
+    list(APPEND defs
+        SERIAL_FLASHER_INTERFACE_SDIO
     )
 endif()
 
@@ -95,13 +107,17 @@ if (DEFINED ESP_PLATFORM)
         list(APPEND srcs
             port/esp32_usb_cdc_acm_port.c
         )
+    elseif (${CONFIG_SERIAL_FLASHER_INTERFACE_SDIO})
+        list(APPEND srcs
+            port/esp32_sdio_port.c
+        )
     endif()
 
     # Register component to esp-idf build system
     idf_component_register(SRCS ${srcs}
                            INCLUDE_DIRS include port
                            PRIV_INCLUDE_DIRS private_include
-                           PRIV_REQUIRES driver esp_timer)
+                           PRIV_REQUIRES driver esp_timer sdmmc)
 
     if (${CONFIG_SERIAL_FLASHER_INTERFACE_USB})
         idf_component_set_property(${COMPONENT_NAME} PRIV_REQUIRES usb APPEND)

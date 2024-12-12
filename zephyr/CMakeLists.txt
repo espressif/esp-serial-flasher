@@ -14,7 +14,7 @@ if (CONFIG_ESP_SERIAL_FLASHER)
     zephyr_library_sources(${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_loader.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_targets.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_stubs.c
-                ${ZEPHYR_CURRENT_MODULE_DIR}/src/protocol_common.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/protocol_serial.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/protocol_uart.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/slip.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/md5_hash.c
