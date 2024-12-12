@@ -341,7 +341,7 @@ esp_loader_error_t esp_loader_mem_write(const void *payload, uint32_t size);
   */
 esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint);
 
-
+#ifndef SERIAL_FLASHER_INTERFACE_SDIO
 /**
   * @brief Reads te MAC of the connected chip.
   *
@@ -399,6 +399,7 @@ esp_loader_error_t esp_loader_read_register(uint32_t address, uint32_t *reg_valu
   *       mode or the stub is running on the target.
   */
 esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rate);
+#endif /* SERIAL_FLASHER_INTERFACE_SDIO */
 
 /**
   * @brief Verify target's flash integrity by checking MD5.

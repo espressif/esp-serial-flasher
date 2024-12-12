@@ -278,11 +278,15 @@ esp_loader_error_t loader_mem_data_cmd(const uint8_t *data, uint32_t size);
 
 esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint);
 
+#ifndef SERIAL_FLASHER_INTERFACE_SDIO
+
 esp_loader_error_t loader_write_reg_cmd(uint32_t address, uint32_t value, uint32_t mask, uint32_t delay_us);
 
 esp_loader_error_t loader_read_reg_cmd(uint32_t address, uint32_t *reg);
 
 esp_loader_error_t loader_change_baudrate_cmd(uint32_t new_baudrate, uint32_t old_baudrate);
+
+#endif /* SERIAL_FLASHER_INTERFACE_SDIO */
 
 #ifdef __cplusplus
 }

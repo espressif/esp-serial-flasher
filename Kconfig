@@ -20,6 +20,9 @@ menu "ESP serial flasher"
         config SERIAL_FLASHER_INTERFACE_USB
             bool "USB"
 
+        config SERIAL_FLASHER_INTERFACE_SDIO
+            bool "SDIO (Experimental, Only supports downloading to RAM)"
+
     endchoice
 
     config SERIAL_FLASHER_RESET_HOLD_TIME_MS

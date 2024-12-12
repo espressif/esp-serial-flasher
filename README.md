@@ -25,8 +25,9 @@ Supported **target** microcontrollers:
 
 Supported hardware interfaces:
 - UART
-- SPI (only for RAM download)
 - USB CDC ACM
+- SPI (only for RAM download)
+- SDIO (only for RAM download, experimental)
 
 For example usage check the [examples](/examples) directory.
 
@@ -34,7 +35,7 @@ For example usage check the [examples](/examples) directory.
 
 These are the configuration toggles available to the user:
 
-* `SERIAL_FLASHER_INTERFACE_UART`/`SERIAL_FLASHER_INTERFACE_SPI`/`SERIAL_FLASHER_INTERFACE_USB`
+* `SERIAL_FLASHER_INTERFACE_UART`/`SERIAL_FLASHER_INTERFACE_SPI`/`SERIAL_FLASHER_INTERFACE_USB/SERIAL_FLASHER_INTERFACE_SDIO`
 
 This defines the hardware interface to use.
 
@@ -163,7 +164,11 @@ The port layer for the given host microcontroller can be implemented if not avai
 
 For the SPI interface ports
 - `loader_port_spi_set_cs()`
-needs to be implemented as well.
+needs to be implemented as well,
+
+and
+- `loader_port_sdio_card_init()`
+for the SDIO interface ports.
 
 The following functions are part of the [io.h](include/io.h) header for convenience, however, the user does not have to strictly follow function signatures, as there are not called directly from library.
 

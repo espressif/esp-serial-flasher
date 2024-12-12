@@ -646,7 +646,7 @@ esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint)
     return loader_mem_end_cmd(entrypoint);
 }
 
-
+#ifndef SERIAL_FLASHER_INTERFACE_SDIO
 esp_loader_error_t esp_loader_read_mac(uint8_t *mac)
 {
     if (s_target == ESP8266_CHIP) {
@@ -681,6 +681,7 @@ esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rat
 
     return loader_change_baudrate_cmd(transmission_rate, 0);
 }
+#endif /* SERIAL_FLASHER_INTERFACE_SDIO */
 
 #if MD5_ENABLED
 
