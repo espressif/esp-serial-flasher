@@ -88,6 +88,7 @@ static void usb_serial_jtag_reset_target(void)
     xStreamBufferReset(s_rx_stream_buffer);
     cdc_acm_host_set_control_line_state(s_acm_device, false, true);
     loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    cdc_acm_host_set_control_line_state(s_acm_device, false, false);
 }
 
 static void usb_serial_jtag_enter_booloader(void)
@@ -96,9 +97,9 @@ static void usb_serial_jtag_enter_booloader(void)
 
     loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
 
+    cdc_acm_host_set_control_line_state(s_acm_device, true, true);
     usb_serial_jtag_reset_target();
 }
-
 
 static void usb_serial_converter_reset_target(void)
 {
