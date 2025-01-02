@@ -17,6 +17,8 @@ def pytest_configure(config):
         pass
     elif "pi_pico" in target:
         config.option.embedded_services = "serial"
+    elif "zephyr" in target:
+        config.option.embedded_services = "serial"
     else:
         config.option.embedded_services = "esp,idf"
 
