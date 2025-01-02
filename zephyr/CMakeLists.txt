@@ -29,6 +29,10 @@ if (CONFIG_ESP_SERIAL_FLASHER)
         target_compile_definitions(esp_flasher INTERFACE -DMD5_ENABLED=1)
     endif()
 
+    if(DEFINED SERIAL_FLASHER_DEBUG_TRACE OR CONFIG_SERIAL_FLASHER_DEBUG_TRACE)
+        target_compile_definitions(esp_flasher INTERFACE SERIAL_FLASHER_DEBUG_TRACE=1)
+    endif()
+
     target_compile_definitions(esp_flasher
     INTERFACE
         SERIAL_FLASHER_WRITE_BLOCK_RETRIES=${CONFIG_SERIAL_FLASHER_WRITE_BLOCK_RETRIES}
