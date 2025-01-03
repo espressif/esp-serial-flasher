@@ -198,6 +198,13 @@ build_stm32:
 build_zephyr:
   stage: build
   image: espressif/idf:latest
+  artifacts:
+    paths:
+      - "**/build*/zephyr/*.bin"
+      - "**/build*/zephyr/*.elf"
+      - "**/build*/zephyr/*.map"
+    when: always
+    expire_in: 3 days
   tags:
     - build
     - internet
@@ -321,6 +328,14 @@ test_esp2:
     - cd $CI_PROJECT_DIR
     - pytest --target=esp32 --port=/dev/serial_ports/ESP32_ESP32 -k 'not test_esp32_sdio_load_ram_example'
     - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_usb_cdc_acm_example'
+
+test_zephyr:
+  extends: .test_template
+  tags:
+    - ESF-RPI-03
+  script:
+    - cd $CI_PROJECT_DIR
+    - pytest --target=zephyr --port=/dev/serial_ports/ESP32_ESP32
 
 test_stm32:
   extends: .test_template
