@@ -35,8 +35,8 @@ Table below shows connection between the two devices:
 |:------------:|:----------------------:|
 |    IO26      |           IO0          |
 |    IO25      |          RESET         |
-|    IO4       |           TX0          |
-|    IO5       |           RX0          |
+|    IO4       |           RX0          |
+|    IO5       |           TX0          |
 
 ## Build and flash
 
