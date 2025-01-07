@@ -66,21 +66,27 @@ Binaries to be flashed are placed in a separate folder (binaries.c) for each pos
 
 Here is the example's console output:
 
-```
-*** Booting Zephyr OS build zephyr-v3.2.0-3548-ga1bb9c9d1736 ***
+``` text
 Running ESP Flasher from Zephyr
 Connected to target
-Baudrate changed
+Transmission rate changed.
 Erasing flash (this may take a while)...
 Start programming
 Progress: 100 %
 Finished programming
+Flash verified
 Erasing flash (this may take a while)...
 Start programming
 Progress: 100 %
 Finished programming
+Flash verified
 Erasing flash (this may take a while)...
 Start programming
 Progress: 100 %
 Finished programming
+Flash verified
+********************************************
+*** Logs below are print from slave .... ***
+********************************************
+Hello world!
 ```

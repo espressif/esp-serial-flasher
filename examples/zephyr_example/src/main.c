@@ -13,6 +13,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/uart.h>
 #include <zephyr/sys/util.h>
 
 #include <stdio.h>
@@ -77,5 +78,19 @@ int main(void)
 
     esp_loader_reset_target();
 
+    if (loader_port_change_transmission_rate(DEFAULT_BAUDRATE) == ESP_LOADER_SUCCESS) {
+        // Delay for skipping the boot message of the targets
+        k_msleep(500);
+
+        printk("********************************************\n");
+        printk("*** Logs below are print from slave .... ***\n");
+        printk("********************************************\n");
+        while (1) {
+            uint8_t c;
+            if (uart_poll_in(esp_uart_dev, &c) == 0) {
+                printk("%c", c);
+            }
+        }
+    }
     return 0;
 }
