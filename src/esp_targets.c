@@ -156,7 +156,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         },
         .efuse_base = 0x60008800,
         .chip_magic_value = { 0x6f51306f, 0x7c41a06f, 0, 0 },
-        .read_spi_config = spi_config_esp32xx,
+        .read_spi_config = spi_config_unsupported,
         .mac_efuse_offset = 0x40,
         .encryption_in_begin_flash_cmd = true,
         .chip_id = 12,
