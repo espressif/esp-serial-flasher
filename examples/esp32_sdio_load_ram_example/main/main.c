@@ -83,6 +83,7 @@ void app_main(void)
         get_example_ram_app_binary(esp_loader_get_target(), &bin);
         ESP_LOGI(TAG, "Loading app to RAM ...");
         esp_loader_error_t err = load_ram_binary(bin.ram_app.data);
+        loader_port_esp32_sdio_deinit();
         if (err == ESP_LOADER_SUCCESS) {
             // Forward slave's serial output
             ESP_LOGI(TAG, "********************************************");

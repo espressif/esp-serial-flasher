@@ -149,7 +149,7 @@ static esp_loader_error_t slave_write_register(const uint32_t addr, uint32_t reg
 
 static esp_loader_error_t slave_wait_ready(const uint32_t timeout)
 {
-    uint8_t reg = 0;
+    uint8_t reg __attribute__((aligned(4))) = 0;
 
     loader_port_start_timer(timeout);
     while ((reg & SD_IO_CCR_FN_ENABLE_FUNC1_EN) == 0) {
