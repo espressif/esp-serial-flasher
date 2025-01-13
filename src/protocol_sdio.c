@@ -251,14 +251,18 @@ static esp_loader_error_t slave_init_link(void)
 
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args)
 {
+    esp_loader_error_t err = ESP_LOADER_ERROR_FAIL;
     for (uint8_t trial = 0; trial < connect_args->trials; trial++) {
-
-        if (loader_port_sdio_card_init() != ESP_LOADER_SUCCESS) {
-            loader_port_debug_print("Retrying card connection...");
-            loader_port_delay_ms(100);
-        } else {
+        err = loader_port_sdio_card_init();
+        if (err == ESP_LOADER_SUCCESS) {
             break;
         }
+        loader_port_debug_print("Retrying card connection...");
+        loader_port_delay_ms(100);
+    }
+
+    if (err != ESP_LOADER_SUCCESS) {
+        return err;
     }
 
     RETURN_ON_ERROR(slave_init_io());
