@@ -54,6 +54,16 @@ esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t 
     s_card_config.max_freq_khz = config->max_freq_khz;
     s_card_config.slot = config->slot;
 
+#if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+    /*
+        The buffer and lenght of the data passed to SDMMC Host Driver needs to be aligned.
+        The new L1 cache requires 64 bytes aligning of a buffer,
+        this flag ensures that SDMMC Driver allocates custom aligned buffer and memcpy the data to it.
+        This should be reworked when the new sdmmc driver-ng comes out as it would not need same alignment for size and buffer.
+    */
+    s_card_config.flags = SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
+#endif
+
     if (!config->dont_initialize_host_driver) {
         if (sdmmc_host_init() != ESP_OK) {
             return ESP_LOADER_ERROR_FAIL;
@@ -61,7 +71,7 @@ esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t 
 
         sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
         slot_config.width = 4;
-#if SOC_SDMMC_USE_GPIO_MATRIX && !SOC_SDMMC_USE_IOMUX
+#if SOC_SDMMC_USE_GPIO_MATRIX
         slot_config.clk = config->sdio_clk_pin;
         slot_config.cmd = config->sdio_cmd_pin;
         slot_config.d0 = config->sdio_d0_pin;
@@ -92,6 +102,9 @@ esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t 
 void loader_port_esp32_sdio_deinit(void)
 {
     if (host_driver_needs_deinit) {
+#if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+        free(s_card.host.dma_aligned_buffer);
+#endif
         sdmmc_host_deinit();
         host_driver_needs_deinit = false;
     }
