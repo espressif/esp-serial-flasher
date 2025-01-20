@@ -67,6 +67,12 @@ esp_loader_error_t loader_port_esp32_init(const loader_esp32_config_t *config)
         QueueHandle_t *uart_queue = config->uart_queue ? config->uart_queue : NULL;
         int queue_size = config->queue_size ? config->queue_size : 0;
 
+        // Sets pin current strength to 40 mA, because some pins default to 10 mA,
+        // which is not enough when USB-UART is also present on the UART lines (at least 20 mA should be sufficient).
+        if ( gpio_set_drive_capability(config->uart_tx_pin, GPIO_DRIVE_CAP_3) != ESP_OK ) {
+            return ESP_LOADER_ERROR_FAIL;
+        }
+
         if ( uart_param_config(s_uart_port, &uart_config) != ESP_OK ) {
             return ESP_LOADER_ERROR_FAIL;
         }
