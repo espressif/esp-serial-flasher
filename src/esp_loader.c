@@ -37,6 +37,7 @@ static const target_registers_t *s_reg = NULL;
 static target_chip_t s_target = ESP_UNKNOWN_CHIP;
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+#define DEFAULT_FLASH_SIZE 2 * 1024 * 1024
 static uint32_t s_flash_write_size = 0;
 static uint32_t s_target_flash_size = 0;
 #endif
@@ -336,6 +337,7 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
             RETURN_ON_ERROR(loader_spi_parameters(s_target_flash_size));
         } else {
             loader_port_debug_print("Flash size detection failed, falling back to default");
+            s_target_flash_size = DEFAULT_FLASH_SIZE;
         }
     }
 
@@ -560,6 +562,7 @@ esp_loader_error_t esp_loader_flash_read(uint8_t *dest, uint32_t address, uint32
             RETURN_ON_ERROR(loader_spi_parameters(s_target_flash_size));
         } else {
             loader_port_debug_print("Flash size detection failed, falling back to default");
+            s_target_flash_size = DEFAULT_FLASH_SIZE;
         }
     }
 
