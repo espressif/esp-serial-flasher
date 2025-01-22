@@ -186,7 +186,7 @@ uint32_t loader_port_remaining_time(void)
 
 void loader_port_debug_print(const char *str)
 {
-    printf("DEBUG: %s", str);
+    printf("DEBUG: %s\n", str);
 }
 
 esp_loader_error_t loader_port_change_transmission_rate(const uint32_t baudrate)

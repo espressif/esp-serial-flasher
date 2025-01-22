@@ -87,7 +87,7 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
                                        sizeof(slave_ready_flag)));
 
         if (slave_ready_flag != SLAVE_CMD_IDLE) {
-            loader_port_debug_print("Waiting for Slave to be idle...\n");
+            loader_port_debug_print("Waiting for Slave to be idle...");
             loader_port_delay_ms(100);
         } else {
             break;
@@ -103,7 +103,7 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
                                        sizeof(slave_ready_flag)));
 
         if (slave_ready_flag != SLAVE_CMD_READY) {
-            loader_port_debug_print("Waiting for Slave to be ready...\n");
+            loader_port_debug_print("Waiting for Slave to be ready...");
             loader_port_delay_ms(100);
         } else {
             break;

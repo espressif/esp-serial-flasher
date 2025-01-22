@@ -727,13 +727,11 @@ esp_loader_error_t esp_loader_flash_verify(void)
     }
 
     if (!md5_match) {
-        loader_port_debug_print("Error: MD5 checksum does not match:\n");
-        loader_port_debug_print("Expected:\n");
+        loader_port_debug_print("Error: MD5 checksum does not match");
+        loader_port_debug_print("Expected:");
         loader_port_debug_print((char *)received_md5);
-        loader_port_debug_print("\n");
-        loader_port_debug_print("Actual:\n");
+        loader_port_debug_print("Actual:");
         loader_port_debug_print((char *)calculated_md5);
-        loader_port_debug_print("\n");
 
         return ESP_LOADER_ERROR_INVALID_MD5;
     }
