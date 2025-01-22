@@ -717,21 +717,21 @@ esp_loader_error_t esp_loader_flash_verify(void)
 
     RETURN_ON_ERROR( loader_md5_cmd(s_start_address, s_image_size, received_md5) );
 
-    bool md5_match;
+    hexify(raw_md5, calculated_md5);
     if (esp_stub_get_running()) {
-        md5_match = memcmp(raw_md5, received_md5, MD5_SIZE_STUB) == 0;
-        memcpy(calculated_md5, raw_md5, MD5_SIZE_STUB);
-    } else {
-        hexify(raw_md5, calculated_md5);
-        md5_match = memcmp(calculated_md5, received_md5, MD5_SIZE_ROM) == 0;
+        // Convert the received MD5 to hex, because stub returns it as 16 raw data bytes
+        uint8_t rec_md5_hex[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
+        hexify(received_md5, rec_md5_hex);
+        memcpy(received_md5, rec_md5_hex, MD5_SIZE_ROM);
     }
 
+    bool md5_match = memcmp(calculated_md5, received_md5, MD5_SIZE_ROM) == 0;
     if (!md5_match) {
         loader_port_debug_print("Error: MD5 checksum does not match");
         loader_port_debug_print("Expected:");
-        loader_port_debug_print((char *)received_md5);
-        loader_port_debug_print("Actual:");
         loader_port_debug_print((char *)calculated_md5);
+        loader_port_debug_print("Actual:");
+        loader_port_debug_print((char *)received_md5);
 
         return ESP_LOADER_ERROR_INVALID_MD5;
     }
