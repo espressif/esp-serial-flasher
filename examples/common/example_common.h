@@ -23,6 +23,7 @@ typedef struct {
     const uint8_t *data;
     uint32_t size;
     uint32_t addr;
+    const uint8_t *md5;
 } partition_attr_t;
 
 typedef struct {
