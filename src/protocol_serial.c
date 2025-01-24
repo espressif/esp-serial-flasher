@@ -37,20 +37,16 @@ static uint8_t compute_checksum(const uint8_t *data, uint32_t size)
 
 void log_loader_internal_error(error_code_t error)
 {
-    loader_port_debug_print("Error: ");
-
     switch (error) {
-    case INVALID_CRC:     loader_port_debug_print("INVALID_CRC"); break;
-    case INVALID_COMMAND: loader_port_debug_print("INVALID_COMMAND"); break;
-    case COMMAND_FAILED:  loader_port_debug_print("COMMAND_FAILED"); break;
-    case FLASH_WRITE_ERR: loader_port_debug_print("FLASH_WRITE_ERR"); break;
-    case FLASH_READ_ERR:  loader_port_debug_print("FLASH_READ_ERR"); break;
-    case READ_LENGTH_ERR: loader_port_debug_print("READ_LENGTH_ERR"); break;
-    case DEFLATE_ERROR:   loader_port_debug_print("DEFLATE_ERROR"); break;
-    default:              loader_port_debug_print("UNKNOWN ERROR"); break;
+    case INVALID_CRC:     loader_port_debug_print("Error: INVALID_CRC"); break;
+    case INVALID_COMMAND: loader_port_debug_print("Error: INVALID_COMMAND"); break;
+    case COMMAND_FAILED:  loader_port_debug_print("Error: COMMAND_FAILED"); break;
+    case FLASH_WRITE_ERR: loader_port_debug_print("Error: FLASH_WRITE_ERR"); break;
+    case FLASH_READ_ERR:  loader_port_debug_print("Error: FLASH_READ_ERR"); break;
+    case READ_LENGTH_ERR: loader_port_debug_print("Error: READ_LENGTH_ERR"); break;
+    case DEFLATE_ERROR:   loader_port_debug_print("Error: DEFLATE_ERROR"); break;
+    default:              loader_port_debug_print("Error: UNKNOWN ERROR"); break;
     }
-
-    loader_port_debug_print("\n");
 }
 
 esp_loader_error_t loader_flash_begin_cmd(uint32_t offset,

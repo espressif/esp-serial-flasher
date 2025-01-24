@@ -401,6 +401,23 @@ esp_loader_error_t esp_loader_read_register(uint32_t address, uint32_t *reg_valu
 esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rate);
 #endif /* SERIAL_FLASHER_INTERFACE_SDIO */
 
+#if MD5_ENABLED
+/**
+  * @brief Verify target's flash integrity by checking with a known MD5 checksum
+  * for a specified offset and length.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_INVALID_MD5 MD5 does not match
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
+  *     - ESP_LOADER_ERROR_IMAGE_SIZE Flash region specified is beyond the flash end
+  */
+esp_loader_error_t esp_loader_flash_verify_known_md5(uint32_t address,
+        uint32_t size,
+        const uint8_t *expected_md5);
+
 /**
   * @brief Verify target's flash integrity by checking MD5.
   *        MD5 checksum is computed from data pushed to target's memory by calling
@@ -416,10 +433,11 @@ esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rat
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
+  *     - ESP_LOADER_ERROR_IMAGE_SIZE Flash region specified is beyond the flash end
   */
-#if MD5_ENABLED
 esp_loader_error_t esp_loader_flash_verify(void);
-#endif
+#endif /* MD5_ENABLED */
+
 /**
   * @brief Toggles reset pin.
   */
