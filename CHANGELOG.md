@@ -20,15 +20,20 @@
 </div>
 <hr>
 
-## Unreleased
+## v1.8.0 (2025-01-27)
 
 ### ✨ New Features
 
+- **examples**: Add ESP32 fast reflash example with MD5 check *(Jaroslav Burian - e0b9b05)*
+- Add a function to check flash regions against a known MD5 *(Djordje Nedic - dd480bc)*
 - Add the SDIO inteface and the corresponding esp port *(Djordje Nedic - b74194b)*
 
 ### 🐛 Bug Fixes
 
 - **esp32s3**: Ensure electric current capabilities allowing to flash devkits with UART converters *(Jaroslav Burian - 05d78a4)*
+- Print MD5 debug as hex string when using stub *(Jaroslav Burian - ab0ce64)*
+- Unify debug prints of all ports *(Jaroslav Burian - ccfd42c)*
+- Set default flash size when detection fails *(Jaroslav Burian - adbe6ab)*
 - INVALID_ARG error when ESP32P4 used as a host *(Jaroslav Burian - b42d1d8)*
 - Return when SDIO connection not initialized *(Jaroslav Burian - 3ee2b25)*
 - esp32c2 incorrect SPI flash config detection *(Jaroslav Burian - ed43e0a)*
@@ -40,7 +45,6 @@
 - Update log output for Zephyr example *(Jaroslav Burian - 7abd989)*
 - Fix swapped RX and TX in Zephyr example *(Jaroslav Burian - 7855e5e)*
 
----
 
 ## v1.7.0 (2024-11-25)
 
