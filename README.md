@@ -31,6 +31,8 @@ Supported hardware interfaces:
 
 For example usage check the [examples](/examples) directory.
 
+You can also watch [YouTube video](https://www.youtube.com/watch?v=hYqkOew8y8w) describing why and how to use the library, how it works and also how to implement a custom port.
+
 ## Configuration
 
 These are the configuration toggles available to the user:
