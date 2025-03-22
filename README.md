@@ -94,6 +94,8 @@ cmake -DMD5_ENABLED=1 .. && cmake --build .
 
 ### STM32 support
 
+> Note: The library was tested with STM32CubeH7 v1.11.1 and arm-gnu-toolchain-13.2.
+
 The STM32 port makes use of STM32 HAL libraries, and these do not come with CMake support. In order to compile the project, `stm32-cmake` (a `CMake` support package) has to be pulled as submodule.
 
 ```
@@ -132,6 +134,8 @@ set(PORT STM32)
 
 ### Zephyr support
 
+> Note: The library was tested with Zephyr RTOS v4.0.0 and Zephyr SDK v0.17.0.
+
 The Zephyr port is ready to be integrated into Zephyr apps as a Zephyr module. In the manifest file (west.yml), add:
 
 ```
@@ -152,6 +156,22 @@ CONFIG_SERIAL_FLASHER_MD5_ENABLED=y
 to the project configuration `prj.conf`.
 
 For the C/C++ source code, the example code provided in `examples/zephyr_example` can be used as a starting point.
+
+### Raspberry Pi Pico support
+
+> Note: The library was tested with Raspberry Pi Pico SDK v1.5.1 and arm-gnu-toolchain-13.2.
+
+The Raspberry Pi Pico port allows using the RP2040 microcontroller as a host for programming ESP devices. 
+For example usage, check the `examples/pi_pico_example` directory.
+
+### Raspberry Pi support
+
+> Note: The library was tested with the latest Raspberry Pi OS.
+
+The Raspberry Pi port allows using the Raspberry Pi SBC as a host for programming ESP devices.
+This port uses the pigpio library for GPIO control.
+For example usage, check the `examples/raspberry_example` directory.
+
 
 ## Supporting a new host target
 
