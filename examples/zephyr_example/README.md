@@ -1,4 +1,4 @@
-# ESP32 Zephyr example
+# ESP32 Zephyr Example
 
 ## Overview
 
@@ -7,7 +7,8 @@ This sample code demonstrates how to flash an Espressif SoC (target) from anothe
 Binaries to be flashed from the host MCU to another Espressif SoC can be found in [binaries](../binaries/) folder
 and are converted into C-array during build process.
 
-How the Example Works
+## How the Example Works
+
 The example performs the following steps to flash the target device:
 
 1. Initialization: Sets up the required peripherals (GPIO for BOOT and EN pins, and UART)
@@ -19,7 +20,7 @@ The example performs the following steps to flash the target device:
    - Repeatedly calls esp_loader_flash_write() to transfer the binary
    - Verifies the flash integrity if MD5 checking is enabled
 
-Note: In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase the flashing speed. This does not apply for ESP8266, as its bootloader does not support this command. However, ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
+**Note:** In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase the flashing speed. This does not apply for ESP8266, as its bootloader does not support this command. However, ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
 ## Hardware Required
 
@@ -28,7 +29,7 @@ Note: In addition, to steps mentioned above, `esp_loader_change_transmission_rat
 - One or two USB cables for power supply and programming
 - Cables to connect the host to the target according to the table below.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between the two devices:
 
@@ -39,13 +40,14 @@ Table below shows connection between the two devices:
 |    IO4       |           RX0          |
 |    IO5       |           TX0          |
 
->**Note:** Pin assignments can be modified in the device tree overlay.
+> [!NOTE]
+> Pin assignments can be modified in the device tree overlay.
 
 ## Prerequisites
 
 Before building the example, you need to set up the Zephyr development environment as stated in [Zephyr's Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html). After this step, you can proceed to building and flashing the example.
 
-## Build and flash
+## Build and Flash
 
 To run the example, type the following commands:
 
@@ -63,7 +65,8 @@ west flash
 west espressif monitor
 ```
 
-> **Note:** Instead of using the `-D ZEPHYR_EXTRA_MODULES` parameter, you can add the esp-serial-flasher module to your `west.yml` file.
+> [!NOTE]
+> Instead of using the `-D ZEPHYR_EXTRA_MODULES` parameter, you can add the esp-serial-flasher module to your `west.yml` file.
 
 ## Configuration
 
@@ -72,7 +75,7 @@ Compile definitions can be specified in `prj.conf` file.
 
 Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 

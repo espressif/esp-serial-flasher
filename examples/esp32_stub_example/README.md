@@ -1,4 +1,4 @@
-# Flashing multiple partitions while using the flasher stub example
+# Flashing Multiple Partitions While Using the Flasher Stub Example
 
 ## Overview
 
@@ -17,7 +17,7 @@ The following steps are performed in order to re-program the target's memory:
 * Any Espressif SoC for the target
 * One or two USB cables for power supply and programming.
 
-## Building and flashing
+## Building and Flashing
 
 To run the example, type the following command:
 
@@ -31,40 +31,48 @@ See the Getting Started Guide for full steps to configure and use ESP-IDF to bui
 
 ## Configuration
 
-For details about available configuration options, please refer to top level [README.md](../../README.md). 
+For details about available configuration options, please refer to top level [README.md](../../README.md).
 Compile definitions can be specified on command line when running `idf.py`, for example:
 
-```
+```bash
 idf.py build -DMD5_ENABLED=1
 ```
+
 Binaries to be flashed are placed in separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
 
-## Pulling newer stub binaries
+## Pulling Newer Stub Binaries
+
 The stub binaries are embedded into `esp_stubs.c` from a fixed release of [esp-flasher-stub](https://github.com/esp-rs/esp-flasher-stub).
 
 If a new [esp-flasher-stub](https://github.com/esp-rs/esp-flasher-stub) version is available, you can obtain binaries by passing a CMake cache variable to `idf.py` like so:
+
 ```bash
 idf.py -DSERIAL_FLASHER_STUB_PULL_VERSION=<version> build
 ```
 
 Additionally, it is possible to override the stub sources by either providing a custom url:
+
 ```bash
 idf.py -DSERIAL_FLASHER_STUB_PULL_SOURCE=<source_url> -DSERIAL_FLASHER_STUB_PULL_VERSION=<version> build
 ```
+
 where the following schema is required: `<stub_download_url>/v<stub_version>/esp32xx.json`,
 or a custom local folder:
+
 ```bash
 idf.py -DSERIAL_FLASHER_STUB_PULL_OVERRIDE_PATH=<local_folder_path> build
 ```
+
 containing stub `.json` files.
 
-> **Note:** If overriding with custom stub sources, please check that the license under which the they are released fits your usecase.
+> [!NOTE]
+> If overriding with custom stub sources, please check that the license under which the they are released fits your usecase.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 
-```
+```text
 ...
 I (541) main_task: Calling app_main()
 Connected to target

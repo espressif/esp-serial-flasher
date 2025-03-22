@@ -1,4 +1,4 @@
-# Flash multiple partitions example
+# Flash Multiple Partitions Example
 
 ## Overview
 
@@ -12,9 +12,9 @@ The following steps are performed in order to re-program targets memory:
 4. Then `esp_loader_flash_start()` is called to enter the flashing mode and erase the amount of memory to be flashed.
 5. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
 
-Note: In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
+**Note:** In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
-## Connection configuration
+## Connection Configuration
 
 In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in order to initialize `loader_connect_args_t` data structure passed to `esp_loader_connect()`. Helper macro sets the maximum time to wait for a response and the number of retrials. For more detailed information refer to [serial protocol](https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/serial-protocol.html).
 
@@ -26,7 +26,7 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 * Cables to connect host to target according to table below.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between the two ESP32 devices.
 
@@ -37,9 +37,10 @@ Table below shows connection between the two ESP32 devices.
 |    IO4       |      RX0      |
 |    IO5       |      TX0      |
 
-Note: interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
+> [!NOTE]
+> Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
 
-## Build and flash
+## Build and Flash
 
 To run the example, type the following command:
 
@@ -53,19 +54,20 @@ See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/s
 
 ## Configuration
 
-For details about available configuration options, please refer to the top level [README.md](../../README.md). 
+For details about available configuration options, please refer to the top level [README.md](../../README.md).
 Compile definitions can be specified in the command line when running `idf.py`, for example:
 
-```
+```bash
 idf.py build -DMD5_ENABLED=1
 ```
+
 Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 
-```
+```text
 ...
 Connected to target
 Transmission rate changed changed

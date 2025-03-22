@@ -1,4 +1,4 @@
-# Raspberry Pi Pico example
+# Raspberry Pi Pico Example
 
 ## Overview
 
@@ -23,7 +23,7 @@ This does not apply for the ESP8266, as its bootloader does not support this com
 * Jumper cables to connect the boards.
 * One or two USB cables for power supply and programming.
 
-## Hardware connection
+## Hardware Connection
 
 The table below shows the connection between the Raspberry Pi Pico board and the ESP32.
 
@@ -34,7 +34,7 @@ The table below shows the connection between the Raspberry Pi Pico board and the
 |       20       |      RX0      |
 |       21       |      TX0      |
 
-## Build and flash
+## Build and Flash
 
 First, either export the SDK location in your shell:
 
@@ -45,17 +45,19 @@ export PICO_SDK_PATH=<sdk_location>
 or set the `PICO_SDK_FETCH_FROM_GIT` CMake variable for the SDK to be pulled from GitHub.
 
 Create and navigate to the example `build` directory:
-s
+
 ```bash
 mkdir build && cd build
 ```
 
-Run cmake (with appropriate parameters) and build: 
+Run CMake (with appropriate parameters) and build:
+
 ```bash
 cmake .. && cmake --build .
 ```
 
-> Note: CMake 3.13 or later is required.
+> [!NOTE]
+> CMake 3.13 or later is required.
 
 Binaries to be flashed are placed in the `binaries.c` file for each possible target and converted to C arrays. Flash integrity verification is enabled by default.
 
@@ -71,7 +73,7 @@ minicom -b 115200 -o -D /dev/ttyACM0
 
 Here is the example's console output:
 
-```
+```text
 Connected to target
 Transmission rate changed changed
 Loading bootloader...

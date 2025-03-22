@@ -1,4 +1,4 @@
-# Raspberry Pi example
+# Raspberry Pi Example
 
 ## Overview
 
@@ -12,15 +12,15 @@ The following steps are performed in order to re-program targets memory:
 4. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
 5. At the end, `loader_port_reset_target()` is called to restart the target and execute the updated firmware.
 
-Note: In addition to the steps mentioned above, `esp_loader_change_transmission_rate()`  is called after connection is established in order to increase the flashing speed. Bootloader is also capable of detecting baud rate during connection phase and can be changed before calling `esp_loader_connect()`. However, it is recommended to start at lower speed and then use dedicated command to increase baud rate. This does not apply for ESP8266, as its bootloader does not support this command, therefore, baud rate can only be changed before connection phase in this case.
+**Note:** In addition to the steps mentioned above, `esp_loader_change_transmission_rate()`  is called after connection is established in order to increase the flashing speed. Bootloader is also capable of detecting baud rate during connection phase and can be changed before calling `esp_loader_connect()`. However, it is recommended to start at lower speed and then use dedicated command to increase baud rate. This does not apply for ESP8266, as its bootloader does not support this command, therefore, baud rate can only be changed before connection phase in this case.
 
 ## Hardware Required
 
-* Raspberry Pi 4 Model B. 
+* Raspberry Pi 4 Model B.
 * A development board with the ESP32 SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
 * USB cable in case ESP32 board is powered from USB. ESP32 can be powered by Raspberry Pi as well.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between Raspberry Pi and ESP32.
 
@@ -36,22 +36,27 @@ Optionally, UART-to-USB bridge can be connected to PD5(RX) and PD6(TX) for debug
 
 ## Installation
 
-### GPIO library
+### GPIO Library
+
 Raspberry Pi makes use of [pigpio](http://abyz.me.uk/rpi/pigpio/) library in order to simplify controlling GPIO pins. Some distributions of 'Raspberry Pi OS' may come with `pigpio` already installed. Presence of the library in the system can checked by running command:
-```
+
+```bash
 pigpiod -v
 ```
 
-If not present, run following commands to install the library. 
-```
+If not present, run following commands to install the library.
+
+```bash
 sudo apt-get update
 sudo apt-get install pigpio
 ```
 
 ### Enable UART
+
 On Raspberry Pi 4, primary UART (UART0) is connected to the On-board Bluetooth module by default.
 In order to enable serial communication on this UART, run following command in terminal:
-```
+
+```bash
 sudo raspi-config
 ```
 
@@ -60,16 +65,19 @@ sudo raspi-config
 * After that, it will ask for enabling Hardware Serial port, select **Yes**.
 * Reboot the Raspberry Pi.
 
-## Build and run
+## Build and Run
 
 To compile the example:
 
 Create and navigate to `build` directory:
-```
+
+```bash
 mkdir build && cd build
 ```
-Run cmake, build example and run example: 
-```
+
+Run cmake, build example and run example:
+
+```bash
 cmake .. && cmake --build . && ./raspberry_flasher
 ```
 

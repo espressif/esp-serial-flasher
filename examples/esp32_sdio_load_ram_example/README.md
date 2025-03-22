@@ -1,4 +1,4 @@
-# Example of loading the program into RAM through SDIO
+# Example of Loading the Program into RAM Through SDIO
 
 ## Overview
 
@@ -17,12 +17,14 @@ The following steps are performed in order to re-program the targets memory:
 ## Hardware Required
 
 * Two development boards, one with an Espressif SoC with an SDMMC peripheral and one Espressif SoC with SDIO download support. Here is a short list of supported MCUs:
+
 1. ESP32-C6
+
 * One or two USB cables for power supply and programming.
 
-> Note: Please check if your board has [possible issues](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/sd_pullup_requirements.html) regarding SDIO requirements.
+> **Note:** Please check if your board has [possible issues](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/sd_pullup_requirements.html) regarding SDIO requirements.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between two Espressif MCUs.
 
@@ -43,9 +45,9 @@ You can find the target SDIO pins for each target [here](https://docs.espressif.
 
 SDIO pins CMD and DAT0-3 must be pulled up with adequate values, please take a look at the [SD Pull-up Requirements](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/sd_pullup_requirements.html) for more info.
 
-> Note: For the ESP32 used as a reference, it is not possible to reassign SDIO pins, due to GPIO matrix limitations
+> **Note:** For the ESP32 used as a reference, it is not possible to reassign SDIO pins, due to GPIO matrix limitations
 
-## Build and flash
+## Build and Flash
 
 To run the example, type the following command:
 
@@ -57,11 +59,11 @@ idf.py -p PORT flash monitor
 
 See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 
-```
+```text
 Connected to target
 I (701) sdio_ram_loader: Loading app to RAM ...
 Start loading
