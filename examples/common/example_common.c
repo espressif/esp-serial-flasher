@@ -462,7 +462,9 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     // Parse segments
     uint32_t seg;
     uint32_t *cur_seg_pos;
-    for (seg = 0, cur_seg_pos = (uint32_t *)(&bin[BIN_FIRST_SEGMENT_OFFSET]);
+    // ESP8266 does not have extended header
+    uint32_t offset = esp_loader_get_target() == ESP8266_CHIP ? BIN_HEADER_SIZE : BIN_HEADER_EXT_SIZE;
+    for (seg = 0, cur_seg_pos = (uint32_t *)(&bin[offset]);
             seg < header->segments;
             seg++) {
         segments[seg].addr = *cur_seg_pos++;
