@@ -26,9 +26,9 @@
 #ifndef SINGLE_TARGET_SUPPORT
 
 
-// For esp8266, esp32, esp32s2
+// For esp32, esp32s2
 #define BOOTLOADER_ADDRESS_V0       0x1000
-// For esp32s3 and later chips
+// For esp8266, esp32s3 and later chips
 #define BOOTLOADER_ADDRESS_V1       0x0
 #define PARTITION_ADDRESS           0x8000
 #define APPLICATION_ADDRESS         0x10000
@@ -131,7 +131,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->boot.data = ESP8266_bootloader_bin;
         bins->boot.size = ESP8266_bootloader_bin_size;
         bins->boot.md5 = ESP8266_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V0;
+        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
         bins->part.data = ESP8266_partition_table_bin;
         bins->part.size = ESP8266_partition_table_bin_size;
         bins->part.md5 = ESP8266_partition_table_bin_md5;
