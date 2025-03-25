@@ -26,9 +26,9 @@
 #ifndef SINGLE_TARGET_SUPPORT
 
 
-// For esp8266, esp32, esp32s2
+// For esp32, esp32s2
 #define BOOTLOADER_ADDRESS_V0       0x1000
-// For esp32s3 and later chips
+// For esp8266, esp32s3 and later chips
 #define BOOTLOADER_ADDRESS_V1       0x0
 #define PARTITION_ADDRESS           0x8000
 #define APPLICATION_ADDRESS         0x10000
@@ -131,7 +131,7 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->boot.data = ESP8266_bootloader_bin;
         bins->boot.size = ESP8266_bootloader_bin_size;
         bins->boot.md5 = ESP8266_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V0;
+        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
         bins->part.data = ESP8266_partition_table_bin;
         bins->part.size = ESP8266_partition_table_bin_size;
         bins->part.md5 = ESP8266_partition_table_bin_md5;
@@ -462,7 +462,9 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
     // Parse segments
     uint32_t seg;
     uint32_t *cur_seg_pos;
-    for (seg = 0, cur_seg_pos = (uint32_t *)(&bin[BIN_FIRST_SEGMENT_OFFSET]);
+    // ESP8266 does not have extended header
+    uint32_t offset = esp_loader_get_target() == ESP8266_CHIP ? BIN_HEADER_SIZE : BIN_HEADER_EXT_SIZE;
+    for (seg = 0, cur_seg_pos = (uint32_t *)(&bin[offset]);
             seg < header->segments;
             seg++) {
         segments[seg].addr = *cur_seg_pos++;

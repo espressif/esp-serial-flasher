@@ -15,7 +15,8 @@
 
 #pragma once
 
-#define BIN_FIRST_SEGMENT_OFFSET    0x18
+#define BIN_HEADER_SIZE    0x8
+#define BIN_HEADER_EXT_SIZE 0x18
 // Maximum block sized for RAM and Flash writes, respectively.
 #define ESP_RAM_BLOCK               0x1800
 
