@@ -22,6 +22,7 @@ Supported **target** microcontrollers:
 - ESP32-C2
 - ESP32-H2
 - ESP32-C6
+- ESP32-C5 (stub not included for now)
 
 Supported hardware interfaces:
 - UART

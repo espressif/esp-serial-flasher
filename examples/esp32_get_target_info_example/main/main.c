@@ -30,7 +30,7 @@ static const char *get_target_string(target_chip_t target)
     const char *target_to_string_mapping[ESP_MAX_CHIP] = {
         "ESP8266", "ESP32", "ESP32-S2",
         "ESP32-C3", "ESP32-S3", "ESP32-C2",
-        "INVALID_TARGET", "ESP32-H2", "ESP32-C6"
+        "ESP32-C5", "ESP32-H2", "ESP32-C6"
     };
 
     return target_to_string_mapping[target];
