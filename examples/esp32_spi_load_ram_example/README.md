@@ -1,4 +1,4 @@
-# Example of loading the program into RAM through SPI
+# Example of Loading the Program into RAM Through SPI
 
 ## Overview
 
@@ -17,14 +17,16 @@ The following steps are performed in order to re-program the targets memory:
 ## Hardware Required
 
 * Two development boards, one with any Espressif MCU (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.) and one with an Espressif MCU with SPI download support. Here is a short list of supported MCUs:
+
 1. ESP32-C3
 2. ESP32-C2
 3. ESP32-S3
 4. ESP32-S2
 5. ESP32-H2
+
 * One or two USB cables for power supply and programming.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between two Espressif MCUs.
 
@@ -44,11 +46,10 @@ Table below shows connection between two Espressif MCUs.
 |    IO_6         |    UART0_RX   |
 |    IO_7         |    UART0_TX   |
 
-> Note 1: Strapping bit pins are documented in the TRM for each respective chip.
+> **Note 1:** Strapping bit pins are documented in the TRM for each respective chip.
+> **Note 2:** For achieving the highest speeds, check which pins go through the IO MUX bypassing the GPIO matrix and use those. Pins chosen here are IO MUX pins for ESP32-S3 and ESP32-S2 chips.
 
-> Note 2: For achieving the highest speeds, check which pins go through the IO MUX bypassing the GPIO matrix and use those. Pins chosen here are IO MUX pins for ESP32-S3 and ESP32-S2 chips.
-
-## Build and flash
+## Build and Flash
 
 To run the example, type the following command:
 
@@ -60,11 +61,11 @@ idf.py -p PORT flash monitor
 
 See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 
-```
+```text
 Connected to target
 I (682) spi_ram_loader: Loading app to RAM ...
 Start loading

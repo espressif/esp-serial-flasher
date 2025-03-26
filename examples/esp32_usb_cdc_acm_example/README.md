@@ -1,4 +1,4 @@
-# Flashing multiple partitions over USB CDC ACM interface
+# Flashing Multiple Partitions over USB CDC ACM Interface
 
 ## Overview
 
@@ -19,7 +19,7 @@ The following steps are performed in order to re-program  memory:
 
 > **Note:** The USB CDC ACM device of the ESP32-S3 does not support changing the baudrate, so the argument to `esp_loader_connect()` is irrelevant.
 
-## USB host driver usage
+## USB Host Driver Usage
 
 This example makes use of the Espressif [USB Host Driver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/usb_host.html).
 In addition to initializing the host driver, a FreeRTOS task needs to be created to handle host usb events.
@@ -34,7 +34,7 @@ A binary semaphore is used as a lock for the connected device and a callback is 
 
 > **Note:** The USB connector on most of the ESP32-S3 and ESP32-S2 boards cannot supply power to the target, so a separate power connection is required.
 
-## Building and flashing
+## Building and Flashing
 
 To run the example, type the following command:
 
@@ -48,19 +48,20 @@ See the Getting Started Guide for full steps to configure and use ESP-IDF to bui
 
 ## Configuration
 
-For details about available configuration option, please refer to the top level [README.md](../../README.md). 
+For details about available configuration option, please refer to the top level [README.md](../../README.md).
 Compile definitions can be specified in the command line when running `idf.py`, for example:
 
-```
+```bash
 idf.py build -DMD5_ENABLED=1
 ```
+
 Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 
-```
+```text
 ...
 I (541) main_task: Calling app_main()
 I (541) usb_flasher: Installing USB Host

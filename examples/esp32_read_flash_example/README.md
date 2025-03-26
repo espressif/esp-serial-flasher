@@ -1,4 +1,4 @@
-# Read from target flash example
+# Read From Target Flash Example
 
 ## Overview
 
@@ -9,13 +9,13 @@ The following steps are performed to demonstrate the flash reading functionality
 1. UART1 through which the the new binary will be transferred is initialized.
 2. The host puts the target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
 3. `esp_loader_flash_start()` is called to enter the flashing mode and erase the amount of memory to be flashed.
-5. `esp_loader_flash_write()` function is called repeatedly until the whole example data is transfered.
-6. `esp_loader_flash_read()` is called to read back the data programmed into the target flash
-7. Data is compared to verify successful reading
+4. `esp_loader_flash_write()` function is called repeatedly until the whole example data is transfered.
+5. `esp_loader_flash_read()` is called to read back the data programmed into the target flash
+6. Data is compared to verify successful reading
 
-Note: In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing and reading speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
+**Note:** In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing and reading speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
-## Connection configuration
+## Connection Configuration
 
 In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in order to initialize `loader_connect_args_t` data structure passed to `esp_loader_connect()`. Helper macro sets the maximum time to wait for a response and the number of retrials. For more detailed information refer to [serial protocol](https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/serial-protocol.html).
 
@@ -27,7 +27,7 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 * Cables to connect host to target according to table below.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between the two ESP32 devices.
 
@@ -38,9 +38,10 @@ Table below shows connection between the two ESP32 devices.
 |    IO4       |      RX0      |
 |    IO5       |      TX0      |
 
-Note: interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
+> [!NOTE]
+> Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
 
-## Build and flash
+## Build and Flash
 
 To run the example, type the following command:
 
@@ -54,18 +55,18 @@ See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/s
 
 ## Configuration
 
-For details about available configuration options, please refer to the top level [README.md](../../README.md). 
+For details about available configuration options, please refer to the top level [README.md](../../README.md).
 Compile definitions can be specified in the command line when running `idf.py`, for example:
 
-```
+```bash
 idf.py build -DMD5_ENABLED=1
 ```
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 
-```
+```text
 ...
 Connected to target
 Transmission rate changed.

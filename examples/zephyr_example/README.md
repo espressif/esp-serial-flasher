@@ -1,4 +1,4 @@
-# ESP32 Zephyr example
+# ESP32 Zephyr Example
 
 ## Overview
 
@@ -7,27 +7,29 @@ This sample code demonstrates how to flash an Espressif SoC (target) from anothe
 Binaries to be flashed from the host MCU to another Espressif SoC can be found in [binaries](../binaries/) folder
 and are converted into C-array during build process.
 
-The following steps are performed in order to re-program targets memory:
+## How the Example Works
 
-1. Peripherals are initialized (GPIO for BOOT and EN pins and UART).
-2. UART1 (can be changed) through which new binary will be transfered is initialized.
-3. The host puts the target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
-4. The binary file is opened and its size is acquired, as it has to be known before flashing.
-5. Then `esp_loader_flash_start()` is called to enter the flashing mode and erase amount of memory to be flashed.
-6. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
+The example performs the following steps to flash the target device:
 
-Note: In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection
-is established in order to increase the flashing speed. This does not apply for ESP8266, as its bootloader
-does not support this command. However, ESP8266 is capable of detecting the baud rate during connection
-phase and can be changed before calling `esp_loader_connect()`, if necessary.
+1. Initialization: Sets up the required peripherals (GPIO for BOOT and EN pins, and UART)
+2. Target Reset: Puts the target into bootloader mode using the BOOT and EN pins
+3. Connection: Establishes communication with the target bootloader using esp_loader_connect()
+4. Baud Rate Change: Increases the transmission speed for faster flashing (except for ESP8266)
+5. Flashing Process:
+   - Calls esp_loader_flash_start() to begin flashing and erase the required memory
+   - Repeatedly calls esp_loader_flash_write() to transfer the binary
+   - Verifies the flash integrity if MD5 checking is enabled
+
+**Note:** In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase the flashing speed. This does not apply for ESP8266, as its bootloader does not support this command. However, ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
 ## Hardware Required
 
-* Any supported Espressif SoC board for the target
-* An ESP32-DevKitC board for the host
-* One or two USB cables for power supply and programming.
+- ESP32-DevKitC board or another compatible ESP32 development board as a host
+- Any supported Espressif SoC development board as a target
+- One or two USB cables for power supply and programming
+- Cables to connect the host to the target according to the table below.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between the two devices:
 
@@ -38,22 +40,33 @@ Table below shows connection between the two devices:
 |    IO4       |           RX0          |
 |    IO5       |           TX0          |
 
-## Build and flash
+> [!NOTE]
+> Pin assignments can be modified in the device tree overlay.
+
+## Prerequisites
+
+Before building the example, you need to set up the Zephyr development environment as stated in [Zephyr's Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html). After this step, you can proceed to building and flashing the example.
+
+## Build and Flash
 
 To run the example, type the following commands:
 
-```c
+```bash
+# Initialize west workspace if not done already
 west init
+
+# Update Zephyr modules
 west update
-west build -p -b <supported board>
+
+# Build the example with esp-serial-flasher module
+west build -p -b <supported board from the boards folder> path/to/esp-serial-flasher/examples/zephyr_example -D ZEPHYR_EXTRA_MODULES=/path/to/esp-serial-flasher
+
 west flash
 west espressif monitor
 ```
->**Note:** You can find the supported boards in the boards folder.
 
-(To exit the serial monitor, type ``ctrl-c``.)
-
-For more information, check [Zephyr's Getting Started](https://docs.zephyrproject.org/latest/develop/getting_started/index.html)
+> [!NOTE]
+> Instead of using the `-D ZEPHYR_EXTRA_MODULES` parameter, you can add the esp-serial-flasher module to your `west.yml` file.
 
 ## Configuration
 
@@ -62,7 +75,7 @@ Compile definitions can be specified in `prj.conf` file.
 
 Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 

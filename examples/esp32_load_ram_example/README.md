@@ -1,4 +1,4 @@
-# Load program into RAM example
+# Load Program Into RAM Example
 
 ## Overview
 
@@ -14,9 +14,9 @@ The following steps are performed in order to re-program targets memory:
 6. UART2 is initialized for the connection to the target.
 7. Target output is continually read and printed out.
 
-Note: In addition to the steps mentioned above, `esp_loader_change_transmission_rate()`  is called after connection is established in order to increase flashing speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
+**Note:** In addition to the steps mentioned above, `esp_loader_change_transmission_rate()`  is called after connection is established in order to increase flashing speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
-## Connection configuration
+## Connection Configuration
 
 In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in order to initialize `loader_connect_args_t` data structure passed to `esp_loader_connect()`. Helper macro sets the maximum time to wait for a response and the number of retrials. For more detailed information refer to [serial protocol](https://docs.espressif.com/projects/esptool/en/latest/esp32s3/advanced-topics/serial-protocol.html).
 
@@ -28,7 +28,7 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 * Cables to connect host to target according to table below.
 
-## Hardware connection
+## Hardware Connection
 
 Table below shows connection between two ESP32 devices.
 
@@ -39,9 +39,10 @@ Table below shows connection between two ESP32 devices.
 |    IO4       |      RX0      |
 |    IO5       |      TX0      |
 
-Note: interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
+> [!NOTE]
+> Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
 
-## Build and flash
+## Build and Flash
 
 To run the example, type the following command:
 
@@ -55,11 +56,11 @@ See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/s
 
 Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array.
 
-## Example output
+## Example Output
 
 Here is the example's console output:
 
-```
+```text
 ...
 Connected to target
 Transmission rate changed.
