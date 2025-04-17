@@ -699,7 +699,7 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(uint32_t address,
 
     RETURN_ON_ERROR(init_flash_params());
 
-    if (address + size > s_target_flash_size) {
+    if (address + size >= s_target_flash_size) {
         return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
