@@ -138,10 +138,8 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_connect_ar
         loader_port_start_timer(DEFAULT_TIMEOUT);
         return loader_flash_begin_cmd(0, 0, 0, 0, s_target);
     } else {
-        uint32_t spi_config;
-        RETURN_ON_ERROR( loader_read_spi_config(s_target, &spi_config) );
         loader_port_start_timer(DEFAULT_TIMEOUT);
-        return loader_spi_attach_cmd(spi_config);
+        return loader_spi_attach_cmd(0);
     }
 
     return ESP_LOADER_SUCCESS;
@@ -316,6 +314,19 @@ esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size)
     return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
 }
 
+static esp_loader_error_t init_flash_params(void)
+{
+    /* Flash size will be known in advance if we're in secure download mode or we already read it*/
+    if (s_target_flash_size == 0) {
+        if (esp_loader_flash_detect_size(&s_target_flash_size) != ESP_LOADER_SUCCESS) {
+            loader_port_debug_print("Flash size detection failed, falling back to default");
+            s_target_flash_size = DEFAULT_FLASH_SIZE;
+        }
+    }
+    loader_port_start_timer(DEFAULT_TIMEOUT);
+    return loader_spi_parameters(s_target_flash_size);
+}
+
 esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, uint32_t block_size)
 {
     s_flash_write_size = block_size;
@@ -325,19 +336,9 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-    /* Flash size will be known in advance if we're in secure download mode or we already read it*/
-    if (s_target_flash_size == 0) {
-        if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
-            if (image_size + offset > s_target_flash_size) {
-                return ESP_LOADER_ERROR_IMAGE_SIZE;
-            }
-
-            loader_port_start_timer(DEFAULT_TIMEOUT);
-            RETURN_ON_ERROR(loader_spi_parameters(s_target_flash_size));
-        } else {
-            loader_port_debug_print("Flash size detection failed, falling back to default");
-            s_target_flash_size = DEFAULT_FLASH_SIZE;
-        }
+    RETURN_ON_ERROR(init_flash_params());
+    if (image_size + offset > s_target_flash_size) {
+        return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
 #if MD5_ENABLED
@@ -550,19 +551,9 @@ static esp_loader_error_t flash_read_stub(uint8_t *dest, uint32_t address, uint3
 
 esp_loader_error_t esp_loader_flash_read(uint8_t *dest, uint32_t address, uint32_t length)
 {
-    /* Flash size will be known in advance if we're in secure download mode or we already read it*/
-    if (s_target_flash_size == 0) {
-        if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
-            if (address + length >= s_target_flash_size) {
-                return ESP_LOADER_ERROR_IMAGE_SIZE;
-            }
-
-            loader_port_start_timer(DEFAULT_TIMEOUT);
-            RETURN_ON_ERROR(loader_spi_parameters(s_target_flash_size));
-        } else {
-            loader_port_debug_print("Flash size detection failed, falling back to default");
-            s_target_flash_size = DEFAULT_FLASH_SIZE;
-        }
+    RETURN_ON_ERROR(init_flash_params());
+    if (address + length >= s_target_flash_size) {
+        return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
     if (esp_stub_get_running()) {
@@ -706,15 +697,7 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(uint32_t address,
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
-    if (s_target_flash_size == 0) {
-        if (esp_loader_flash_detect_size(&s_target_flash_size) == ESP_LOADER_SUCCESS) {
-            loader_port_start_timer(DEFAULT_TIMEOUT);
-            RETURN_ON_ERROR( loader_spi_parameters(s_target_flash_size) );
-        } else {
-            loader_port_debug_print("Flash size detection failed, falling back to default");
-            s_target_flash_size = DEFAULT_FLASH_SIZE;
-        }
-    }
+    RETURN_ON_ERROR(init_flash_params());
 
     if (address + size > s_target_flash_size) {
         return ESP_LOADER_ERROR_IMAGE_SIZE;
