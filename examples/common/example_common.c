@@ -455,8 +455,8 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
         printf("Erasing flash failed with error: %s.\n", get_error_string(err));
 
         if (err == ESP_LOADER_ERROR_INVALID_PARAM) {
-            printf("If using Secure Download Mode, double check that the specified\
-                    target flash size is correct.\n");
+            printf("If using Secure Download Mode, double check that the specified "
+                   "target flash size is correct.\n");
         }
         return err;
     }
