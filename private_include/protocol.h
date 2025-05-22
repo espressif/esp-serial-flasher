@@ -83,6 +83,18 @@ typedef enum __attribute__((packed))
     FLASH_READ_ERR  = 0x09, // SPI read failed
     READ_LENGTH_ERR = 0x0a, // SPI read request length is too long
     DEFLATE_ERROR   = 0x0b, // ESP32 compressed uploads only
+
+    STUB_BAD_DATA_LEN = 0xC0,
+    STUB_BAD_DATA_CHECKSUM = 0xC1,
+    STUB_BAD_BLOCKSIZE = 0xC2,
+    STUB_INVALID_COMMAND = 0xC3,
+    STUB_FAILED_SPI_OP = 0xC4,
+    STUB_FAILED_SPI_UNLOCK = 0xC5,
+    STUB_NOT_IN_FLASH_MODE = 0xC6,
+    STUB_INFLATE_ERROR = 0xC7,
+    STUB_NOT_ENOUGH_DATA = 0xC8,
+    STUB_TOO_MUCH_DATA = 0xC9,
+    STUB_CMD_NOT_IMPLEMENTED = 0xFF,
 } error_code_t;
 
 typedef struct __attribute__((packed))
