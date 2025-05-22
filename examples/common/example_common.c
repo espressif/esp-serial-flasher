@@ -442,7 +442,9 @@ esp_loader_error_t connect_to_target_with_stub(const uint32_t current_transmissi
 
     return ESP_LOADER_SUCCESS;
 }
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
+#ifndef SERIAL_FLASHER_INTERFACE_SPI
 esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 {
     esp_loader_error_t err;
@@ -499,7 +501,7 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 
     return ESP_LOADER_SUCCESS;
 }
-#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
+#endif /* SERIAL_FLASHER_INTERFACE_SPI */
 
 esp_loader_error_t load_ram_binary(const uint8_t *bin)
 {

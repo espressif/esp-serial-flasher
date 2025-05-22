@@ -161,7 +161,6 @@ esp_loader_error_t loader_port_read(const uint32_t function, const uint32_t addr
     }
 }
 
-
 void loader_port_enter_bootloader(void)
 {
     gpio_set_level(s_boot_pin, 0);
@@ -214,4 +213,13 @@ uint32_t loader_port_remaining_time(void)
 void loader_port_debug_print(const char *str)
 {
     printf("DEBUG: %s\n", str);
+}
+
+esp_loader_error_t loader_port_wait_int(uint32_t timeout)
+{
+    if (sdmmc_io_wait_int(&s_card, timeout) == ESP_OK) {
+        return ESP_LOADER_SUCCESS;
+    } else {
+        return ESP_LOADER_ERROR_TIMEOUT;
+    }
 }

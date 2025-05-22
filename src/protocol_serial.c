@@ -288,6 +288,7 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
 }
 
 
+#ifndef SERIAL_FLASHER_INTERFACE_SDIO
 esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t blocks_to_write, uint32_t block_size)
 {
 
@@ -358,6 +359,7 @@ esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint)
 
     return send_cmd(&cmd_config);
 }
+#endif /* SERIAL_FLASHER_INTERFACE_SDIO */
 
 
 esp_loader_error_t loader_write_reg_cmd(uint32_t address, uint32_t value,

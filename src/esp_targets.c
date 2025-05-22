@@ -311,8 +311,8 @@ esp_loader_error_t loader_read_mac(const target_chip_t target_code, uint8_t *mac
 {
     const esp_target_t *target = &esp_target[target_code];
 
-    uint32_t part1;
-    uint32_t part2;
+    uint32_t part1 = 0;
+    uint32_t part2 = 0;
 
     RETURN_ON_ERROR(esp_loader_read_register(target->efuse_base + target->mac_efuse_offset, &part1));
     RETURN_ON_ERROR(esp_loader_read_register(target->efuse_base + target->mac_efuse_offset + sizeof(uint32_t), &part2));

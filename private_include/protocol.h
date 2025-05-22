@@ -259,13 +259,19 @@ typedef struct __attribute__((packed))
 
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args);
 
-#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 esp_loader_error_t loader_flash_begin_cmd(uint32_t offset, uint32_t erase_size, uint32_t block_size, uint32_t blocks_to_write, bool encryption);
 
 esp_loader_error_t loader_flash_data_cmd(const uint8_t *data, uint32_t size);
 
 esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader);
 
+#ifndef SERIAL_FLASHER_INTERFACE_SPI
+esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out);
+
+esp_loader_error_t loader_spi_parameters(uint32_t total_size);
+#endif /* SERIAL_FLASHER_INTERFACE_SPI */
+
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 esp_loader_error_t loader_flash_read_rom_cmd(uint32_t address, uint8_t *data);
 
 esp_loader_error_t loader_flash_read_stub_cmd(uint32_t address, uint32_t size, uint32_t size_per_packet);
@@ -273,10 +279,6 @@ esp_loader_error_t loader_flash_read_stub_cmd(uint32_t address, uint32_t size, u
 esp_loader_error_t loader_sync_cmd(void);
 
 esp_loader_error_t loader_spi_attach_cmd(uint32_t config);
-
-esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out);
-
-esp_loader_error_t loader_spi_parameters(uint32_t total_size);
 
 esp_loader_error_t loader_run_stub(target_chip_t target);
 
@@ -290,11 +292,11 @@ esp_loader_error_t loader_mem_data_cmd(const uint8_t *data, uint32_t size);
 
 esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint);
 
-#ifndef SERIAL_FLASHER_INTERFACE_SDIO
-
 esp_loader_error_t loader_write_reg_cmd(uint32_t address, uint32_t value, uint32_t mask, uint32_t delay_us);
 
 esp_loader_error_t loader_read_reg_cmd(uint32_t address, uint32_t *reg);
+
+#ifndef SERIAL_FLASHER_INTERFACE_SDIO
 
 esp_loader_error_t loader_change_baudrate_cmd(uint32_t new_baudrate, uint32_t old_baudrate);
 
