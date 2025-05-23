@@ -74,49 +74,31 @@ check_stub_source_correctness:
         export CCACHE_RECACHE="1"
         echo "INFO: ccache recache enabled"
       fi
-    - python -m idf_build_apps build -v -p .
-      --recursive
-      --exclude ./examples/binaries
-      --config "sdkconfig.defaults*"
-      --build-dir ${BUILD_DIR}
-      --check-warnings
+    - |
+      if [ -n "${TARGETS}" ]; then
+          python -m idf_build_apps build -v -p . \
+              --recursive \
+              --exclude ./examples/binaries \
+              --config "sdkconfig.defaults*" \
+              --build-dir ${BUILD_DIR} \
+              --check-warnings \
+              --target ${TARGETS}
+      else
+          python -m idf_build_apps build -v -p . \
+              --recursive \
+              --exclude ./examples/binaries \
+              --config "sdkconfig.defaults*" \
+              --build-dir ${BUILD_DIR} \
+              --check-warnings
+      fi
     # Show ccache statistics if enabled globally
     - test "$CI_CCACHE_STATS" == 1 && test -n "$(which ccache)" && ccache --show-stats -vv || true
 
 build_idf_v4.3:
   image: espressif/idf:release-v4.3
-  stage: build
-  tags:
-    - build
-    - internet
-  before_script:
-    - apt install ccache
-    - pip install -U idf-build-apps --prefer-binary
+  extends: .build_idf_template
   variables:
-    IDF_CCACHE_ENABLE: 1
-    CCACHE_DIR: "/cache/esf_ccache"
-    CCACHE_SLOPPINESS: "time_macros"
-    PEDANTIC_FLAGS: "-Werror -Wall -Wextra"
-    EXTRA_CFLAGS: "${PEDANTIC_FLAGS}"
-    EXTRA_CXXFLAGS: "${PEDANTIC_FLAGS}"
-    BUILD_DIR: "build"
-  script:
-    # CCACHE_RECACHE Used when invalidating the current cache.
-    # could be enabled by MR label "ccache:recache"
-    - |
-      if [ -n "${CI_MERGE_REQUEST_LABELS}" ] && echo "${CI_MERGE_REQUEST_LABELS}" | grep -q "ccache::recache"; then
-        export CCACHE_RECACHE="1"
-        echo "INFO: ccache recache enabled"
-      fi
-    - python -m idf_build_apps build -v -p .
-      --recursive
-      --exclude ./examples/binaries
-      --target "esp32"
-      --config "sdkconfig.defaults*"
-      --build-dir ${BUILD_DIR}
-      --check-warnings
-    # Show ccache statistics if enabled globally
-    - test "$CI_CCACHE_STATS" == 1 && test -n "$(which ccache)" && ccache --show-stats -vv || true
+    TARGETS: "esp32"
 
 build_idf_v4.4:
   image: espressif/idf:release-v4.4
@@ -321,7 +303,6 @@ test_esp1:
   script:
     - cd $CI_PROJECT_DIR
     - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_spi_load_ram_example'
-    - pytest --target=esp32 --port=/dev/serial_ports/ESP32_ESP32C6 -k 'test_esp32_sdio_load_ram_example'
 
 test_esp2:
   extends: .test_template
@@ -334,7 +315,7 @@ test_esp2:
           - "build_master"
   script:
     - cd $CI_PROJECT_DIR
-    - pytest --target=esp32 --port=/dev/serial_ports/ESP32_ESP32H2 -k 'not test_esp32_sdio_load_ram_example'
+    - pytest --target=esp32 --port=/dev/serial_ports/ESP32_ESP32H2
     - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_usb_cdc_acm_example'
 
 test_zephyr:

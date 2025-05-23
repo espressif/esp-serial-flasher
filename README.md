@@ -30,7 +30,7 @@ Supported hardware interfaces:
 - UART
 - USB CDC ACM
 - SPI (only for RAM download)
-- SDIO (experimental, supported only with ESP32-P4 as a host)
+- SDIO (experimental, supported only with ESP32-P4 as a host and ESP32-C6 as a target)
   > **Note:** The SDIO implementation uses a custom built stub. The sources are currently not available publicly. We plan to make them available in the near future as part of the migration to [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
 
 
