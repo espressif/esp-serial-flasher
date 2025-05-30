@@ -38,6 +38,7 @@ files_to_download = [
     None,  # ESP32C5_CHIP (stub not included for now)
     "esp32h2.json",  # ESP32H2_CHIP
     "esp32c6.json",  # ESP32C6_CHIP
+    None,  # ESP32P4_CHIP (stub not included for now)
 ]
 
 

@@ -37,10 +37,16 @@ typedef struct {
 #define ESP32H2_SPI_REG_BASE 0x60003000
 #define ESP32C5_SPI_REG_BASE 0x60003000
 #define ESP32C6_SPI_REG_BASE 0x60003000
+#define ESP32P4_SPI_REG_BASE 0x5008d000
 #define ESP32xx_SPI_REG_BASE 0x60002000
 #define ESP32_SPI_REG_BASE   0x3ff42000
 
 #define CHIP_ID_NONE 0xFF
+
+// Used for ESP32P4 chip detection, other chips uses ROM magic value
+#define ESP32P4_SPI_DATE_REG 0x500d0000
+#define ESP32P4_SPI_DATE_REG_MASK 0x7FFFFFF
+#define ESP32P4_SPI_DATE_REG_VALUE 0x2207202
 
 static esp_loader_error_t spi_config_esp32(uint32_t efuse_base, uint32_t *spi_config);
 static esp_loader_error_t spi_config_esp32xx(uint32_t efuse_base, uint32_t *spi_config);
@@ -227,6 +233,27 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .encryption_in_begin_flash_cmd = true,
         .chip_id = 13,
     },
+
+    // ESP32P4
+    {
+        .regs = {
+            .cmd  = ESP32P4_SPI_REG_BASE + 0x00,
+            .usr  = ESP32P4_SPI_REG_BASE + 0x18,
+            .usr1 = ESP32P4_SPI_REG_BASE + 0x1c,
+            .usr2 = ESP32P4_SPI_REG_BASE + 0x20,
+            .w0   = ESP32P4_SPI_REG_BASE + 0x58,
+            .mosi_dlen = ESP32P4_SPI_REG_BASE + 0x24,
+            .miso_dlen = ESP32P4_SPI_REG_BASE + 0x28,
+        },
+        .efuse_base = 0x5012d000,
+        .chip_magic_value = NULL,
+        .magic_values_count = 0,
+        .read_spi_config = spi_config_esp32xx,
+        .mac_efuse_offset = 0x44,
+        .encryption_in_begin_flash_cmd = true,
+        .chip_id = 18,
+    },
+
 };
 
 const target_registers_t *get_esp_target_data(target_chip_t chip)
@@ -261,6 +288,16 @@ esp_loader_error_t loader_detect_chip(target_chip_t *target_chip, const target_r
         }
     }
 
+    // ESP32-P4 has different memory map, so the same register as for other chips cannot be used
+    // to detect the chip. Date register of SPI peripheral is used instead. There is low probability
+    // that the date register will have same value as for other chips and it will also be at different
+    // address.
+    RETURN_ON_ERROR(esp_loader_read_register(ESP32P4_SPI_DATE_REG, &magic_value));
+    if ((magic_value & ESP32P4_SPI_DATE_REG_MASK) == ESP32P4_SPI_DATE_REG_VALUE) {
+        *target_chip = ESP32P4_CHIP;
+        *target_data = (target_registers_t *)&esp_target[ESP32P4_CHIP];
+        return ESP_LOADER_SUCCESS;
+    }
     return ESP_LOADER_ERROR_INVALID_TARGET;
 }
 
