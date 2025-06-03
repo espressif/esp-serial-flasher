@@ -114,6 +114,10 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_connect_args_t *conne
 
     RETURN_ON_ERROR(loader_detect_chip(&s_target, &s_reg));
 
+    if (s_target == ESP32P4_CHIP || s_target == ESP32C5_CHIP) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    }
+
     RETURN_ON_ERROR(loader_run_stub(s_target));
 
     return ESP_LOADER_SUCCESS;
