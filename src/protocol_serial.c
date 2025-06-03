@@ -38,14 +38,27 @@ static uint8_t compute_checksum(const uint8_t *data, uint32_t size)
 void log_loader_internal_error(error_code_t error)
 {
     switch (error) {
-    case INVALID_CRC:     loader_port_debug_print("Error: INVALID_CRC"); break;
-    case INVALID_COMMAND: loader_port_debug_print("Error: INVALID_COMMAND"); break;
-    case COMMAND_FAILED:  loader_port_debug_print("Error: COMMAND_FAILED"); break;
-    case FLASH_WRITE_ERR: loader_port_debug_print("Error: FLASH_WRITE_ERR"); break;
-    case FLASH_READ_ERR:  loader_port_debug_print("Error: FLASH_READ_ERR"); break;
-    case READ_LENGTH_ERR: loader_port_debug_print("Error: READ_LENGTH_ERR"); break;
-    case DEFLATE_ERROR:   loader_port_debug_print("Error: DEFLATE_ERROR"); break;
-    default:              loader_port_debug_print("Error: UNKNOWN ERROR"); break;
+    case INVALID_CRC:               loader_port_debug_print("Error: INVALID_CRC"); break;
+    case INVALID_COMMAND:           loader_port_debug_print("Error: INVALID_COMMAND"); break;
+    case COMMAND_FAILED:            loader_port_debug_print("Error: COMMAND_FAILED"); break;
+    case FLASH_WRITE_ERR:           loader_port_debug_print("Error: FLASH_WRITE_ERR"); break;
+    case FLASH_READ_ERR:            loader_port_debug_print("Error: FLASH_READ_ERR"); break;
+    case READ_LENGTH_ERR:           loader_port_debug_print("Error: READ_LENGTH_ERR"); break;
+    case DEFLATE_ERROR:             loader_port_debug_print("Error: DEFLATE_ERROR"); break;
+
+    case STUB_BAD_DATA_LEN:         loader_port_debug_print("Error: BAD_DATA_LEN"); break;
+    case STUB_BAD_DATA_CHECKSUM:    loader_port_debug_print("Error: BAD_DATA_CHECKSUM"); break;
+    case STUB_BAD_BLOCKSIZE:        loader_port_debug_print("Error: BAD_BLOCKSIZE"); break;
+    case STUB_INVALID_COMMAND:      loader_port_debug_print("Error: INVALID_COMMAND"); break;
+    case STUB_FAILED_SPI_OP:        loader_port_debug_print("Error: FAILED_SPI_OP"); break;
+    case STUB_FAILED_SPI_UNLOCK:    loader_port_debug_print("Error: FAILED_SPI_UNLOCK"); break;
+    case STUB_NOT_IN_FLASH_MODE:    loader_port_debug_print("Error: NOT_IN_FLASH_MODE"); break;
+    case STUB_INFLATE_ERROR:        loader_port_debug_print("Error: INFLATE_ERROR"); break;
+    case STUB_NOT_ENOUGH_DATA:      loader_port_debug_print("Error: NOT_ENOUGH_DATA"); break;
+    case STUB_TOO_MUCH_DATA:        loader_port_debug_print("Error: TOO_MUCH_DATA"); break;
+    case STUB_CMD_NOT_IMPLEMENTED:  loader_port_debug_print("Error: CMD_NOT_IMPLEMENTED"); break;
+
+    default:                        loader_port_debug_print("Error: UNKNOWN ERROR"); break;
     }
 }
 
@@ -275,6 +288,7 @@ esp_loader_error_t loader_spi_parameters(uint32_t total_size)
 }
 
 
+#ifndef SERIAL_FLASHER_INTERFACE_SDIO
 esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t blocks_to_write, uint32_t block_size)
 {
 
@@ -345,6 +359,7 @@ esp_loader_error_t loader_mem_end_cmd(uint32_t entrypoint)
 
     return send_cmd(&cmd_config);
 }
+#endif /* SERIAL_FLASHER_INTERFACE_SDIO */
 
 
 esp_loader_error_t loader_write_reg_cmd(uint32_t address, uint32_t value,

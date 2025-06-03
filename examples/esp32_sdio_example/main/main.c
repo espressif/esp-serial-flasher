@@ -1,4 +1,4 @@
-/* Example of loading the program into RAM through SDIO
+/* Example of flashing the program through SDIO
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -53,7 +53,7 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-    example_ram_app_binary_t bin;
+    example_binaries_t bin;
 
     const loader_esp32_sdio_config_t config = {
         .slot = SDMMC_HOST_SLOT_1,
@@ -74,19 +74,27 @@ void app_main(void)
     }
 
     if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
-        get_example_ram_app_binary(esp_loader_get_target(), &bin);
-        ESP_LOGI(TAG, "Loading app to RAM ...");
-        esp_loader_error_t err = load_ram_binary(bin.ram_app.data);
-        loader_port_esp32_sdio_deinit();
-        if (err == ESP_LOADER_SUCCESS) {
-            // Forward slave's serial output
-            ESP_LOGI(TAG, "********************************************");
-            ESP_LOGI(TAG, "*** Logs below are print from slave .... ***");
-            ESP_LOGI(TAG, "********************************************");
-            xTaskCreate(slave_monitor, "slave_monitor", 2048, NULL, configMAX_PRIORITIES - 1, NULL);
-        } else {
-            ESP_LOGE(TAG, "Loading to RAM failed ...");
-        }
+
+        get_example_binaries(esp_loader_get_target(), &bin);
+
+        ESP_LOGI(TAG, "Loading bootloader...");
+        flash_binary(bin.boot.data, bin.boot.size, bin.boot.addr);
+        ESP_LOGI(TAG, "Loading partition table...");
+        flash_binary(bin.part.data, bin.part.size, bin.part.addr);
+        ESP_LOGI(TAG, "Loading app...");
+        flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
+        ESP_LOGI(TAG, "Done!");
+        esp_loader_reset_target();
+
+        // Delay for skipping the boot message of the targets
+        vTaskDelay(500 / portTICK_PERIOD_MS);
+
+        // Forward slave's serial output
+        ESP_LOGI(TAG, "********************************************");
+        ESP_LOGI(TAG, "*** Logs below are print from slave .... ***");
+        ESP_LOGI(TAG, "********************************************");
+        xTaskCreate(slave_monitor, "slave_monitor", 2048, NULL, configMAX_PRIORITIES - 1, NULL);
+
     }
     vTaskDelete(NULL);
 }

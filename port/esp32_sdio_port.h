@@ -63,6 +63,8 @@ esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t 
   */
 void loader_port_esp32_sdio_deinit(void);
 
+esp_loader_error_t loader_port_wait_int(uint32_t timeout);
+
 #ifdef __cplusplus
 }
 #endif

@@ -30,7 +30,9 @@ Supported hardware interfaces:
 - UART
 - USB CDC ACM
 - SPI (only for RAM download)
-- SDIO (only for RAM download, experimental)
+- SDIO (experimental, supported only with ESP32-P4 as a host and ESP32-C6 as a target)
+  > **Note:** The SDIO implementation uses a custom built stub. The sources are currently not available publicly. We plan to make them available in the near future as part of the migration to [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
+
 
 For example usage check the [examples](/examples) directory.
 
@@ -195,6 +197,7 @@ needs to be implemented as well,
 and
 
 - `loader_port_sdio_card_init()`
+- `loader_port_wait_int()`
 for the SDIO interface ports.
 
 The following functions are part of the [io.h](include/io.h) header for convenience, however, the user does not have to strictly follow function signatures, as there are not called directly from library.

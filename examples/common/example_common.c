@@ -442,7 +442,9 @@ esp_loader_error_t connect_to_target_with_stub(const uint32_t current_transmissi
 
     return ESP_LOADER_SUCCESS;
 }
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
+#ifndef SERIAL_FLASHER_INTERFACE_SPI
 esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 {
     esp_loader_error_t err;
@@ -455,8 +457,8 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
         printf("Erasing flash failed with error: %s.\n", get_error_string(err));
 
         if (err == ESP_LOADER_ERROR_INVALID_PARAM) {
-            printf("If using Secure Download Mode, double check that the specified\
-                    target flash size is correct.\n");
+            printf("If using Secure Download Mode, double check that the specified "
+                   "target flash size is correct.\n");
         }
         return err;
     }
@@ -499,7 +501,7 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
 
     return ESP_LOADER_SUCCESS;
 }
-#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
+#endif /* SERIAL_FLASHER_INTERFACE_SPI */
 
 esp_loader_error_t load_ram_binary(const uint8_t *bin)
 {
