@@ -187,6 +187,46 @@ esp_loader_error_t loader_flash_read_stub_cmd(const uint32_t address, const uint
 }
 
 
+esp_loader_error_t loader_flash_erase_cmd(void)
+{
+    const flash_erase_chip_cmd erase_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = ERASE_FLASH,
+            .size = CMD_SIZE(erase_cmd),
+            .checksum = 0
+        },
+    };
+
+    const send_cmd_config cmd_config = {
+        .cmd = &erase_cmd,
+        .cmd_size = sizeof(erase_cmd),
+    };
+
+    return send_cmd(&cmd_config);
+}
+
+esp_loader_error_t loader_flash_erase_region_cmd(uint32_t offset, uint32_t size)
+{
+    const flash_erase_region_cmd erase_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = ERASE_REGION,
+            .size = CMD_SIZE(erase_cmd),
+            .checksum = 0
+        },
+        .offset = offset,
+        .size = size,
+    };
+
+    const send_cmd_config cmd_config = {
+        .cmd = &erase_cmd,
+        .cmd_size = sizeof(erase_cmd),
+    };
+
+    return send_cmd(&cmd_config);
+}
+
 esp_loader_error_t loader_sync_cmd(void)
 {
     sync_command_t sync_cmd = {

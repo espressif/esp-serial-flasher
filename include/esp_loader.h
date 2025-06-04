@@ -259,6 +259,38 @@ esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size);
 esp_loader_error_t esp_loader_flash_read(uint8_t *buf, uint32_t address, uint32_t length);
 
 /**
+  * @brief Erase the whole flash chip
+  *
+  * @note When using ROM-based approach (without stub), this function is experimental
+  *       and not fully tested in all scenarios. Use with caution. When using the stub,
+  *       this function is fully supported.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  */
+esp_loader_error_t esp_loader_flash_erase(void);
+
+/**
+  * @brief Erase a region of the flash
+  *
+  * @note When using ROM-based approach (without stub), this function is experimental
+  *       and not fully tested in all scenarios. Use with caution. When using the stub,
+  *       this function is fully supported.
+  *
+  * @param offset[in] The offset of the region to erase (must be 4096 byte aligned)
+  * @param size[in] The size of the region to erase (must be 4096 byte aligned)
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid parameter
+  */
+esp_loader_error_t esp_loader_flash_erase_region(uint32_t offset, uint32_t size);
+
+/**
   * @brief Change baud rate of the stub running on the target
   *
   * @note  Baud rate has to be also adjusted accordingly on host MCU, as

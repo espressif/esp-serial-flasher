@@ -57,6 +57,19 @@ void app_main(void)
 
     if (connect_to_target_with_stub(115200, 230400) == ESP_LOADER_SUCCESS) {
 
+        // Not necessary, just to demonstrate the erase functions
+        esp_loader_error_t err;
+        err = esp_loader_flash_erase();
+        if (err != ESP_LOADER_SUCCESS) {
+            ESP_LOGE(TAG, "Failed to erase flash");
+            return;
+        }
+        err = esp_loader_flash_erase_region(0, 0x1000);
+        if (err != ESP_LOADER_SUCCESS) {
+            ESP_LOGE(TAG, "Failed to erase flash region");
+            return;
+        }
+
         get_example_binaries(esp_loader_get_target(), &bin);
 
         ESP_LOGI(TAG, "Loading bootloader...");

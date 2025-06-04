@@ -70,6 +70,8 @@ typedef enum __attribute__((packed))
     FLASH_DEFL_END = 0x12,
     SPI_FLASH_MD5 = 0x13,
     GET_SECURITY_INFO = 0x14,
+    ERASE_FLASH = 0xd0,
+    ERASE_REGION = 0xd1,
     READ_FLASH_STUB = 0xd2,
 } command_t;
 
@@ -145,6 +147,18 @@ typedef struct __attribute__((packed))
     uint32_t packet_data_size;
     uint32_t max_inflight_packets;
 } flash_read_stub_cmd;
+
+typedef struct __attribute__((packed))
+{
+    command_common_t common;
+} flash_erase_chip_cmd;
+
+typedef struct __attribute__((packed))
+{
+    command_common_t common;
+    uint32_t offset;
+    uint32_t size;
+} flash_erase_region_cmd;
 
 typedef struct __attribute__((packed))
 {
@@ -269,6 +283,10 @@ esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader);
 esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out);
 
 esp_loader_error_t loader_spi_parameters(uint32_t total_size);
+
+esp_loader_error_t loader_flash_erase_cmd(void);
+
+esp_loader_error_t loader_flash_erase_region_cmd(uint32_t offset, uint32_t size);
 #endif /* SERIAL_FLASHER_INTERFACE_SPI */
 
 #if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
