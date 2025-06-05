@@ -5,7 +5,6 @@ from datetime import datetime
 from typing import List, Optional
 
 import pytest
-from pytest_embedded.plugin import multi_dut_fixture
 
 
 def pytest_configure(config):
@@ -53,9 +52,13 @@ def session_tempdir() -> str:
 
 
 @pytest.fixture
-@multi_dut_fixture
+def config(request: pytest.FixtureRequest) -> str:
+    return getattr(request, "param", None)
+
+
+@pytest.fixture
 def build_dir(
-    request: pytest.FixtureRequest, app_path: str, target: Optional[str]
+    request: pytest.FixtureRequest, app_path: str, config: Optional[str]
 ) -> str:
     """
     Check local build dir and return the valid one
@@ -64,10 +67,10 @@ def build_dir(
         valid build directory
     """
     check_dirs = []
-    build_folder = os.getenv("CI_BUILD_FOLDER")
-    if build_folder is not None:
-        check_dirs.append(build_folder)
-    check_dirs.append("build")
+    build_folder = os.getenv("CI_BUILD_FOLDER", "build")
+    if config is not None:
+        check_dirs.append(f"{build_folder}_{config}")
+    check_dirs.append(build_folder)
 
     for check_dir in check_dirs:
         binary_path = os.path.join(app_path, check_dir)

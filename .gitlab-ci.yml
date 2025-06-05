@@ -80,15 +80,15 @@ check_stub_source_correctness:
               --recursive \
               --exclude ./examples/binaries \
               --config "sdkconfig.defaults*" \
-              --build-dir ${BUILD_DIR} \
+              --build-dir ${BUILD_DIR}_@w \
               --check-warnings \
               --target ${TARGETS}
       else
           python -m idf_build_apps build -v -p . \
               --recursive \
               --exclude ./examples/binaries \
-              --config "sdkconfig.defaults*" \
-              --build-dir ${BUILD_DIR} \
+              --config-rules "sdkconfig.defaults*" \
+              --build-dir ${BUILD_DIR}_@w \
               --check-warnings
       fi
     # Show ccache statistics if enabled globally
