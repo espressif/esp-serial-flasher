@@ -37,6 +37,7 @@ python -m idf_build_apps build -v -p .
       --recursive
       --exclude ./examples/binaries
       --config "sdkconfig.defaults*"
+      --build-dir "build_"@w
       --check-warnings
 ```
 

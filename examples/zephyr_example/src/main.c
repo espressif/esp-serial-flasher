@@ -71,8 +71,11 @@ int main(void)
 
         get_example_binaries(esp_loader_get_target(), &bin);
 
+        printk("Loading bootloader...\n");
         flash_binary(bin.boot.data, bin.boot.size, bin.boot.addr);
+        printk("Loading partition table...\n");
         flash_binary(bin.part.data, bin.part.size, bin.part.addr);
+        printk("Loading app...\n");
         flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
     }
 

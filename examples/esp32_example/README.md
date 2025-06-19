@@ -76,16 +76,19 @@ Erasing flash (this may take a while)...
 Start programming
 Progress: 100 %
 Finished programming
+Flash verified
 I (4074) serial_flasher: Loading partition table...
 Erasing flash (this may take a while)...
 Start programming
 Progress: 100 %
 Finished programming
+Flash verified
 I (4284) serial_flasher: Loading app...
 Erasing flash (this may take a while)...
 Start programming
 Progress: 100 %
 Finished programming
+Flash verified
 I (11934) serial_flasher: Done!
 I (11273) serial_flasher: ********************************************
 I (11273) serial_flasher: *** Logs below are print from slave .... ***

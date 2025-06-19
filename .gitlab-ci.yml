@@ -80,15 +80,15 @@ check_stub_source_correctness:
               --recursive \
               --exclude ./examples/binaries \
               --config "sdkconfig.defaults*" \
-              --build-dir ${BUILD_DIR} \
+              --build-dir ${BUILD_DIR}_@w \
               --check-warnings \
               --target ${TARGETS}
       else
           python -m idf_build_apps build -v -p . \
               --recursive \
               --exclude ./examples/binaries \
-              --config "sdkconfig.defaults*" \
-              --build-dir ${BUILD_DIR} \
+              --config-rules "sdkconfig.defaults*" \
+              --build-dir ${BUILD_DIR}_@w \
               --check-warnings
       fi
     # Show ccache statistics if enabled globally
@@ -182,7 +182,7 @@ build_stm32:
     - mv arm-gnu-toolchain-* gcc-arm-none-eabi
     - mkdir $CI_PROJECT_DIR/examples/stm32_example/build
     - cd $CI_PROJECT_DIR/examples/stm32_example/build
-    - cmake -DSTM32_TOOLCHAIN_PATH=$CI_PROJECT_DIR/gcc-arm-none-eabi -DSTM32_CUBE_H7_PATH=$CI_PROJECT_DIR/STM32CubeH7 -G Ninja ..
+    - cmake -DSTM32_TOOLCHAIN_PATH=$CI_PROJECT_DIR/gcc-arm-none-eabi -DSTM32_CUBE_H7_PATH=$CI_PROJECT_DIR/STM32CubeH7 -DMD5_ENABLED=1 -G Ninja ..
     - cmake --build .
 
 build_zephyr:
@@ -220,7 +220,7 @@ build_zephyr:
     - unset IDF_PATH
     - west zephyr-export
     - west update hal_espressif
-    - west build -p -b esp32_devkitc_wroom/esp32/procpu $CI_PROJECT_DIR/examples/zephyr_example -DZEPHYR_EXTRA_MODULES=$CI_PROJECT_DIR
+    - west build -p -b esp32_devkitc_wroom/esp32/procpu $CI_PROJECT_DIR/examples/zephyr_example -DZEPHYR_EXTRA_MODULES=$CI_PROJECT_DIR -DMD5_ENABLED=1
 
 build_pi_pico:
   stage: build
@@ -245,7 +245,7 @@ build_pi_pico:
     - cd $CI_PROJECT_DIR/examples/pi_pico_example
     - mkdir build
     - cd build
-    - cmake ..
+    - cmake -DMD5_ENABLED=1 ..
     - cmake --build .
 
 build_pi:
@@ -259,7 +259,7 @@ build_pi:
   script:
     - cd $CI_PROJECT_DIR/examples/raspberry_example
     - mkdir build && cd build
-    - cmake .. && cmake --build .
+    - cmake -DMD5_ENABLED=1 .. && cmake --build .
   artifacts:
     paths:
       - "${CI_PROJECT_DIR}/examples/raspberry_example/build/raspberry_flasher"

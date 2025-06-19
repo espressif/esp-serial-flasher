@@ -39,6 +39,9 @@ int main(void)
 
     loader_port_pi_pico_init(&config);
 
+    // delay for the test to have time to connect to the device
+    sleep_ms(500);
+
     if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
         get_example_binaries(esp_loader_get_target(), &bin);
