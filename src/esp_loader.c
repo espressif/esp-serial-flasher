@@ -28,6 +28,10 @@
 #define DEFAULT_FLASH_TIMEOUT 3000
 #define LOAD_RAM_TIMEOUT_PER_MB 2000000
 #define MD5_TIMEOUT_PER_MB 8000
+#define ERASE_FLASH_TIMEOUT_PER_MB 10000
+
+#define FLASH_SECTOR_SIZE 4096
+#define ROM_FLASH_BLOCK_SIZE 1024
 
 typedef enum {
     SPI_FLASH_READ_ID = 0x9F
@@ -360,8 +364,7 @@ esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, 
     const uint32_t erase_size = calc_erase_size(esp_loader_get_target(), offset, image_size);
     const uint32_t blocks_to_write = (image_size + block_size - 1) / block_size;
 
-    const uint32_t erase_region_timeout_per_mb = 10000;
-    loader_port_start_timer(timeout_per_mb(erase_size, erase_region_timeout_per_mb));
+    loader_port_start_timer(timeout_per_mb(erase_size, ERASE_FLASH_TIMEOUT_PER_MB));
     return loader_flash_begin_cmd(offset, erase_size, block_size, blocks_to_write, encryption_in_cmd);
 }
 
@@ -402,6 +405,46 @@ esp_loader_error_t esp_loader_flash_finish(bool reboot)
     loader_port_start_timer(DEFAULT_TIMEOUT);
 
     return loader_flash_end_cmd(!reboot);
+}
+
+esp_loader_error_t esp_loader_flash_erase(void)
+{
+    if (esp_stub_get_running()) {
+        RETURN_ON_ERROR(init_flash_params());
+
+        loader_port_start_timer(timeout_per_mb(s_target_flash_size, ERASE_FLASH_TIMEOUT_PER_MB));
+        RETURN_ON_ERROR(loader_flash_erase_cmd());
+    } else {
+        // erase using flash begin
+        uint32_t flash_size = 0;
+        RETURN_ON_ERROR(esp_loader_flash_detect_size(&flash_size));
+        RETURN_ON_ERROR(esp_loader_flash_start(0, flash_size, ROM_FLASH_BLOCK_SIZE));
+    }
+    return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t esp_loader_flash_erase_region(uint32_t offset, uint32_t size)
+{
+    // Both offset and size must be aligned to flash sector size.
+    if (offset % FLASH_SECTOR_SIZE != 0 || size % FLASH_SECTOR_SIZE != 0) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    if (esp_stub_get_running()) {
+        RETURN_ON_ERROR(init_flash_params());
+
+        loader_port_start_timer(timeout_per_mb(size, ERASE_FLASH_TIMEOUT_PER_MB));
+        RETURN_ON_ERROR(loader_flash_erase_region_cmd(offset, size));
+    } else {
+        // erase using flash begin
+        uint32_t flash_size = 0;
+        RETURN_ON_ERROR(esp_loader_flash_detect_size(&flash_size));
+        if (offset + size > flash_size) {
+            return ESP_LOADER_ERROR_FAIL;
+        }
+        RETURN_ON_ERROR(esp_loader_flash_start(offset, size, ROM_FLASH_BLOCK_SIZE));
+    }
+    return ESP_LOADER_SUCCESS;
 }
 #endif /* SERIAL_FLASHER_INTERFACE_SPI */
 
