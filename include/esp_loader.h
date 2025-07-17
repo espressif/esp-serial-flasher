@@ -87,7 +87,7 @@ typedef struct {
 typedef struct {
     uint32_t addr;
     uint32_t size;
-    uint8_t *data;
+    const uint8_t *data;
 } esp_loader_bin_segment_t;
 
 typedef struct {

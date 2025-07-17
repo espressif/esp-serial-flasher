@@ -69,12 +69,12 @@ def read_stub_json(json_file):
             {{
                 .addr = {text_start},
                 .size = {text_size},
-                .data = (uint8_t[]){{{text_str}}},
+                .data = (const uint8_t[]){{{text_str}}},
             }},
             {{
                 .addr = {data_start},
                 .size = {data_size},
-                .data = (uint8_t[]){{{data_str}}},
+                .data = (const uint8_t[]){{{data_str}}},
             }},
         }},
     }},

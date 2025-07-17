@@ -539,7 +539,7 @@ esp_loader_error_t load_ram_binary(const uint8_t *bin)
         }
 
         size_t remain_size = segments[seg].size;
-        uint8_t *data_pos = segments[seg].data;
+        const uint8_t *data_pos = segments[seg].data;
         while (remain_size > 0) {
             size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
             err = esp_loader_mem_write(data_pos, data_size);
