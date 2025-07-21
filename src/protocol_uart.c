@@ -57,7 +57,7 @@ esp_loader_error_t loader_run_stub(target_chip_t target)
         }
 
         size_t remain_size = stub->segments[seg].size;
-        uint8_t *data_pos = stub->segments[seg].data;
+        const uint8_t *data_pos = stub->segments[seg].data;
         while (remain_size > 0) {
             size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
             err = esp_loader_mem_write(data_pos, data_size);
