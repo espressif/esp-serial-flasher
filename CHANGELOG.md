@@ -20,6 +20,38 @@
 </div>
 <hr>
 
+## v1.9.0 (2025-07-21)
+
+### ✨ New Features
+
+- add erase function *(Jaroslav Burian - 1c36d0a)*
+- add esp32_sdio_example to demonstrate SDIO flashing *(Jaroslav Burian - bb41a06)*
+- add support for SDIO flashing *(Jaroslav Burian - e5ae852)*
+- add support for ESP32-P4 *(Jaroslav Burian - e475fe5)*
+- Add ESP32-C5 support without stub *(Jaroslav Burian - f82b1a4)*
+
+### 🐛 Bug Fixes
+
+- ensure stubs for targets are stored in flash to save RAM space *(Jaroslav Burian - e3572f3)*
+- flash error log indentation *(Jaroslav Burian - 8d6504d)*
+- add missing stub error codes *(Jaroslav Burian - f452b3b)*
+- properly check flash size when verifying flash *(Jaroslav Burian - cf1ca67)*
+- writing above 0x200000 in SDM *(Jaroslav Burian - 34d27fe)*
+- use correct image header size for ESP8266 *(Jaroslav Burian - 3f7a78f)*
+- esp8266 bootloader offset address *(Jaroslav Burian - 4858e98)*
+
+### 📖 Documentation
+
+- **zephyr**: improve description of how to use the Zephyr example *(Jaroslav Burian - 08f5f41)*
+- fix Markdown syntax and improve notes *(Jaroslav Burian - 52c064e)*
+- mention tested SDK and toolchain versions for each port *(Jaroslav Burian - 4b556cd)*
+- add link to devcon talk *(Jaroslav Burian - 8869652)*
+
+### 🔧 Code Refactoring
+
+- change chip magic values to variable-length pointer array *(Jaroslav Burian - 2b2066c)*
+
+
 ## v1.8.0 (2025-01-27)
 
 ### ✨ New Features
