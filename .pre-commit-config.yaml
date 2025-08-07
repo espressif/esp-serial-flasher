@@ -13,6 +13,12 @@ repos:
       - id: mixed-line-ending
         args: ['-f=lf']
         exclude: *excludes
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.6
+    hooks:
+      - id: codespell
+        args: [--write-changes]
+        exclude: *excludes
   - repo: https://github.com/espressif/astyle_py.git
     rev: v1.0.5
     hooks:
