@@ -63,7 +63,7 @@ If implementing SDIO interface support, also implement:
 
 ## Optional Convenience Functions
 
-These functions are part of [io.h](../include/io.h) for convenience but are not called directly by the library. You can implement them as needed for your platform:
+These functions are part of [esp_loader_io.h](../include/esp_loader_io.h) for convenience but are not called directly by the library. You can implement them as needed for your platform:
 
 #### `loader_port_change_transmission_rate()`
 - **Purpose**: Change communication baud rate or speed
@@ -125,7 +125,7 @@ endif()
 
 ## Function Prototypes
 
-All function prototypes are defined in [include/io.h](../include/io.h). Refer to this file for exact function signatures and parameter details.
+All function prototypes are defined in [include/esp_loader_io.h](../include/esp_loader_io.h). Refer to this file for exact function signatures and parameter details.
 
 ## Platform-Specific Considerations
 
@@ -200,7 +200,7 @@ Test with actual ESP target devices:
 ### Resources
 
 - Study existing port implementations in `port/` directory
-- Check [include/io.h](../include/io.h) for function specifications
+- Check [include/esp_loader_io.h](../include/esp_loader_io.h) for function specifications
 - Review [examples/](../examples/) for usage patterns
 
 ### Support

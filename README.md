@@ -53,29 +53,29 @@ To use ESP Serial Flasher, you need:
 ### Basic Usage
 
 1. **Clone the repository:**
-```bash
-git clone --recursive https://github.com/espressif/esp-serial-flasher.git
-```
+   ```bash
+   git clone --recursive https://github.com/espressif/esp-serial-flasher.git
+   ```
 
 2. **Include in your project:**
-```cmake
-add_subdirectory(esp-serial-flasher)
-target_link_libraries(your_project flasher)
-```
+   ```cmake
+   add_subdirectory(esp-serial-flasher)
+   target_link_libraries(your_project flasher)
+   ```
 
 3. **Basic API usage:**
-```c
-#include "esp_loader.h"
+   ```c
+   #include "esp_loader.h"
 
-// Initialize and connect
-esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
-esp_loader_connect(&connect_config);
+   // Initialize and connect
+   esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+   esp_loader_connect(&connect_config);
 
-// Flash binary
-esp_loader_flash_start(target_address, binary_size, sizeof(block));
-esp_loader_flash_write(data, sizeof(data));
-esp_loader_flash_finish(true);
-```
+   // Flash binary
+   esp_loader_flash_start(target_address, binary_size, sizeof(block));
+   esp_loader_flash_write(data, sizeof(data));
+   esp_loader_flash_finish(true);
+   ```
 
 ### Examples
 
@@ -113,6 +113,7 @@ cmake -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 ..
 ### Interface Selection
 
 Choose one interface (UART is default):
+
 - `SERIAL_FLASHER_INTERFACE_UART` - UART communication (default)
 - `SERIAL_FLASHER_INTERFACE_SPI` - SPI communication  
 - `SERIAL_FLASHER_INTERFACE_USB` - USB CDC ACM
