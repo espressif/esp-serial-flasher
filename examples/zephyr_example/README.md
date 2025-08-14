@@ -34,11 +34,11 @@ The example performs the following steps to flash the target device:
 Table below shows connection between the two devices:
 
 | ESP32 (host) | Espressif SoC (target) |
-|:------------:|:----------------------:|
-|    IO26      |           IO0          |
-|    IO25      |          RESET         |
-|    IO4       |           RX0          |
-|    IO5       |           TX0          |
+| :----------: | :--------------------: |
+|     IO26     |          IO0           |
+|     IO25     |         RESET          |
+|     IO4      |          RX0           |
+|     IO5      |          TX0           |
 
 > [!NOTE]
 > Pin assignments can be modified in the device tree overlay.
@@ -79,7 +79,7 @@ Binaries to be flashed are placed in a separate folder (binaries.c) for each pos
 
 Here is the example's console output:
 
-``` text
+```text
 Running ESP Flasher from Zephyr
 Connected to target
 Transmission rate changed.

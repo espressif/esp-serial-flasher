@@ -13,9 +13,9 @@ The following steps are performed in order to re-program the target's memory:
 
 ## Hardware Required
 
-* One ESP32-series Espressif SoC for the host
-* Any Espressif SoC for the target
-* One or two USB cables for power supply and programming.
+- One ESP32-series Espressif SoC for the host
+- Any Espressif SoC for the target
+- One or two USB cables for power supply and programming.
 
 ## Building and Flashing
 
@@ -25,7 +25,7 @@ To run the example, type the following command:
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+(To exit the serial monitor, type `Ctrl-]`.)
 
 See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
 

@@ -16,7 +16,7 @@ The following steps are performed in order to re-program the targets memory:
 
 ## Hardware Required
 
-* Two development boards, one with any Espressif MCU (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.) and one with an Espressif MCU with SPI download support. Here is a short list of supported MCUs:
+- Two development boards, one with any Espressif MCU (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.) and one with an Espressif MCU with SPI download support. Here is a short list of supported MCUs:
 
 1. ESP32-C3
 2. ESP32-C2
@@ -24,27 +24,27 @@ The following steps are performed in order to re-program the targets memory:
 4. ESP32-S2
 5. ESP32-H2
 
-* One or two USB cables for power supply and programming.
+- One or two USB cables for power supply and programming.
 
 ## Hardware Connection
 
 Table below shows connection between two Espressif MCUs.
 
-| Host (ESP32-S3) | Target        |
-|:---------------:|:-------------:|
-|    IO_5         |    RESET      |
-|    IO_12        |    CLK        |
-|    IO_10        |    CS         |
-|    IO_13        |    MISO       |
-|    IO_11        |    MOSI       |
-|    IO_14        |    QUADWP     |
-|    IO_9         |    QUADHD     |
-|    IO_13        |    STRAP_B0   |
-|    IO_2         |    STRAP_B1   |
-|    IO_3         |    STRAP_B2   |
-|    IO_4         |    STRAP_B3   |
-|    IO_6         |    UART0_RX   |
-|    IO_7         |    UART0_TX   |
+| Host (ESP32-S3) |  Target  |
+| :-------------: | :------: |
+|      IO_5       |  RESET   |
+|      IO_12      |   CLK    |
+|      IO_10      |    CS    |
+|      IO_13      |   MISO   |
+|      IO_11      |   MOSI   |
+|      IO_14      |  QUADWP  |
+|      IO_9       |  QUADHD  |
+|      IO_13      | STRAP_B0 |
+|      IO_2       | STRAP_B1 |
+|      IO_3       | STRAP_B2 |
+|      IO_4       | STRAP_B3 |
+|      IO_6       | UART0_RX |
+|      IO_7       | UART0_TX |
 
 > **Note 1:** Strapping bit pins are documented in the TRM for each respective chip.
 > **Note 2:** For achieving the highest speeds, check which pins go through the IO MUX bypassing the GPIO matrix and use those. Pins chosen here are IO MUX pins for ESP32-S3 and ESP32-S2 chips.
@@ -57,7 +57,7 @@ To run the example, type the following command:
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+(To exit the serial monitor, type `Ctrl-]`.)
 
 See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
 

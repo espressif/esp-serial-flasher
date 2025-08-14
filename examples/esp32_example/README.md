@@ -20,22 +20,22 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 ## Hardware Required
 
-* Two development boards with the ESP32 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
+- Two development boards with the ESP32 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
 
-* One or two USB cables for power supply and programming.
+- One or two USB cables for power supply and programming.
 
-* Cables to connect host to target according to table below.
+- Cables to connect host to target according to table below.
 
 ## Hardware Connection
 
 Table below shows connection between the two ESP32 devices.
 
 | ESP32 (host) | ESP32 (target) |
-|:------------:|:-------------:|
-|    IO26      |      IO0      |
-|    IO25      |     RESET     |
-|    IO4       |      RX0      |
-|    IO5       |      TX0      |
+| :----------: | :------------: |
+|     IO26     |      IO0       |
+|     IO25     |     RESET      |
+|     IO4      |      RX0       |
+|     IO5      |      TX0       |
 
 > [!NOTE]
 > Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
@@ -48,7 +48,7 @@ To run the example, type the following command:
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+(To exit the serial monitor, type `Ctrl-]`.)
 
 See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/index.html) for full steps to configure and use ESP-IDF to build projects.
 

@@ -538,7 +538,7 @@ static esp_loader_error_t flash_read_stub(uint8_t *dest, uint32_t address, uint3
     MD5Init(&md5_context);
 
     // The flasher stub requires reads to be aligned to 4 bytes.
-    // The solution is to read more than is needed and discard the unecessary bytes.
+    // The solution is to read more than is needed and discard the unnecessary bytes.
     const uint32_t seek_back_len = address % 4;
     address -= seek_back_len;
     length += seek_back_len;

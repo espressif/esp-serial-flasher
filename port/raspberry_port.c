@@ -98,7 +98,7 @@ static int serialOpen (const char *device, uint32_t baudrate)
     int status, fd;
 
     if ((fd = open (device, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK)) == -1) {
-        printf("Error occured while opening serial port !\n");
+        printf("Error occurred while opening serial port !\n");
         return -1 ;
     }
 

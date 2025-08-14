@@ -69,7 +69,7 @@ esp_loader_error_t SLIP_receive_packet(uint8_t *buff, const size_t max_size, siz
     }
 
     // Wait for delimiter if we already reached max receive size
-    // This enables us to ignore unsupported or unecessary packet data instead of failing
+    // This enables us to ignore unsupported or unnecessary packet data instead of failing
     do {
         RETURN_ON_ERROR( peripheral_read(&ch, 1) );
     } while (ch != DELIMITER);
