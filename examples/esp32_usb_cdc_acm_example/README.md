@@ -28,11 +28,25 @@ A binary semaphore is used as a lock for the connected device and a callback is 
 
 ## Hardware Required
 
-- One ESP32-S3 target board and one ESP32-S3 or ESP32-S2 board, with each board having USB connections
-- An USB OTG adapter for the host board
-- One or two USB cables for power supply and programming.
+- **Host**: Espressif SoC development board with USB Host capability
+- **Target**: Espressif SoC development board with USB Serial/JTAG peripheral (e.g., ESP32-S3)
+- USB OTG adapter for the host board
+- Quality USB cables for communication and programming
+- **Separate power supply** for target board (USB cannot provide sufficient power)
 
-> **Note:** The USB connector on most of the ESP32-S3 and ESP32-S2 boards cannot supply power to the target, so a separate power connection is required.
+> **Note:** The USB connector on most ESP32-S3 and ESP32-S2 boards cannot supply sufficient power to the target, so a separate power connection is required.
+
+## Hardware Connection
+
+This example uses the **USB CDC ACM interface**. For detailed interface information, power requirements, and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#usb-cdc-acm-interface).
+
+**Connection Setup:**
+
+1. **USB Connection**: Host board → USB OTG adapter → Target board (USB cable only)
+2. **Power Supply**: Independent power source for target board
+3. **Programming**: Separate USB connection to PC for host programming
+
+**No additional wiring required** - communication is entirely over USB.
 
 ## Building and Flashing
 

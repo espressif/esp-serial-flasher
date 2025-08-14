@@ -21,25 +21,22 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 ## Hardware Required
 
-- Two development boards with the ESP32 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
-
+- Two development boards with Espressif SoCs (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
 - One or two USB cables for power supply and programming.
-
-- Cables to connect host to target according to table below.
+- Jumper cables to connect host to target according to table below.
 
 ## Hardware Connection
 
-Table below shows connection between the two ESP32 devices.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| ESP32 (host) | ESP32 (target) |
-| :----------: | :------------: |
-|     IO26     |      IO0       |
-|     IO25     |     RESET      |
-|     IO4      |      RX0       |
-|     IO5      |      TX0       |
+**ESP32-to-Espressif SoC Pin Assignment:**
 
-> [!NOTE]
-> Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
+| ESP32 (host) | Espressif SoC (target) |
+| :----------: | :--------------------: |
+|     IO26     |          IO0           |
+|     IO25     |         RESET          |
+|     IO4      |          RX0           |
+|     IO5      |          TX0           |
 
 ## Build and Flash
 

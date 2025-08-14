@@ -16,21 +16,25 @@ The following steps are performed in order to re-program targets memory:
 ## Hardware Required
 
 - WeActStudio [MiniSTM32H7xx](https://github.com/WeActStudio/MiniSTM32H7xx) board with the STM32H743VIT chip.
-- A development board with the ESP32 SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
+- A development board with an Espressif SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
 - One or two USB cables for power supply and programming.
+- Jumper cables for host-to-target connections.
 
 ## Hardware Connection
 
-Table below shows connection between STM32 and ESP32.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| STM32 (host) | ESP32 (slave) |
-| :----------: | :-----------: |
-|     PB12     |      IO0      |
-|     PB13     |      RST      |
-|     PA2      |      RX0      |
-|     PA3      |      TX0      |
+**STM32-to-Espressif SoC Pin Assignment:**
 
-Optionally, UART-to-USB bridge can be connected to PA9(TX) and PA10 (RX) for the debug purposes (same pins can be used to flash STM32 in bootloader).
+| STM32 (host) | Espressif SoC (target) |
+| :----------: | :--------------------: |
+|     PB12     |          IO0           |
+|     PB13     |         RESET          |
+|     PA2      |          RX0           |
+|     PA3      |          TX0           |
+
+**Optional Debug Connection:**
+UART-to-USB bridge can be connected to PA9(TX) and PA10(RX) for debug purposes (same pins can be used to flash STM32 in bootloader mode).
 
 ## Build and Flash
 

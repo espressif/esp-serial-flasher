@@ -17,22 +17,26 @@ The following steps are performed in order to re-program targets memory:
 ## Hardware Required
 
 - Raspberry Pi 4 Model B.
-- A development board with the ESP32 SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
-- USB cable in case ESP32 board is powered from USB. ESP32 can be powered by Raspberry Pi as well.
+- A development board with an Espressif SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
+- USB cable in case Espressif board is powered from USB. The target can be powered by Raspberry Pi as well.
+- Jumper cables for host-to-target connections.
 
 ## Hardware Connection
 
-Table below shows connection between Raspberry Pi and ESP32.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| Raspberry Pi (host) | ESP32 (target) |
-| :-----------------: | :------------: |
-|        GPIO3        |      IO0       |
-|        GPIO2        |      RST       |
-|       GPIO14        |      RX0       |
-|       GPIO15        |      TX0       |
-|         GND         |      GND       |
+**Raspberry Pi-to-Espressif SoC Pin Assignment:**
 
-Optionally, UART-to-USB bridge can be connected to PD5(RX) and PD6(TX) for debug purposes.
+| Raspberry Pi (host) | Espressif SoC (target) |
+| :-----------------: | :--------------------: |
+|        GPIO3        |          IO0           |
+|        GPIO2        |         RESET          |
+|       GPIO14        |          RX0           |
+|       GPIO15        |          TX0           |
+|         GND         |          GND           |
+
+**Optional Debug Connection:**
+UART-to-USB bridge can be connected to PD5(RX) and PD6(TX) for debug purposes.
 
 ## Installation
 
