@@ -3,7 +3,7 @@
 ## Overview
 
 This sample code demonstrates how to flash an Espressif SoC (target) from another MCU (host) using
-`esp_serial_flasher`. In this case, the ESP32 is used as the host MCU.
+`esp_serial_flasher`.
 Binaries to be flashed from the host MCU to another Espressif SoC can be found in [binaries](../binaries/) folder
 and are converted into C-array during build process.
 
@@ -24,21 +24,23 @@ The example performs the following steps to flash the target device:
 
 ## Hardware Required
 
-- ESP32-DevKitC board or another compatible ESP32 development board as a host
+- ESP32-DevKitC board or another compatible Espressif development board as a host
 - Any supported Espressif SoC development board as a target
 - One or two USB cables for power supply and programming
-- Cables to connect the host to the target according to the table below.
+- Jumper cables to connect the host to the target according to the table below.
 
 ## Hardware Connection
 
-Table below shows connection between the two devices:
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
+
+**ESP32-to-Espressif SoC Pin Assignment:**
 
 | ESP32 (host) | Espressif SoC (target) |
-|:------------:|:----------------------:|
-|    IO26      |           IO0          |
-|    IO25      |          RESET         |
-|    IO4       |           RX0          |
-|    IO5       |           TX0          |
+| :----------: | :--------------------: |
+|     IO26     |          IO0           |
+|     IO25     |         RESET          |
+|     IO4      |          RX0           |
+|     IO5      |          TX0           |
 
 > [!NOTE]
 > Pin assignments can be modified in the device tree overlay.
@@ -79,7 +81,7 @@ Binaries to be flashed are placed in a separate folder (binaries.c) for each pos
 
 Here is the example's console output:
 
-``` text
+```text
 Running ESP Flasher from Zephyr
 Connected to target
 Transmission rate changed.

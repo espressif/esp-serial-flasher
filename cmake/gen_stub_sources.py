@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
         for file_to_download in files_to_download:
             if file_to_download is None:
-                cfile.write("    // placeholder\n" "    {},\n" "\n")
+                cfile.write("    // placeholder\n    {},\n\n")
             else:
                 if stub_override_path:
                     with open(f"{stub_override_path}/{file_to_download}") as file_path:
@@ -122,4 +122,4 @@ if __name__ == "__main__":
                     ) as url:
                         cfile.write(read_stub_json(url))
 
-        cfile.write("};\n" "\n" "#endif\n")
+        cfile.write("};\n\n#endif\n")

@@ -22,7 +22,7 @@
 static const char *TAG = "serial_ram_loader";
 
 // This can be set to a higher baud rate, but because it takes some time to
-// switch the uart baud rate in slave_monitor task, the log at slave starup
+// switch the uart baud rate in slave_monitor task, the log at slave startup
 // time will be lost or garbled.
 #define HIGHER_BAUDRATE 115200
 
