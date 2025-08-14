@@ -33,7 +33,6 @@ Supported hardware interfaces:
 - SDIO (experimental, supported only with ESP32-P4 as a host and ESP32-C6 as a target)
   > **Note:** The SDIO implementation uses a custom built stub. The sources are currently not available publicly. We plan to make them available in the near future as part of the migration to [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
 
-
 For example usage check the [examples](/examples) directory.
 
 You can also watch [YouTube video](https://www.youtube.com/watch?v=hYqkOew8y8w) describing why and how to use the library, how it works and also how to implement a custom port.
@@ -53,6 +52,7 @@ Default: SERIAL_FLASHER_INTERFACE_UART
 If enabled, `esp-serial-flasher` is capable of verifying flash integrity after writing to flash.
 
 Default: Enabled
+
 > Warning: As ROM bootloader of the ESP8266 does not support MD5_CHECK, this option has to be disabled!
 
 - `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`
@@ -81,8 +81,8 @@ between the host and the target reset pin. Implemented only for UART interface.
 Default: n
 
 - `SERIAL_FLASHER_BOOT_INVERT`
-This inverts the output of the boot (IO0) gpio pin. Useful if the hardware has inverting connection
-between the host and the target boot pin. Implemented only for UART interface.
+  This inverts the output of the boot (IO0) gpio pin. Useful if the hardware has inverting connection
+  between the host and the target boot pin. Implemented only for UART interface.
 
 Default: n
 
@@ -117,7 +117,7 @@ git submodule update --init
 In addition to the configuration parameters mentioned above, the following definitions have to be set:
 
 - STM32_TOOLCHAIN_PATH: path to arm toolchain (i.e /home/user/gcc-arm-none-eabi-9-2019-q4-major)
-- STM32_CUBE_<CHIP_FAMILY>_PATH: path to STM32 Cube libraries (i.e /home/user/STM32Cube/Repository/STM32Cube_FW_F4_V1.25.0)
+- STM32_CUBE\_\<CHIP_FAMILY>\_PATH: path to STM32 Cube libraries (i.e /home/user/STM32Cube/Repository/STM32Cube_FW_F4_V1.25.0)
 - STM32_CHIP: name of STM32 for which project should be compiled (i.e STM32F407VG)
 - CORE_USED: core used on multicore devices (i.e. M7 or M4 on some STM32H7 chips)
 - PORT: STM32
@@ -192,13 +192,13 @@ The port layer for the given host microcontroller can be implemented if not avai
 For the SPI interface ports
 
 - `loader_port_spi_set_cs()`
-needs to be implemented as well,
+  needs to be implemented as well,
 
 and
 
 - `loader_port_sdio_card_init()`
 - `loader_port_wait_int()`
-for the SDIO interface ports.
+  for the SDIO interface ports.
 
 The following functions are part of the [io.h](include/io.h) header for convenience, however, the user does not have to strictly follow function signatures, as there are not called directly from library.
 

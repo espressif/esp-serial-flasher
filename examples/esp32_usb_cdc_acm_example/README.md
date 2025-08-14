@@ -6,7 +6,7 @@ This example demonstrates how to flash an ESP32-S3 (target) from another ESP32-S
 
 > **Note:** The `esp32_usb_cdc_acm` port requires ESP-IDF v4.4 or newer to build.
 
-The following steps are performed in order to re-program  memory:
+The following steps are performed in order to re-program memory:
 
 1. The system is started.
 2. The USB CDC ACM driver is initialized and a task to handle USB events is created.
@@ -28,9 +28,9 @@ A binary semaphore is used as a lock for the connected device and a callback is 
 
 ## Hardware Required
 
-* One ESP32-S3 target board and one ESP32-S3 or ESP32-S2 board, with each board having USB connections
-* An USB OTG adapter for the host board
-* One or two USB cables for power supply and programming.
+- One ESP32-S3 target board and one ESP32-S3 or ESP32-S2 board, with each board having USB connections
+- An USB OTG adapter for the host board
+- One or two USB cables for power supply and programming.
 
 > **Note:** The USB connector on most of the ESP32-S3 and ESP32-S2 boards cannot supply power to the target, so a separate power connection is required.
 
@@ -42,7 +42,7 @@ To run the example, type the following command:
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+(To exit the serial monitor, type `Ctrl-]`.)
 
 See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
 
