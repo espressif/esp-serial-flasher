@@ -1,234 +1,222 @@
-# esp-serial-flasher
+# ESP Serial Flasher
 
-`esp-serial-flasher` is a portable C library for flashing or loading apps to RAM of Espressif SoCs from other host microcontrollers.
+[![Component Registry](https://components.espressif.com/components/espressif/esp-serial-flasher/badge.svg)](https://components.espressif.com/components/espressif/esp-serial-flasher)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-`esp-serial-flasher` supports a variety of host/target/interface combinations:
+ESP Serial Flasher is a portable C library for programming and interacting with Espressif SoCs from other host microcontrollers.
 
-Supported **host** microcontrollers:
+## Overview
 
-- STM32
-- Raspberry Pi SBC
-- ESP32 Series
-- Any MCU running Zephyr OS
-- Raspberry Pi Pico
+This library enables you to program ESP32-series microcontrollers from various host platforms using different communication interfaces. It provides a unified API that abstracts the underlying communication protocol, making it easy to integrate ESP device programming into your projects. In this context, the host (flashing/programming device running this library) controls the target (the ESP-series SoC being programmed). It serves a similar purpose to [esptool](https://github.com/espressif/esptool), but is designed for embedded hosts without a PC or Python runtime or on less powerful single board computers.
 
-Supported **target** microcontrollers:
+- **Connection and identification**: Connect to targets, autodetect chip family, read MAC address, retrieve security info.
+- **Flash operations**: Write, read, erase, detect flash size, and optionally verify data via MD5.
+- **RAM download and execution**: Load binaries to RAM and run them.
+- **Registers and control**: Read/write registers, change transmission rate, reset the target.
 
-- ESP32
+### Supported Host Platforms (device running this library and performing flashing)
+
+- **STM32** microcontrollers
+- **Raspberry Pi** SBC
+- **ESP32 series** microcontrollers
+- **Zephyr OS** compatible devices
+- **Raspberry Pi Pico** (RP2040)
+
+### Supported Target Devices (ESP device being flashed)
+
 - ESP8266
+- ESP32
 - ESP32-S2
 - ESP32-S3
 - ESP32-C3
 - ESP32-C2
 - ESP32-H2
 - ESP32-C6
-- ESP32-C5 (stub not included for now)
-- ESP32-P4 (stub not included for now)
+- ESP32-C5 (stub support coming soon)
+- ESP32-P4 (stub support coming soon)
 
-Supported hardware interfaces:
+### Supported Communication Interfaces
 
-- UART
-- USB CDC ACM
-- SPI (only for RAM download)
-- SDIO (experimental, supported only with ESP32-P4 as a host and ESP32-C6 as a target)
-  > **Note:** The SDIO implementation uses a custom built stub. The sources are currently not available publicly. We plan to make them available in the near future as part of the migration to [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
+- **UART** - Universal asynchronous communication
+- **USB CDC ACM** - USB virtual serial port
+- **SPI** - Serial Peripheral Interface (RAM download only)
+- **SDIO** - Secure Digital Input/Output (experimental)
 
-For example usage check the [examples](/examples) directory.
+> **Note:** SDIO interface is experimental and currently supported only with ESP32-P4 as host and ESP32-C6 as target. The implementation uses a custom stub that will be made available as part of the migration to [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
 
-You can also watch [YouTube video](https://www.youtube.com/watch?v=hYqkOew8y8w) describing why and how to use the library, how it works and also how to implement a custom port.
+### Public API
 
-## Configuration
+- Public headers: [include/esp_loader.h](include/esp_loader.h) and [include/esp_loader_io.h](include/esp_loader_io.h) define the stable public API of this library.
+- Examples and helpers: [examples/common/](examples/common/) contains helper utilities used by the examples; not part of the library API, but can be used as a reference.
 
-These are the configuration toggles available to the user:
+## Getting Started
 
-- `SERIAL_FLASHER_INTERFACE_UART`/`SERIAL_FLASHER_INTERFACE_SPI`/`SERIAL_FLASHER_INTERFACE_USB/SERIAL_FLASHER_INTERFACE_SDIO`
+### Prerequisites
 
-This defines the hardware interface to use.
+To use ESP Serial Flasher, you need:
 
-Default: SERIAL_FLASHER_INTERFACE_UART
+- **CMake 3.5 or later** - Build system
+- **Git** - For cloning the repository with submodules
+- **Platform-specific toolchain** - Depends on your host platform (you can also implement a custom port for your platform; see [Supporting New Host Platforms Guide](docs/supporting-new-platforms.md))
+  - ESP-IDF for ESP32 hosts
+  - ARM GCC toolchain for STM32/Raspberry Pi Pico
+  - Raspberry Pi OS development tools for Raspberry Pi
+  - Zephyr SDK for Zephyr OS
 
-- `MD5_ENABLED`
+### Installation
 
-If enabled, `esp-serial-flasher` is capable of verifying flash integrity after writing to flash.
-
-Default: Enabled
-
-> Warning: As ROM bootloader of the ESP8266 does not support MD5_CHECK, this option has to be disabled!
-
-- `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`
-
-This configures the amount of retries for writing blocks either to target flash or RAM.
-
-Default: 3
-
-- `SERIAL_FLASHER_RESET_HOLD_TIME_MS`
-
-This is the time for which the reset pin is asserted when doing a hard reset in milliseconds.
-
-Default: 100
-
-- `SERIAL_FLASHER_BOOT_HOLD_TIME_MS`
-
-This is the time for which the boot pin is asserted when doing a hard reset in milliseconds.
-
-Default: 50
-
-- `SERIAL_FLASHER_RESET_INVERT`
-
-This inverts the output of the reset gpio pin. Useful if the hardware has inverting connection
-between the host and the target reset pin. Implemented only for UART interface.
-
-Default: n
-
-- `SERIAL_FLASHER_BOOT_INVERT`
-  This inverts the output of the boot (IO0) gpio pin. Useful if the hardware has inverting connection
-  between the host and the target boot pin. Implemented only for UART interface.
-
-Default: n
-
-Configuration can be passed to `cmake` via command line:
+#### ESP-IDF (Component Manager)
 
 ```bash
-cmake -DMD5_ENABLED=1 .. && cmake --build .
+idf.py add-dependency "espressif/esp-serial-flasher"
 ```
 
-### ESP Support
-
-#### Supported ESP-IDF Versions
-
-- v4.3 or later
-
-### STM32 Support
-
-> **Note:**: The library was tested with STM32CubeH7 v1.11.1 and arm-gnu-toolchain-13.2.
-
-The STM32 port makes use of STM32 HAL libraries, and these do not come with CMake support. In order to compile the project, `stm32-cmake` (a `CMake` support package) has to be pulled as submodule.
+#### From source (CMake subproject)
 
 ```bash
 git clone --recursive https://github.com/espressif/esp-serial-flasher.git
 ```
 
-If you have cloned this repository without the `--recursive` flag, you can initialize the submodule using the following command:
+```cmake
+add_subdirectory(esp-serial-flasher)
+target_link_libraries(your_project flasher)
+```
+
+### Usage
+
+1. **Basic API usage:**
+
+   ```c
+   #include "esp_loader.h"
+
+   esp_loader_error_t err;
+
+   // Initialize and connect
+   esp_loader_connect_args_t config = ESP_LOADER_CONNECT_DEFAULT();
+   err = esp_loader_connect(&config);
+   if (err != ESP_LOADER_SUCCESS) {
+       printf("Connection failed: %s\n", esp_loader_error_string(err));
+       return err;
+   }
+
+   // Flash binary (example: 64KB at 0x10000)
+   const uint32_t addr = 0x10000;
+   const size_t size = 65536;
+   const size_t block_size = 4096;
+   // Variable holding your binary image. Typical sources:
+   // - Read from storage (SD card, filesystem, flash)
+   // - Received over a link (UART/SPI/USB/Wi‑Fi) into a RAM buffer
+   // - Compiled-in C array generated from a .bin
+   const uint8_t *data = /* pointer to your firmware image buffer */;
+
+   err = esp_loader_flash_start(addr, size, block_size);
+   if (err != ESP_LOADER_SUCCESS) return err;
+
+   // Write data in chunks
+   size_t offset = 0;
+   while (offset < size) {
+      size_t chunk = MIN(block_size, size - offset);
+      err = esp_loader_flash_write(data + offset, chunk);
+      if (err != ESP_LOADER_SUCCESS) return err;
+      offset += chunk;
+   }
+
+   esp_loader_reset_target();
+   return err
+   ```
+
+### Examples
+
+For complete implementation examples, see the [examples](examples/) directory:
+
+- [ESP32 Example](examples/esp32_example/) - ESP32 family as host
+- [STM32 Example](examples/stm32_example/) - STM32 as host
+- [Raspberry Pi Example](examples/raspberry_example/) - Raspberry Pi as host
+- [Zephyr Example](examples/zephyr_example/) - Zephyr OS integration
+- [Raspberry Pi Pico Example](examples/pi_pico_example/) - RP2040 as host
+- [ESF Demo](https://github.com/Dzarda7/esf-demo) - End-to-end demo flashing ESP targets from an embedded host (M5Stack Dial) over USB CDC ACM; includes SD card image selection and on-device progress UI
+
+### Educational Resources
+
+- [esptool documentation](https://docs.espressif.com/projects/esptool/en/latest/esp32/) - Contains most of the informations on how the communication with the chip works, what is and is not possible etc.
+- [YouTube Tutorial](https://www.youtube.com/watch?v=hYqkOew8y8w) - Comprehensive guide covering library usage, internals, and custom port implementation
+
+## Configuration
+
+ESP Serial Flasher provides several configuration options to customize its behavior. These options are set as **CMake cache variables**.
+
+### Basic Configuration
+
+The most common configuration options:
 
 ```bash
-git submodule update --init
+# Enable SPI interface instead of UART
+cmake -DSERIAL_FLASHER_INTERFACE_SPI=1 ..
+
+# Disable MD5 verification
+cmake -DMD5_ENABLED=0 ..
+
+# Set custom retry count
+cmake -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 ..
 ```
 
-In addition to the configuration parameters mentioned above, the following definitions have to be set:
+### Interface Selection
 
-- STM32_TOOLCHAIN_PATH: path to arm toolchain (i.e /home/user/gcc-arm-none-eabi-9-2019-q4-major)
-- STM32_CUBE\_\<CHIP_FAMILY>\_PATH: path to STM32 Cube libraries (i.e /home/user/STM32Cube/Repository/STM32Cube_FW_F4_V1.25.0)
-- STM32_CHIP: name of STM32 for which project should be compiled (i.e STM32F407VG)
-- CORE_USED: core used on multicore devices (i.e. M7 or M4 on some STM32H7 chips)
-- PORT: STM32
+Choose one interface (UART is default):
 
-This can be achieved by passing definitions to the command line, such as:
+- `SERIAL_FLASHER_INTERFACE_UART` - UART communication (default)
+- `SERIAL_FLASHER_INTERFACE_SPI` - SPI communication
+- `SERIAL_FLASHER_INTERFACE_USB` - USB CDC ACM
+- `SERIAL_FLASHER_INTERFACE_SDIO` - SDIO (experimental)
 
-```bash
-cmake -DSTM32_TOOLCHAIN_PATH="path_to_toolchain" -DSTM32_CUBE_<CHIP_FAMILY>_PATH="path_to_cube_libraries" -DSTM32_CHIP="STM32F407VG" -DPORT="STM32" .. && cmake --build .
-```
+For complete configuration reference, see [Configuration Documentation](docs/configuration.md).
 
-Alternatively, those variables can be set in the top level `cmake` directory:
+## Platform Setup
 
-```bash
-set(STM32_TOOLCHAIN_PATH path_to_toolchain)
-set(STM32_CUBE_H7_PATH path_to_cube_libraries)
-set(STM32_CHIP STM32H743VI)
-set(CORE_USED M7)
-set(PORT STM32)
-```
+Different host platforms require specific setup procedures:
 
-### Zephyr Support
+- **ESP32 series**: Works with ESP-IDF v4.3 or later
+- **STM32**: Requires STM32 HAL libraries and ARM toolchain
+- **Zephyr**: Integrates as Zephyr module with specific Kconfig options
+- **Raspberry Pi Pico**: Uses Pico SDK
+- **Raspberry Pi**: Requires pigpio library
 
-> **Note:**: The library was tested with Zephyr RTOS v4.0.0 and Zephyr SDK v0.17.0.
+For detailed setup instructions, see [Platform Setup Guide](docs/platform-setup.md).
 
-The Zephyr port is ready to be integrated into Zephyr apps as a Zephyr module. In the manifest file (west.yml), add:
+## Hardware Connections
 
-```yaml
-    - name: esp-flasher
-      url: https://github.com/espressif/esp-serial-flasher
-      revision: master
-      path: modules/lib/esp_flasher
-```
+ESP Serial Flasher supports multiple communication interfaces, each with specific hardware connection requirements:
 
-And add
+- **UART/Serial**: Standard 4-pin connection (TX, RX, RESET, BOOT) - works with all ESP targets
+- **USB CDC ACM**: Direct USB connection - requires ESP32-S3/S2 hosts and ESP32-S3 targets
+- **SPI**: High-speed interface for RAM operations - requires specific strapping pins
+- **SDIO**: Experimental high-speed interface - may require pullup resistors and clock edge configuration
 
-```yaml
-CONFIG_ESP_SERIAL_FLASHER=y
-CONFIG_CONSOLE_GETCHAR=y
-CONFIG_SERIAL_FLASHER_MD5_ENABLED=y
-```
-
-to the project configuration `prj.conf`.
-
-For the C/C++ source code, the example code provided in `examples/zephyr_example` can be used as a starting point.
-
-### Raspberry Pi Pico Support
-
-> **Note:** The library was tested with Raspberry Pi Pico SDK v1.5.1 and arm-gnu-toolchain-13.2.
-
-The Raspberry Pi Pico port allows using the RP2040 microcontroller as a host for programming ESP devices.
-For example usage, check the `examples/pi_pico_example` directory.
-
-### Raspberry Pi Support
-
-> **Note:**: The library was tested with the latest Raspberry Pi OS.
-
-The Raspberry Pi port allows using the Raspberry Pi SBC as a host for programming ESP devices.
-This port uses the pigpio library for GPIO control.
-For example usage, check the `examples/raspberry_example` directory.
-
-## Supporting a New Host Target
-
-The port layer for the given host microcontroller can be implemented if not available, in order to support a new target, following functions have to be implemented by user:
-
-- `loader_port_read()`
-- `loader_port_write()`
-- `loader_port_enter_bootloader()`
-- `loader_port_delay_ms()`
-- `loader_port_start_timer()`
-- `loader_port_remaining_time()`
-
-For the SPI interface ports
-
-- `loader_port_spi_set_cs()`
-  needs to be implemented as well,
-
-and
-
-- `loader_port_sdio_card_init()`
-- `loader_port_wait_int()`
-  for the SDIO interface ports.
-
-The following functions are part of the [io.h](include/io.h) header for convenience, however, the user does not have to strictly follow function signatures, as there are not called directly from library.
-
-- `loader_port_change_transmission_rate()`
-- `loader_port_reset_target()`
-- `loader_port_debug_print()`
-
-Prototypes of all functions mentioned above can be found in [io.h](include/io.h).
-
-After that, the target implementing these functions should be linked with the `flasher` target and the `PORT` CMake variable should be set to `USER_DEFINED`.
+For complete wiring diagrams, pin assignments, and interface-specific requirements, see [Hardware Connections Guide](docs/hardware-connections.md).
 
 ## Contributing
 
-We welcome contributions to this project in the form of bug reports, feature requests and pull requests.
+We welcome contributions! Before starting work on new features or significant changes, please [open an issue](https://github.com/espressif/esp-serial-flasher/issues) to discuss your proposal.
 
-Issue reports and feature requests can be submitted using [Github Issues](https://github.com/espressif/esp-serial-flasher/issues). Please check if the issue has already been reported before opening a new one.
+For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Contributions in the form of pull requests should follow ESP-IDF project's [contribution guidelines](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/contribute/style-guide.html) and use the [conventional commit message style](https://www.conventionalcommits.org/en/v1.0.0/).
+### Adding New Platform Support
 
-To automatically enforce these rules, use [pre-commit](https://pre-commit.com/) and install hooks with the following commands:
+If you want to add support for a new host platform, see [Supporting New Host Platforms Guide](docs/supporting-new-platforms.md).
 
-```bash
-pre-commit install
-pre-commit install -t commit-msg
-```
+## License
 
-## Licence
-
-Code is distributed under Apache 2.0 license.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
 
 ## Known Limitations
 
-Size of new binary image has to be known before flashing.
+The following limitations are currently known:
+
+- Binary image size must be known before flashing
+- ESP8266 targets require `MD5_ENABLED=0` due to ROM bootloader limitations
+- SPI interface only supports RAM download operations
+- SDIO interface is experimental with limited platform support
+- Only one target can be flashed at a time (library holds state in static variables)
+- Communication interface must be selected at compile time (no runtime switching)
+
+For additional limitations and current issues, see the [GitHub Issues](https://github.com/espressif/esp-serial-flasher/issues) page.
