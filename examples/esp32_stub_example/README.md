@@ -13,9 +13,22 @@ The following steps are performed in order to re-program the target's memory:
 
 ## Hardware Required
 
-- One ESP32-series Espressif SoC for the host
-- Any Espressif SoC for the target
+- Two development boards with Espressif SoCs (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
 - One or two USB cables for power supply and programming.
+- Jumper cables to connect host to target according to table below.
+
+## Hardware Connection
+
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
+
+**ESP32-to-Espressif SoC Pin Assignment:**
+
+| ESP32 (host) | Espressif SoC (target) |
+| :----------: | :--------------------: |
+|     IO26     |          BOOT          |
+|     IO25     |         RESET          |
+|     IO4      |          RX0           |
+|     IO5      |          TX0           |
 
 ## Building and Flashing
 

@@ -2,16 +2,17 @@
 
 ## Overview
 
-This example demonstrates how to get the target info including the flash chip size, the WIFI MAC address and security info of an Espressif SoC from another (host) MCU using `esp-serial-flasher`. In this case, an ESP32 is used as the host MCU.
+This example demonstrates how to get the target info including the flash chip size, the Wi‑Fi MAC address and security info of an Espressif SoC from another (host) MCU using `esp-serial-flasher`.
 
 The following steps are performed:
 
 1. UART1 through which new binary will be transfered is initialized.
 2. The host puts target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
-3. The host attempts to read the target flash size and the WIFI MAC and prints them out.
+3. The host attempts to read the target flash size and the Wi‑Fi MAC and prints them out.
 4. The host attempts to read the target security info and prints it out.
 
-**Note:** In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase communication speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase, and can be changed before calling `esp_loader_connect()`, if necessary.
+> [!NOTE]
+> In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase communication speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase, and can be changed before calling `esp_loader_connect()`, if necessary.
 
 ## Connection Configuration
 
@@ -19,23 +20,22 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 ## Hardware Required
 
-- Two development boards with the ESP32 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
+- Two development boards with Espressif SoCs (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
 - One or two USB cables for power supply and programming.
-- Cables to connect host to target according to table below.
+- Jumper cables to connect host to target according to table below.
 
 ## Hardware Connection
 
-Table below shows connection between two ESP32 devices.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| ESP32 (host) | ESP32 (target) |
-| :----------: | :------------: |
-|     IO26     |      IO0       |
-|     IO25     |     RESET      |
-|     IO4      |      RX0       |
-|     IO5      |      TX0       |
+**ESP32-to-Espressif SoC Pin Assignment:**
 
-> [!NOTE]
-> Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
+| ESP32 (host) | Espressif SoC (target) |
+| :----------: | :--------------------: |
+|     IO26     |          BOOT          |
+|     IO25     |         RESET          |
+|     IO4      |          RX0           |
+|     IO5      |          TX0           |
 
 ## Build and Flash
 
@@ -58,7 +58,7 @@ Here is the example's console output:
 Connected to target
 Transmission rate changed.
 I (726) serial_flasher: Target flash size [B]: 4194304
-I (726) serial_flasher: Target WIFI MAC:
+I (726) serial_flasher: Target Wi‑Fi MAC:
 I (726) serial_flasher: 70 04 1d 77 08 0c 
 I (736) serial_flasher: Target Security Information:
 I (736) serial_flasher: Target chip: ESP32-C3

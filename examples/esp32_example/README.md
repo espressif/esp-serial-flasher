@@ -2,7 +2,7 @@
 
 ## Overview
 
-This example demonstrates how to flash an Espressif SoC (target) from another MCU (host) using `esp_serial_flasher`. Two ESP32 chips are used in this case. Binaries to be flashed from the host MCU to the Espressif SoC can be found in [binaries](../binaries/) folder and are converted into C-array during build process.
+This example demonstrates how to flash an Espressif SoC (target) from another MCU (host) using `esp_serial_flasher`. Binaries to be flashed from the host MCU to the Espressif SoC can be found in [binaries](../binaries/) folder and are converted into C-array during build process.
 
 The following steps are performed in order to re-program targets memory:
 
@@ -12,7 +12,8 @@ The following steps are performed in order to re-program targets memory:
 4. Then `esp_loader_flash_start()` is called to enter the flashing mode and erase the amount of memory to be flashed.
 5. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
 
-**Note:** In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
+> [!NOTE]
+> In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
 ## Connection Configuration
 
@@ -20,25 +21,22 @@ In the majority of cases `ESP_LOADER_CONNECT_DEFAULT` helper macro is used in or
 
 ## Hardware Required
 
-- Two development boards with the ESP32 SoC (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
-
+- Two development boards with Espressif SoCs (e.g., ESP32-DevKitC, ESP-WROVER-KIT, etc.).
 - One or two USB cables for power supply and programming.
-
-- Cables to connect host to target according to table below.
+- Jumper cables to connect host to target according to table below.
 
 ## Hardware Connection
 
-Table below shows connection between the two ESP32 devices.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| ESP32 (host) | ESP32 (target) |
-| :----------: | :------------: |
-|     IO26     |      IO0       |
-|     IO25     |     RESET      |
-|     IO4      |      RX0       |
-|     IO5      |      TX0       |
+**ESP32-to-Espressif SoC Pin Assignment:**
 
-> [!NOTE]
-> Interconnection is the same for ESP32, ESP32-S2 and ESP8266 targets.
+| ESP32 (host) | Espressif SoC (target) |
+| :----------: | :--------------------: |
+|     IO26     |          BOOT          |
+|     IO25     |         RESET          |
+|     IO4      |          RX0           |
+|     IO5      |          TX0           |
 
 ## Build and Flash
 

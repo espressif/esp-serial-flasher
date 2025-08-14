@@ -3,7 +3,7 @@
 ## Overview
 
 This sample code demonstrates how to flash an Espressif SoC (target) from another MCU (host) using
-`esp_serial_flasher`. In this case, the ESP32 is used as the host MCU.
+`esp_serial_flasher`.
 Binaries to be flashed from the host MCU to another Espressif SoC can be found in [binaries](../binaries/) folder
 and are converted into C-array during build process.
 
@@ -20,22 +20,25 @@ The example performs the following steps to flash the target device:
    - Repeatedly calls esp_loader_flash_write() to transfer the binary
    - Verifies the flash integrity if MD5 checking is enabled
 
-**Note:** In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase the flashing speed. This does not apply for ESP8266, as its bootloader does not support this command. However, ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
+> [!NOTE]
+> In addition, to steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase the flashing speed. This does not apply for ESP8266, as its bootloader does not support this command. However, ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.
 
 ## Hardware Required
 
-- ESP32-DevKitC board or another compatible ESP32 development board as a host
+- ESP32-DevKitC board or another compatible Espressif development board as a host
 - Any supported Espressif SoC development board as a target
 - One or two USB cables for power supply and programming
-- Cables to connect the host to the target according to the table below.
+- Jumper cables to connect the host to the target according to the table below.
 
 ## Hardware Connection
 
-Table below shows connection between the two devices:
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
+
+**ESP32-to-Espressif SoC Pin Assignment:**
 
 | ESP32 (host) | Espressif SoC (target) |
 | :----------: | :--------------------: |
-|     IO26     |          IO0           |
+|     IO26     |          BOOT          |
 |     IO25     |         RESET          |
 |     IO4      |          RX0           |
 |     IO5      |          TX0           |
