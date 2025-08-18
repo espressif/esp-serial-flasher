@@ -7,4 +7,4 @@ dependencies:
     version: "^2"
     rules:
       - if: "idf_version >=4.4"
-      - if: "target in [esp32s2, esp32s3]"
+      - if: "target in [esp32s2, esp32s3, esp32p4]"

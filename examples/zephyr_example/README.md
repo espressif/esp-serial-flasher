@@ -61,7 +61,7 @@ west init
 # Update Zephyr modules
 west update
 
-# Build the example with esp-serial-flasher module
+# Build the example with ESP-Serial-Flasher module
 west build -p -b <supported board from the boards folder> path/to/esp-serial-flasher/examples/zephyr_example -D ZEPHYR_EXTRA_MODULES=/path/to/esp-serial-flasher
 
 west flash
