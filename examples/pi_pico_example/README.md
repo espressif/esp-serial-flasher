@@ -18,21 +18,23 @@ This does not apply for the ESP8266, as its bootloader does not support this com
 
 ## Hardware Required
 
-* A Raspberry Pi Pico Board with 2MB of flash or more.
-* A development board with an Espressif SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
-* Jumper cables to connect the boards.
-* One or two USB cables for power supply and programming.
+- A Raspberry Pi Pico Board with 2MB of flash or more.
+- A development board with an Espressif SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
+- Jumper cables to connect the boards.
+- One or two USB cables for power supply and programming.
 
 ## Hardware Connection
 
-The table below shows the connection between the Raspberry Pi Pico board and the ESP32.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| Pi Pico (host) | ESP32 (slave) |
-|:--------------:|:-------------:|
-|       18       |      IO0      |
-|       19       |      RST      |
-|       20       |      RX0      |
-|       21       |      TX0      |
+**Pi Pico-to-Espressif SoC Pin Assignment:**
+
+| Pi Pico (host) | Espressif SoC (target) |
+| :------------: | :--------------------: |
+|       18       |          BOOT          |
+|       19       |         RESET          |
+|       20       |          RX0           |
+|       21       |          TX0           |
 
 ## Build and Flash
 

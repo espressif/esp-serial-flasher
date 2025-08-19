@@ -5287,7 +5287,7 @@ inline void setRngSeed( ConfigData &config, std::string const &seed )
         ss << seed;
         ss >> config.rngSeed;
         if ( ss.fail() ) {
-            throw std::runtime_error( "Argment to --rng-seed should be the word 'time' or a number" );
+            throw std::runtime_error( "Argument to --rng-seed should be the word 'time' or a number" );
         }
     }
 }
@@ -8287,7 +8287,7 @@ inline void enforceNotReservedTag( std::string const &tag, SourceLineInfo const 
             Colour colourGuard( Colour::Red );
             Catch::cerr()
                     << "Tag name [" << tag << "] not allowed.\n"
-                    << "Tag names starting with non alpha-numeric characters are reserved\n";
+                    << "Tag names starting with non alphanumeric characters are reserved\n";
         }
         {
             Colour colourGuard( Colour::FileName );

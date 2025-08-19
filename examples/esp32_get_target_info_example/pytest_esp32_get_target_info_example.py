@@ -15,7 +15,7 @@ def test_esp32_get_target_info_example(dut: Dut) -> None:
     dut.expect(re.compile(r"Eco version number: \d+"))
 
     dut.expect(re.compile(r"Secure boot: (ENABLED|DISABLED)"))
-    dut.expect(re.compile(r"Secure boot agressive revoke: (ENABLED|DISABLED)"))
+    dut.expect(re.compile(r"Secure boot aggressive revoke: (ENABLED|DISABLED)"))
     dut.expect(re.compile(r"Flash encryption: (ENABLED|DISABLED)"))
     dut.expect(re.compile(r"Secure download mode: (ENABLED|DISABLED)"))
 

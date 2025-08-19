@@ -11,26 +11,31 @@ The following steps are performed in order to re-program targets memory:
 3. Then `esp_loader_flash_start()` is called to enter flashing mode and erase amount of memory to be flashed.
 4. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
 
-**Note:** In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase the flashing speed. Bootloader is also capable of detecting the baud rate during connection phase. The baud rate can be changed before calling `esp_loader_connect()`. However, it is recommended to start at lower speed and then use dedicated command to increase the baud rate. This does not apply for ESP8266, as its bootloader does not support this command, therefore, baud rate can only be changed before connection phase in this case.
+> [!NOTE]
+> In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after connection is established in order to increase the flashing speed. Bootloader is also capable of detecting the baud rate during connection phase. The baud rate can be changed before calling `esp_loader_connect()`. However, it is recommended to start at lower speed and then use dedicated command to increase the baud rate. This does not apply for ESP8266, as its bootloader does not support this command, therefore, baud rate can only be changed before connection phase in this case.
 
 ## Hardware Required
 
-* WeActStudio [MiniSTM32H7xx](https://github.com/WeActStudio/MiniSTM32H7xx) board with the STM32H743VIT chip.
-* A development board with the ESP32 SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
-* One or two USB cables for power supply and programming.
+- WeActStudio [MiniSTM32H7xx](https://github.com/WeActStudio/MiniSTM32H7xx) board with the STM32H743VIT chip.
+- A development board with an Espressif SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
+- One or two USB cables for power supply and programming.
+- Jumper cables for host-to-target connections.
 
 ## Hardware Connection
 
-Table below shows connection between STM32 and ESP32.
+This example uses the **UART interface**. For detailed interface information and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#uartserial-interface).
 
-| STM32 (host) | ESP32 (slave) |
-|:------------:|:-------------:|
-|    PB12      |      IO0      |
-|    PB13      |      RST      |
-|    PA2       |      RX0      |
-|    PA3       |      TX0      |
+**STM32-to-Espressif SoC Pin Assignment:**
 
-Optionally, UART-to-USB bridge can be connected to PA9(TX) and PA10 (RX) for the debug purposes (same pins can be used to flash STM32 in bootloader).
+| STM32 (host) | Espressif SoC (target) |
+| :----------: | :--------------------: |
+|     PB12     |          BOOT          |
+|     PB13     |         RESET          |
+|     PA2      |          RX0           |
+|     PA3      |          TX0           |
+
+**Optional Debug Connection:**
+UART-to-USB bridge can be connected to PA9(TX) and PA10(RX) for debug purposes (same pins can be used to flash STM32 in bootloader mode).
 
 ## Build and Flash
 

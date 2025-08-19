@@ -4,6 +4,7 @@ import os
 import sys
 import urllib.request
 from datetime import datetime
+from textwrap import dedent, indent
 
 """
 This python module generates esp_stubs.c/h files from a given version and url, with
@@ -111,7 +112,12 @@ if __name__ == "__main__":
 
         for file_to_download in files_to_download:
             if file_to_download is None:
-                cfile.write("    // placeholder\n" "    {},\n" "\n")
+                placeholder_text = dedent("""\
+                    // placeholder
+                    {},
+
+                    """)
+                cfile.write(indent(placeholder_text, " " * 4))
             else:
                 if stub_override_path:
                     with open(f"{stub_override_path}/{file_to_download}") as file_path:
@@ -122,4 +128,4 @@ if __name__ == "__main__":
                     ) as url:
                         cfile.write(read_stub_json(url))
 
-        cfile.write("};\n" "\n" "#endif\n")
+        cfile.write("};\n\n#endif\n")

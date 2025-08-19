@@ -80,7 +80,7 @@ void app_main(void)
 
             ESP_LOGI(TAG, "Secure boot: %s",
                      security_info.secure_boot_enabled ? "ENABLED" : "DISABLED");
-            ESP_LOGI(TAG, "Secure boot agressive revoke: %s",
+            ESP_LOGI(TAG, "Secure boot aggressive revoke: %s",
                      security_info.secure_boot_enabled ? "ENABLED" : "DISABLED");
             ESP_LOGI(TAG, "Flash encryption: %s",
                      security_info.flash_encryption_enabled ? "ENABLED" : "DISABLED");

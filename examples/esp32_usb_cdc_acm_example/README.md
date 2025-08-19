@@ -4,9 +4,10 @@
 
 This example demonstrates how to flash an ESP32-S3 (target) from another ESP32-S3 or an ESP32-S2 MCU (host) using the `esp_serial_flasher`. Binaries to be flashed from the host MCU to the Espressif SoC can be found in [binaries](../binaries/) folder and are converted into C-array during build process.
 
-> **Note:** The `esp32_usb_cdc_acm` port requires ESP-IDF v4.4 or newer to build.
+> [!NOTE]
+> The `esp32_usb_cdc_acm` port requires ESP-IDF v4.4 or newer to build.
 
-The following steps are performed in order to re-program  memory:
+The following steps are performed in order to re-program memory:
 
 1. The system is started.
 2. The USB CDC ACM driver is initialized and a task to handle USB events is created.
@@ -17,7 +18,8 @@ The following steps are performed in order to re-program  memory:
 7. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transferred.
 8. After completion, the device can be manually reset and another ESP32-S3 can be connected to perform the flashing.
 
-> **Note:** The USB CDC ACM device of the ESP32-S3 does not support changing the baudrate, so the argument to `esp_loader_connect()` is irrelevant.
+> [!NOTE]
+> The USB CDC ACM device of the ESP32-S3 does not support changing the baudrate, so the argument to `esp_loader_connect()` is irrelevant.
 
 ## USB Host Driver Usage
 
@@ -28,11 +30,26 @@ A binary semaphore is used as a lock for the connected device and a callback is 
 
 ## Hardware Required
 
-* One ESP32-S3 target board and one ESP32-S3 or ESP32-S2 board, with each board having USB connections
-* An USB OTG adapter for the host board
-* One or two USB cables for power supply and programming.
+- **Host**: Espressif SoC development board with USB Host capability
+- **Target**: Espressif SoC development board with USB Serial/JTAG peripheral (e.g., ESP32-S3)
+- USB OTG adapter for the host board
+- Quality USB cables for communication and programming
+- **Separate power supply** for target board (USB cannot provide sufficient power)
 
-> **Note:** The USB connector on most of the ESP32-S3 and ESP32-S2 boards cannot supply power to the target, so a separate power connection is required.
+> [!NOTE]
+> The USB connector on most ESP32-S3 and ESP32-S2 boards cannot supply sufficient power to the target, so a separate power connection is required.
+
+## Hardware Connection
+
+This example uses the **USB CDC ACM interface**. For detailed interface information, power requirements, and general hardware considerations, see the [Hardware Connections Guide](../../docs/hardware-connections.md#usb-cdc-acm-interface).
+
+**Connection Setup:**
+
+1. **USB Connection**: Host board → USB OTG adapter → Target board (USB cable only)
+2. **Power Supply**: Independent power source for target board
+3. **Programming**: Separate USB connection to PC for host programming
+
+**No additional wiring required** - communication is entirely over USB.
 
 ## Building and Flashing
 
@@ -42,7 +59,7 @@ To run the example, type the following command:
 idf.py -p PORT flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+(To exit the serial monitor, type `Ctrl-]`.)
 
 See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
 
