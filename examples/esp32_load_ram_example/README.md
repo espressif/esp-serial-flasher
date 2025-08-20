@@ -6,7 +6,7 @@ This example demonstrates how to load a program into an Espressif SoC (target) R
 
 The following steps are performed in order to re-program targets memory:
 
-1. UART1 through which the new binary will be transfered is initialized.
+1. UART1 through which the new binary will be transferred is initialized.
 2. The host puts target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
 3. The binary file is opened and its size is acquired, as it has to be known before flashing.
 4. Then `esp_loader_mem_start()` is called for each segment in RAM.

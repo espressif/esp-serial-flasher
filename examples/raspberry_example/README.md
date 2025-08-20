@@ -9,7 +9,7 @@ The following steps are performed in order to re-program targets memory:
 1. Peripherals are initialized.
 2. The host puts slave device into the boot mode and tries to connect by calling `esp_loader_connect()`.
 3. Then `esp_loader_flash_start()` is called to enter the flashing mode and erase amount of the memory to be flashed.
-4. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
+4. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transferred.
 5. At the end, `loader_port_reset_target()` is called to restart the target and execute the updated firmware.
 
 > [!NOTE]

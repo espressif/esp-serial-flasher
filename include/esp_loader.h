@@ -379,7 +379,7 @@ esp_loader_error_t esp_loader_mem_write(const void *payload, uint32_t size);
 esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint);
 
 /**
-  * @brief Reads te MAC of the connected chip.
+  * @brief Reads the MAC address of the connected chip.
   *
   * @param mac[out] 6 byte MAC address of the chip
   *

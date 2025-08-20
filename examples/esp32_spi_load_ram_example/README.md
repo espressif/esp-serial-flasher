@@ -6,10 +6,10 @@ This example demonstrates how to upload an app to RAM of an Espressif MCU (targe
 
 The following steps are performed in order to re-program the targets memory:
 
-1. SPI2 through which the binary will be transfered is initialized.
+1. SPI2 through which the binary will be transferred is initialized.
 2. The host puts the slave device into the SPI download mode tries to connect by calling `esp_loader_connect()`.
 3. Then `esp_loader_mem_start()` is called for each segment in RAM.
-4. `esp_loader_flash_write()` function is called repeatedly for every segment until the whole binary image is transfered.
+4. `esp_loader_flash_write()` function is called repeatedly for every segment until the whole binary image is transferred.
 5. `esp_loader_mem_finish()` is called with the binary entrypoint, telling the chip to start the uploaded program.
 6. UART2 is initialized for the connection to the target.
 7. Target output is continually read and printed out.

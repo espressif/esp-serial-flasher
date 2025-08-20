@@ -58,7 +58,7 @@
 
 - **examples**: Add ESP32 fast reflash example with MD5 check *(Jaroslav Burian - e0b9b05)*
 - Add a function to check flash regions against a known MD5 *(Djordje Nedic - dd480bc)*
-- Add the SDIO inteface and the corresponding esp port *(Djordje Nedic - b74194b)*
+- Add the SDIO interface and the corresponding esp port *(Djordje Nedic - b74194b)*
 
 ### 🐛 Bug Fixes
 

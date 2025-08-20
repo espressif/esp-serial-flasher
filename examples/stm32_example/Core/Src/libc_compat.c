@@ -91,8 +91,7 @@ int _gettimeofday(struct timeval *tv, struct timezone *tz)
 
 int _isatty(int file)
 {
-    switch (file)
-    {
+    switch (file) {
     case STDOUT_FILENO:
     case STDERR_FILENO:
     case STDIN_FILENO:
@@ -124,14 +123,13 @@ int _lseek(int file, int ptr, int dir)
 caddr_t _sbrk(int incr)
 {
     extern char _ebss;
-    static char *heap_end= &_ebss;
+    static char *heap_end = &_ebss;
     char *prev_heap_end;
 
     prev_heap_end = heap_end;
 
-    char * stack = (char*) __get_MSP();
-    if (heap_end + incr > stack)
-    {
+    char *stack = (char *) __get_MSP();
+    if (heap_end + incr > stack) {
         _write(STDERR_FILENO, "Heap and stack collision\n", 25);
         errno = ENOMEM;
         return (caddr_t) - 1;
@@ -145,8 +143,7 @@ caddr_t _sbrk(int incr)
 
 int _read(int file, char *ptr, int len)
 {
-    switch (file)
-    {
+    switch (file) {
     case STDIN_FILENO:
         HAL_UART_Receive(&huart1, (uint8_t *)ptr, 1, HAL_MAX_DELAY);
         return 1;
@@ -181,13 +178,12 @@ int _wait(int *status)
 
 int _write(int file, char *ptr, int len)
 {
-    switch (file)
-    {
+    switch (file) {
     case STDOUT_FILENO: /*stdout*/
-        HAL_UART_Transmit(&huart1, (uint8_t*)ptr, len, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
         break;
     case STDERR_FILENO: /* stderr */
-        HAL_UART_Transmit(&huart1, (uint8_t*)ptr, len, HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len, HAL_MAX_DELAY);
         break;
     default:
         errno = EBADF;

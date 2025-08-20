@@ -13,7 +13,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR} Core/Inc)
 include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)
 create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/Hello-world Core/Src/binaries.c)
 
-add_executable(${CMAKE_PROJECT_NAME} 
+add_executable(${CMAKE_PROJECT_NAME}
     ../common/example_common.c
     Core/Src/main.c
     Core/Src/stm32h7xx_hal_msp.c
