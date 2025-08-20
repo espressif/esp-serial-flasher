@@ -14,11 +14,13 @@
 ### Prerequisites and Environment Setup
 
 **Always run the following first for any STM32-related builds:**
+
 ```bash
 git submodule update --init
 ```
 
 **Always install pre-commit hooks before making changes:**
+
 ```bash
 pip install pre-commit
 pre-commit install
@@ -28,11 +30,13 @@ pre-commit install -t commit-msg
 ### Basic Library Build (Standalone)
 
 For basic library compilation without platform-specific ports:
+
 ```bash
 mkdir build && cd build
 cmake .. -DPORT=USER_DEFINED
 make
 ```
+
 **Time required**: ~30 seconds
 **Postcondition**: Creates `libflasher.a` static library
 **Note**: CMake warnings about missing project() call are expected and harmless
@@ -40,10 +44,12 @@ make
 ### ESP-IDF Component Build
 
 **Requires ESP-IDF environment setup (idf.py must be in PATH)**
+
 ```bash
 # From any example directory (e.g., examples/esp32_example)
 idf.py build
 ```
+
 **Time required**: 2-5 minutes depending on configuration
 **Configuration options**: Set via `idf.py menuconfig` or `-D` flags
 **Common build flags**: `-DMD5_ENABLED=1`, `-DSERIAL_FLASHER_INTERFACE_UART=1`
@@ -51,8 +57,9 @@ idf.py build
 ### STM32 Build
 
 **Required environment variables:**
+
 - `STM32_TOOLCHAIN_PATH`: Path to ARM GCC toolchain
-- `STM32_CUBE_H7_PATH`: Path to STM32Cube libraries  
+- `STM32_CUBE_H7_PATH`: Path to STM32Cube libraries
 - `STM32_CHIP`: Target chip (e.g., STM32H743VI)
 - `CORE_USED`: Core for multicore devices (M7/M4)
 
@@ -68,12 +75,14 @@ cmake -DSTM32_TOOLCHAIN_PATH="path_to_toolchain" \
       ..
 cmake --build .
 ```
+
 **Time required**: 3-10 minutes
 **Common errors**: Missing toolchain path, missing STM32Cube libraries
 
 ### Zephyr Build
 
 **Requires Zephyr SDK and west workspace setup**
+
 ```bash
 export ZEPHYR_SDK_INSTALL_DIR=/path/to/zephyr-sdk
 export ZEPHYR_TOOLCHAIN_VARIANT="zephyr"
@@ -83,12 +92,14 @@ west build -p -b esp32_devkitc_wroom/esp32/procpu \
     -DZEPHYR_EXTRA_MODULES=path/to/esp-serial-flasher \
     -DMD5_ENABLED=1
 ```
+
 **Time required**: 5-15 minutes
 **Prerequisites**: Zephyr SDK v0.17.0+, west installed
 
 ### Raspberry Pi Pico Build
 
 **Requires Pico SDK and ARM toolchain**
+
 ```bash
 export PICO_SDK_PATH=/path/to/pico-sdk
 cd examples/pi_pico_example
@@ -96,12 +107,14 @@ mkdir build && cd build
 cmake -DMD5_ENABLED=1 ..
 cmake --build .
 ```
+
 **Time required**: 1-3 minutes
 **Output**: `.uf2` file for flashing to Pico
 
 ### Raspberry Pi Build
 
 **Requires pigpio library**
+
 ```bash
 # Install dependencies first
 apt-get update && apt-get install -y cmake gcc g++ make pigpio
@@ -115,25 +128,30 @@ cmake -DMD5_ENABLED=1 .. && cmake --build .
 ### Pre-commit Validation
 
 **Always run before committing changes:**
+
 ```bash
 pre-commit run --all-files
 ```
+
 **Checks performed**: trailing whitespace, line endings, astyle formatting, ruff linting, conventional commit messages
 
 ### QEMU Testing
 
 **Requires compiled QEMU with ESP32 support**
+
 ```bash
 export QEMU_PATH=/path/to/qemu-system-xtensa
 cd test
 ./run_qemu_test.sh
 ```
+
 **Time required**: 2-5 minutes
 **Prerequisites**: QEMU built with ESP32 machine support
 
 ### Hardware-in-the-Loop Testing
 
 **Requires physical hardware setup**
+
 ```bash
 # Install test dependencies
 pip install -r test/requirements_test.txt
@@ -147,6 +165,7 @@ pytest --target=zephyr --port=/dev/ttyUSB2
 ```
 
 **Important**: Some ESP32-S3 tests must run separately:
+
 ```bash
 # Run these separately, not together
 pytest --target=esp32s3 --port=/dev/ttyUSB1 -k 'test_esp32_spi_load_ram_example'
@@ -156,6 +175,7 @@ pytest --target=esp32s3 --port=/dev/ttyUSB1 -k 'not test_esp32_spi_load_ram_exam
 ### Build All Examples (ESP-IDF)
 
 **Requires ESP-IDF environment and idf-build-apps**
+
 ```bash
 pip install -U idf-build-apps
 python -m idf_build_apps build -v -p . \
@@ -165,16 +185,18 @@ python -m idf_build_apps build -v -p . \
     --build-dir "build_@w" \
     --check-warnings
 ```
+
 **Time required**: 10-30 minutes depending on configuration
 
 ## Project Layout and Architecture
 
 ### Core Library Structure
+
 ```
 src/                    # Core library implementation
 ├── esp_loader.c       # Main API implementation
 ├── protocol_uart.c   # UART communication protocol
-├── protocol_spi.c    # SPI communication protocol  
+├── protocol_spi.c    # SPI communication protocol
 ├── protocol_sdio.c   # SDIO communication protocol
 ├── esp_targets.c     # Target chip definitions
 ├── esp_stubs.c       # Flash stub binaries
@@ -187,7 +209,7 @@ include/               # Public API headers
 
 port/                  # Platform-specific implementations
 ├── esp32_port.c      # ESP32 UART implementation
-├── esp32_spi_port.c  # ESP32 SPI implementation  
+├── esp32_spi_port.c  # ESP32 SPI implementation
 ├── esp32_usb_cdc_acm_port.c # ESP32 USB implementation
 ├── stm32_port.c      # STM32 HAL implementation
 ├── raspberry_port.c  # Raspberry Pi pigpio implementation
@@ -196,6 +218,7 @@ port/                  # Platform-specific implementations
 ```
 
 ### Configuration Files
+
 - `Kconfig`: ESP-IDF component configuration options
 - `idf_component.yml`: ESP-IDF component manifest
 - `CMakeLists.txt`: Main build configuration
@@ -204,6 +227,7 @@ port/                  # Platform-specific implementations
 - `pytest.ini`: Test framework configuration
 
 ### CI/CD Pipelines
+
 - **GitLab CI** (`.gitlab-ci.yml`): Primary CI with hardware testing
 - **GitHub Actions** (`.github/workflows/`): Pre-commit validation, issue management
 - **Pre-commit hooks**: Local validation before commit
@@ -211,18 +235,21 @@ port/                  # Platform-specific implementations
 ### Key Configuration Options
 
 **Interface Selection (choose one):**
+
 - `SERIAL_FLASHER_INTERFACE_UART` (default)
 - `SERIAL_FLASHER_INTERFACE_SPI` (RAM loading only)
 - `SERIAL_FLASHER_INTERFACE_USB`
 - `SERIAL_FLASHER_INTERFACE_SDIO` (experimental)
 
 **Common Options:**
+
 - `MD5_ENABLED`: Enable flash verification (default: enabled, disable for ESP8266)
 - `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`: Number of write retries (default: 3)
 - `SERIAL_FLASHER_RESET_HOLD_TIME_MS`: Reset assertion time (default: 100ms)
 - `SERIAL_FLASHER_BOOT_HOLD_TIME_MS`: Boot pin assertion time (default: 50ms)
 
 ### Examples Directory Structure
+
 ```
 examples/
 ├── esp32_example/              # Basic ESP32 UART flashing
@@ -239,17 +266,20 @@ examples/
 ## Validation Steps
 
 ### Before Making Changes
+
 1. **Always run basic build test**: `mkdir build && cd build && cmake .. -DPORT=USER_DEFINED && make`
 2. **Install and run pre-commit**: `pre-commit install && pre-commit run --all-files`
 3. **Check existing issues**: Review GitLab CI failures and GitHub issue tracker
 
 ### After Making Changes
+
 1. **Run pre-commit validation**: `pre-commit run --all-files`
 2. **Test affected examples**: Build and test relevant example applications
 3. **Run QEMU tests if available**: `cd test && ./run_qemu_test.sh`
 4. **Verify configuration options**: Test with different interface and MD5 settings
 
 ### Integration Validation
+
 - **ESP-IDF compatibility**: Test with multiple ESP-IDF versions (v4.3+)
 - **Cross-platform builds**: Verify STM32, Zephyr, Pi Pico builds don't break
 - **Hardware testing**: Use pytest framework for hardware validation when possible
@@ -257,11 +287,13 @@ examples/
 ## Dependencies and Requirements
 
 ### Build Tools
+
 - **CMake**: 3.5+ (3.10+ recommended to avoid warnings)
 - **GCC/Clang**: Standard C99 compiler
 - **Python**: 3.11+ for testing and pre-commit
 
 ### Platform-Specific Dependencies
+
 - **ESP-IDF**: v4.3 or later for ESP32 builds
 - **STM32**: ARM GCC toolchain 13.2+, STM32Cube H7 v1.11.1+
 - **Zephyr**: Zephyr SDK v0.17.0+, west build tool
@@ -269,6 +301,7 @@ examples/
 - **Raspberry Pi**: pigpio library for GPIO control
 
 ### Python Dependencies (Testing)
+
 ```bash
 pip install -r test/requirements_test.txt
 # Includes: pytest, pytest-embedded, idf-build-apps, stm32loader
@@ -277,6 +310,7 @@ pip install -r test/requirements_test.txt
 ## Trust These Instructions
 
 These instructions have been validated against the current codebase and CI/CD pipelines. Only perform additional exploration if:
+
 - Instructions are incomplete for your specific use case
 - You encounter errors not covered in the common issues
 - Working with newly added features not documented here

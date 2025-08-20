@@ -6,7 +6,7 @@ This example demonstrates how to get the target info including the flash chip si
 
 The following steps are performed:
 
-1. UART1 through which new binary will be transfered is initialized.
+1. UART1 through which new binary will be transferred is initialized.
 2. The host puts target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
 3. The host attempts to read the target flash size and the Wi‑Fi MAC and prints them out.
 4. The host attempts to read the target security info and prints it out.
@@ -59,12 +59,12 @@ Connected to target
 Transmission rate changed.
 I (726) serial_flasher: Target flash size [B]: 4194304
 I (726) serial_flasher: Target Wi‑Fi MAC:
-I (726) serial_flasher: 70 04 1d 77 08 0c 
+I (726) serial_flasher: 70 04 1d 77 08 0c
 I (736) serial_flasher: Target Security Information:
 I (736) serial_flasher: Target chip: ESP32-C3
 I (746) serial_flasher: Eco version number: 3
 I (746) serial_flasher: Secure boot: DISABLED
-I (756) serial_flasher: Secure boot agressive revoke: DISABLED
+I (756) serial_flasher: Secure boot aggressive revoke: DISABLED
 I (756) serial_flasher: Flash encryption: DISABLED
 I (766) serial_flasher: Secure download mode: DISABLED
 I (766) serial_flasher: Secure boot key 0 revoked: FALSE

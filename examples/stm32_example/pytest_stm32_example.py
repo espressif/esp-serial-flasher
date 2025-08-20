@@ -7,8 +7,8 @@ import serial
 @pytest.fixture(autouse=True)
 def flash_stm32(build_dir: str, port: str) -> None:
     # Flush input buffer, because there is some data left from previous bootloader communication (cannot enter bootloader mode otherwise)
-    with serial.Serial(port, 115200) as ser:
-        ser.reset_input_buffer()
+    with serial.Serial(port, 115200) as serial_port:
+        serial_port.reset_input_buffer()
 
     subprocess.run(
         [f"stm32loader --port {port} --erase --write stm32_flasher.bin"],

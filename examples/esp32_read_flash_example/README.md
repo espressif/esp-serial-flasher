@@ -9,7 +9,7 @@ The following steps are performed to demonstrate the flash reading functionality
 1. UART1 through which the the new binary will be transferred is initialized.
 2. The host puts the target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
 3. `esp_loader_flash_start()` is called to enter the flashing mode and erase the amount of memory to be flashed.
-4. `esp_loader_flash_write()` function is called repeatedly until the whole example data is transfered.
+4. `esp_loader_flash_write()` function is called repeatedly until the whole example data is transferred.
 5. `esp_loader_flash_read()` is called to read back the data programmed into the target flash
 6. Data is compared to verify successful reading
 

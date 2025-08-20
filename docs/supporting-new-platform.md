@@ -31,7 +31,7 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
 **For SDIO interface:**
 
 ```c
-esp_loader_error_t loader_port_read(uint32_t function, uint32_t addr, uint8_t *data, 
+esp_loader_error_t loader_port_read(uint32_t function, uint32_t addr, uint8_t *data,
                                    uint16_t size, uint32_t timeout);
 ```
 

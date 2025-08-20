@@ -136,7 +136,7 @@ For complete implementation examples, see the [examples](examples/) directory:
 
 ### Educational Resources
 
-- [esptool documentation](https://docs.espressif.com/projects/esptool/en/latest/esp32/) - Contains most of the informations on how the communication with the chip works, what is and is not possible etc.
+- [esptool documentation](https://docs.espressif.com/projects/esptool/en/latest/esp32/) - Contains most of the information on how the communication with the chip works, what is and is not possible etc.
 - [YouTube Tutorial](https://www.youtube.com/watch?v=hYqkOew8y8w) published 9th September 2024 - Comprehensive guide covering library usage, internals, and custom port implementation
 
 ## Configuration

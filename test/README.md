@@ -51,4 +51,4 @@ Pytest is used to test the built examples. There is a test written for each exam
 pytest --target=<target_name> --port=<port>
 ```
 
-The examples for Espressif SoC are built for ESP32 and some of them for ESP32-S3 (`esp32_spi_load_ram_example` and `esp32_usb_cdc_acm_example`). Please be aware that tests for ESP32-S3 need to be run separately as `esp32_usb_cdc_acm_example` fails when runnning after `esp32_spi_load_ram_example`.
+The examples for Espressif SoC are built for ESP32 and some of them for ESP32-S3 (`esp32_spi_load_ram_example` and `esp32_usb_cdc_acm_example`). Please be aware that tests for ESP32-S3 need to be run separately as `esp32_usb_cdc_acm_example` fails when running after `esp32_spi_load_ram_example`.

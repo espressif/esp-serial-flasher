@@ -10,7 +10,7 @@ The following steps are performed in order to re-program targets memory:
 2. The host puts the target device into the boot mode and tries to connect by calling `esp_loader_connect()`.
 3. The binary file is opened and its size is acquired, as it has to be known before flashing.
 4. Then `esp_loader_flash_start()` is called to enter the flashing mode and erase the amount of memory to be flashed.
-5. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transfered.
+5. `esp_loader_flash_write()` function is called repeatedly until the whole binary image is transferred.
 
 > [!NOTE]
 > In addition to the steps mentioned above, `esp_loader_change_transmission_rate()` is called after the connection is established in order to increase the flashing speed. This does not apply for the ESP8266, as its bootloader does not support this command. However, the ESP8266 is capable of detecting the baud rate during connection phase and can be changed before calling `esp_loader_connect()`, if necessary.

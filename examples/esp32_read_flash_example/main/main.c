@@ -18,26 +18,28 @@
 #include "example_common.h"
 
 static const char *TAG = "serial_flasher";
-static const char example_data[] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. "
-                                   "Donec pretium sem et condimentum tincidunt.n "
-                                   "Quisque tristique in enim elementum aliquet. "
-                                   "Integer consequat sodales bibendum. "
-                                   "Nam enim quam, tristique id dui ut, fermentum porta felis. "
-                                   "Phasellus vulputate sem quis ligula egestas, sed ullamcorper eros tincidunt. "
-                                   "Donec imperdiet ac urna in placerat. "
-                                   "Praesent ultrices velit nulla, eu rutrum nisi maximus in."
-                                   "Donec non ligula molestie, blandit massa vel, auctor ipsum. "
-                                   "Nunc consectetur mi nulla, a ultricies odio vehicula a. "
-                                   "Praesent hendrerit tellus nunc, a interdum lectus mollis eget. "
-                                   "Nullam in felis vitae diam posuere dignissim quis non urna. "
-                                   "Quisque elementum ante at sapien condimentum, sit amet ultricies tortor feugiat. "
-                                   "Aliquam id mi at purus maximus lobortis. "
-                                   "Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. "
-                                   "Nunc consequat lorem turpis, vitae dignissim leo fringilla eget. "
-                                   "In ornare convallis finibus. "
-                                   "Morbi libero neque, pretium et mollis non, dictum eget felis. "
-                                   "Ut mattis vitae urna id vulputate. "
-                                   "Nam porttitor dolor diam, eu rutrum tortor auctor id...";
+static const char example_data[] = "To be, or not to be: that is the question: "
+                                   "Whether 'tis nobler in the mind to suffer "
+                                   "The slings and arrows of outrageous fortune, "
+                                   "Or to take arms against a sea of troubles, "
+                                   "And by opposing end them? To die: to sleep; "
+                                   "No more; and by a sleep to say we end "
+                                   "The heart-ache and the thousand natural shocks "
+                                   "That flesh is heir to, 'tis a consummation "
+                                   "Devoutly to be wish'd. To die, to sleep; "
+                                   "To sleep: perchance to dream: ay, there's the rub; "
+                                   "For in that sleep of death what dreams may come "
+                                   "When we have shuffled off this mortal coil, "
+                                   "Must give us pause: there's the respect "
+                                   "That makes calamity of so long life; "
+                                   "For who would bear the whips and scorns of time, "
+                                   "The oppressor's wrong, the proud man's contumely, "
+                                   "The pangs of despised love, the law's delay, "
+                                   "The insolence of office and the spurns "
+                                   "That patient merit of the unworthy takes, "
+                                   "When he himself might his quietus make "
+                                   "With a bare bodkin? who would fardels bear, "
+                                   "To grunt and sweat under a weary life";
 static uint8_t read_buf[sizeof(example_data)];
 
 #define HIGHER_BAUDRATE 230400
@@ -59,6 +61,13 @@ void app_main(void)
     }
 
     if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+
+        esp_loader_error_t err;
+        err = esp_loader_flash_erase();
+        if (err != ESP_LOADER_SUCCESS) {
+            ESP_LOGE(TAG, "Failed to erase flash");
+            return;
+        }
 
         ESP_LOGI(TAG, "Loading example data");
         flash_binary((const uint8_t *)example_data, sizeof(example_data), 0x00000000);
