@@ -20,9 +20,6 @@
 #include "usb/usb_host.h"
 #include "usb/cdc_acm_host.h"
 
-#define ESPRESSIF_VID 0x303a
-#define ESP_SERIAL_JTAG_PID 0x1001
-
 static const char *TAG = "usb_flasher";
 static SemaphoreHandle_t device_disconnected_sem;
 
@@ -81,8 +78,8 @@ void app_main(void)
 
     while (true) {
         const loader_esp32_usb_cdc_acm_config_t config = {
-            .device_vid = ESPRESSIF_VID,
-            .device_pid = ESP_SERIAL_JTAG_PID,
+            .device_vid = USB_VID_PID_AUTO_DETECT,
+            .device_pid = USB_VID_PID_AUTO_DETECT,
             .connection_timeout_ms = 1000,
             .out_buffer_size = 4096,
             .device_disconnected_callback = device_disconnected_callback,

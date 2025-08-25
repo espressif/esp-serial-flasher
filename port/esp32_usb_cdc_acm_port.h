@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "esp_loader_io.h"
+#include "esp_loader.h"
 #include "usb/usb_host.h"
 #include "usb/cdc_acm_host.h"
 #include "freertos/stream_buffer.h"
@@ -23,6 +23,23 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define USB_VID_PID_AUTO_DETECT     (0)      // Use for VID/PID in config to enable auto-detection
+
+#define ESPRESSIF_VID               (0x303a)
+#define ESP_SERIAL_JTAG_PID         (0x1001)
+
+// VID and PID definitions from esp-usb library, only these are supported
+#define SILICON_LABS_VID            (0x10C4) // Silicon Labs
+#define CP210X_PID                  (0xEA60) // Single i.e. CP2101 - CP2104
+#define CP2105_PID                  (0xEA70) // Dual
+#define CP2108_PID                  (0xEA71) // Quad
+
+#define NANJING_QINHENG_MICROE_VID  (0x1A86) // Nanjing Qinheng Microelectronics
+#define CH340_PID                   (0x7522)
+#define CH340_PID_1                 (0x7523)
+#define CH341_PID                   (0x5523)
+
 
 typedef void (*loader_port_esp32_usb_cdc_acm_callback_t) (void);
 
