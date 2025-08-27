@@ -162,9 +162,10 @@ build_idf_master:
 
 build_stm32:
   stage: build
-  # IDF is not necessary for STM32 build, but this image is already used in another job
-  # and it comes with a recent enough CMake version.
-  image: espressif/idf:latest
+  image: debian:latest
+  before_script:
+    - apt-get update
+    - apt-get install -y git wget cmake ninja-build xz-utils
   artifacts:
     paths:
       - "**/build*/*.bin"
@@ -187,7 +188,10 @@ build_stm32:
 
 build_zephyr:
   stage: build
-  image: espressif/idf:latest
+  image: debian:latest
+  before_script:
+    - apt-get update
+    - apt-get install -y git cmake ninja-build wget python3 python3-pip python3-venv xz-utils
   artifacts:
     paths:
       - "**/build*/zephyr/*.bin"
@@ -212,8 +216,10 @@ build_zephyr:
     - export ZEPHYR_TOOLCHAIN_VARIANT="zephyr"
     - cd $CI_PROJECT_DIR/zephyrproject-rtos/zephyr
     - export ZEPHYR_BASE=$(pwd)
-    - pip install -r scripts/requirements.txt
-    - pip install wheel
+    - python3 -m venv venv
+    - source venv/bin/activate
+    - pip install -r scripts/requirements.txt --prefer-binary
+    - pip install wheel --prefer-binary
     - if [[ ! -d "$CI_PROJECT_DIR/zephyrproject-rtos/.west" ]]; then
     - west init -l .
     - fi
@@ -224,10 +230,13 @@ build_zephyr:
 
 build_pi_pico:
   stage: build
-  image: espressif/idf:latest
+  image: debian:latest
   tags:
     - build
     - internet
+  before_script:
+    - apt-get update
+    - apt-get install -y git wget cmake build-essential python3 python3-pip
   artifacts:
     paths:
       - "**/build*/*.bin"
@@ -282,9 +291,11 @@ test_qemu:
   image: debian:latest
   before_script:
     - apt-get update
-    - apt-get install -y python3 python3-pip libffi-dev
-    - pip install -r $CI_PROJECT_DIR/test/requirements_test.txt --break-system-packages --prefer-binary
-    - pip install esptool --break-system-packages --prefer-binary
+    - apt-get install -y python3 python3-pip python3-venv libffi-dev
+    - python3 -m venv venv
+    - source venv/bin/activate
+    - pip install -r $CI_PROJECT_DIR/test/requirements_test.txt --prefer-binary
+    - pip install esptool --prefer-binary
   artifacts:
     paths:
       - "${CI_PROJECT_DIR}/examples/pytest_embedded_log/"
@@ -356,8 +367,10 @@ test_rpi:
     - ESF-RPI-01
   before_script:
     - apt-get update
-    - apt-get install -y pigpio python3 python3-pip libffi-dev
-    - pip install -r $CI_PROJECT_DIR/test/requirements_test.txt --break-system-packages --prefer-binary
+    - apt-get install -y pigpio python3 python3-pip python3-venv libffi-dev
+    - python3 -m venv venv
+    - source venv/bin/activate
+    - pip install -r $CI_PROJECT_DIR/test/requirements_test.txt --prefer-binary
   script:
     - pytest --target=raspberry
 
