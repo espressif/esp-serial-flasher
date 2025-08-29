@@ -30,6 +30,8 @@
 #define MD5_TIMEOUT_PER_MB 8000
 #define ERASE_FLASH_TIMEOUT_PER_MB 10000
 
+#define INITIAL_UART_BAUDRATE 115200
+
 #define FLASH_SECTOR_SIZE 4096
 #define ROM_FLASH_BLOCK_SIZE 1024
 
@@ -718,10 +720,65 @@ esp_loader_error_t esp_loader_write_register(uint32_t address, uint32_t reg_valu
 }
 
 #ifndef SERIAL_FLASHER_INTERFACE_SDIO
+
+static esp_loader_error_t get_crystal_frequency_esp32c2(uint32_t *frequency)
+{
+    /*
+    There is a bug in the ESP32-C2 ROM that causes it to think it has a 40 MHz crystal,
+    even though it might be 26 MHz. That is why we need to check frequency and adjust
+    the transmission rate accordingly.
+
+    The logic here is:
+    - We know that our baud rate and the target's UART baud rate are roughly the same,
+    or we couldn't communicate
+    - We can read the UART clock divider register to know how the ESP derives this
+    from the APB bus frequency
+    - Multiplying these two together gives us the bus frequency which is either
+    the crystal frequency or multiple of the crystal frequency (for some chips).
+    */
+
+    // ESP32-C2 supported crystal frequencies
+    const uint32_t ESP32C2_CRYSTAL_26MHZ = 26;
+    const uint32_t ESP32C2_CRYSTAL_40MHZ = 40;
+
+    const uint32_t CRYSTAL_FREQ_THRESHOLD = 33;
+
+    // UART clock divider register address and mask
+    const uint32_t UART_CLK_DIV_REG = 0x60000014;
+    const uint32_t UART_CLK_DIV_REG_MASK = 0xFFFFF;
+
+    *frequency = 0;
+    uint32_t est_freq;
+    RETURN_ON_ERROR(esp_loader_read_register(UART_CLK_DIV_REG, &est_freq));
+    est_freq &= UART_CLK_DIV_REG_MASK;
+
+    est_freq = (INITIAL_UART_BAUDRATE * est_freq) / 1000000U;
+
+    if (est_freq > CRYSTAL_FREQ_THRESHOLD) {
+        *frequency = ESP32C2_CRYSTAL_40MHZ;
+    } else {
+        *frequency = ESP32C2_CRYSTAL_26MHZ;
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
 esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rate)
 {
     if (s_target == ESP8266_CHIP || esp_stub_get_running()) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    }
+    if (s_target == ESP32C2_CHIP) {
+        const uint32_t ESP32C2_CRYSTAL_26MHZ = 26;
+        const uint32_t ESP32C2_CRYSTAL_40MHZ = 40;
+
+        uint32_t frequency;
+        RETURN_ON_ERROR(get_crystal_frequency_esp32c2(&frequency));
+        // The ESP32-C2 still thinks it has 40 MHz crystal, even though it might be 26 MHz.
+        // So we need to adjust the transmission rate accordingly.
+        if (frequency == ESP32C2_CRYSTAL_26MHZ) {
+            transmission_rate = transmission_rate * ESP32C2_CRYSTAL_40MHZ / ESP32C2_CRYSTAL_26MHZ;
+        }
     }
 
     loader_port_start_timer(DEFAULT_TIMEOUT);
