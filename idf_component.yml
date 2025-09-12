@@ -8,3 +8,13 @@ dependencies:
     rules:
       - if: "idf_version >=4.4"
       - if: "target in [esp32s2, esp32s3, esp32p4]"
+  usb_host_cp210x_vcp:
+    version: "^2.2"
+    rules:
+      - if: "idf_version >=4.4"
+      - if: "target in [esp32s2, esp32s3, esp32p4]"
+  usb_host_ch34x_vcp:
+    version: "^2.2"
+    rules:
+      - if: "idf_version >=4.4"
+      - if: "target in [esp32s2, esp32s3, esp32p4]"

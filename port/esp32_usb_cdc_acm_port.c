@@ -17,9 +17,11 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "usb/cdc_acm_host.h"
+#include "usb/vcp_cp210x.h"
+#include "usb/vcp_ch34x.h"
+#include "esp_loader_io.h"
 #include "esp32_usb_cdc_acm_port.h"
-
-#define ESP_SERIAL_JTAG_PID 0x1001
 
 static const char *TAG = "usb_cdc_acm_port";
 
@@ -104,18 +106,18 @@ static void usb_serial_jtag_enter_booloader(void)
 static void usb_serial_converter_reset_target(void)
 {
     xStreamBufferReset(s_rx_stream_buffer);
-    cdc_acm_host_set_control_line_state(s_acm_device, true, true);
+    cdc_acm_host_set_control_line_state(s_acm_device, false, true);
     loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    cdc_acm_host_set_control_line_state(s_acm_device, true, false);
+    cdc_acm_host_set_control_line_state(s_acm_device, false, false);
 }
 
 static void usb_serial_converter_enter_bootloader(void)
 {
-    cdc_acm_host_set_control_line_state(s_acm_device, true, false);
-
-    usb_serial_converter_reset_target();
-
+    xStreamBufferReset(s_rx_stream_buffer);
+    cdc_acm_host_set_control_line_state(s_acm_device, false, true);
     loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
+    cdc_acm_host_set_control_line_state(s_acm_device, true, false);
+    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
     cdc_acm_host_set_control_line_state(s_acm_device, false, false);
 }
 
@@ -169,11 +171,6 @@ esp_loader_error_t loader_port_esp32_usb_cdc_acm_init(const loader_esp32_usb_cdc
     s_device_disconnected_callback = config->device_disconnected_callback;
     s_acm_host_serial_state_callback = config->acm_host_serial_state_callback;
 
-    /* Different reset and enter bootloader sequences are needed depending on whether the target
-     * device is connected via internal USB Serial/JTAG or an USB to serial converter which
-     * connects to target UART and BOOT/RST pins. See pages 1207 and 1208 of the ESP32-S3 TRM */
-    s_is_usb_serial_jtag = config->device_pid == ESP_SERIAL_JTAG_PID;
-
     s_rx_stream_buffer = xStreamBufferCreate(1024, 1);
 
     if (s_rx_stream_buffer == NULL) {
@@ -189,20 +186,42 @@ esp_loader_error_t loader_port_esp32_usb_cdc_acm_init(const loader_esp32_usb_cdc
         .data_cb = handle_usb_data
     };
 
-    esp_err_t err = cdc_acm_host_open(config->device_vid,
-                                      config->device_pid,
-                                      0,
-                                      &dev_config,
-                                      &s_acm_device);
+    const bool auto_detect = (config->device_vid == USB_VID_PID_AUTO_DETECT ||
+                              config->device_pid == USB_VID_PID_AUTO_DETECT);
 
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to open the USB device");
-        esp_loader_error_t deinit_status = loader_port_esp32_usb_cdc_acm_deinit();
-        assert(deinit_status == ESP_LOADER_SUCCESS);
-        return ESP_LOADER_ERROR_FAIL;
+    if (auto_detect) {
+        if (cdc_acm_host_open(ESPRESSIF_VID, ESP_SERIAL_JTAG_PID, 0, &dev_config, &s_acm_device) == ESP_OK) {
+            s_is_usb_serial_jtag = true;
+            return ESP_LOADER_SUCCESS;
+        }
+        if (cp210x_vcp_open(CP210X_PID_AUTO, 0, &dev_config, &s_acm_device) == ESP_OK) {
+            s_is_usb_serial_jtag = false;
+            return ESP_LOADER_SUCCESS;
+        }
+        if (ch34x_vcp_open(CH34X_PID_AUTO, 0, &dev_config, &s_acm_device) == ESP_OK) {
+            s_is_usb_serial_jtag = false;
+            return ESP_LOADER_SUCCESS;
+        }
+    } else {
+        esp_err_t err;
+        if (config->device_vid == SILICON_LABS_VID) {
+            err = cp210x_vcp_open(config->device_pid, 0, &dev_config, &s_acm_device);
+        } else if (config->device_vid == NANJING_QINHENG_MICROE_VID) {
+            err = ch34x_vcp_open(config->device_pid, 0, &dev_config, &s_acm_device);
+        } else {
+            err = cdc_acm_host_open(config->device_vid, config->device_pid, 0, &dev_config, &s_acm_device);
+        }
+
+        if (err == ESP_OK) {
+            s_is_usb_serial_jtag = (config->device_vid == ESPRESSIF_VID);
+            return ESP_LOADER_SUCCESS;
+        }
     }
 
-    return ESP_LOADER_SUCCESS;
+    ESP_LOGE(TAG, "Failed to open any USB device");
+    esp_loader_error_t deinit_status = loader_port_esp32_usb_cdc_acm_deinit();
+    assert(deinit_status == ESP_LOADER_SUCCESS);
+    return ESP_LOADER_ERROR_FAIL;
 }
 
 
