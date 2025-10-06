@@ -609,7 +609,7 @@ static esp_loader_error_t flash_read_stub(uint8_t *dest, uint32_t address, uint3
 esp_loader_error_t esp_loader_flash_read(uint8_t *dest, uint32_t address, uint32_t length)
 {
     RETURN_ON_ERROR(init_flash_params());
-    if (address + length >= s_target_flash_size) {
+    if (address + length > s_target_flash_size) {
         return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
@@ -810,7 +810,7 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(uint32_t address,
 
     RETURN_ON_ERROR(init_flash_params());
 
-    if (address + size >= s_target_flash_size) {
+    if (address + size > s_target_flash_size) {
         return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
