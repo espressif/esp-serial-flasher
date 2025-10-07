@@ -1,6 +1,7 @@
 stages:
   - pre_check
-  - build
+  - build_target_example
+  - build_host_examples
   - test
   - deploy
 
@@ -29,6 +30,52 @@ cache:
   paths:
     - "$CI_PROJECT_DIR/.cache/pip"
 
+
+build_target_example:
+  stage: build_target_example
+  image: espressif/idf:release-v5.5
+  tags:
+    - build
+    - internet
+  artifacts:
+    paths:
+      - "test/target-example-src/hello-world-ESP32-src/build-*"
+      - "examples/*/target-firmware/"
+    when: always
+    expire_in: 3 days
+  before_script:
+    - apt install ccache python3
+  variables:
+    IDF_CCACHE_ENABLE: 1
+    CCACHE_DIR: "/cache/esf_ccache"
+    CCACHE_SLOPPINESS: "time_macros"
+  parallel:
+    matrix:
+      - CHIP: esp32
+        BUILD_TYPE: flash
+        PATHS: "stm32_example:zephyr_example:pi_pico_example:raspberry_example"
+      - CHIP: esp32c3
+        BUILD_TYPE: flash
+        PATHS: "esp32_usb_cdc_acm_example"
+      - CHIP: esp32c3
+        BUILD_TYPE: ram
+        PATHS: "esp32_spi_load_ram_example"
+      - CHIP: esp32c6
+        BUILD_TYPE: flash
+        PATHS: "esp32_sdio_example"
+      - CHIP: esp32c6
+        BUILD_TYPE: ram
+        PATHS: "esp32_sdio_load_ram_example"
+      - CHIP: esp32h2
+        BUILD_TYPE: flash
+        PATHS: "esp32_example:esp32_stub_example:esp32_fast_reflash_example:esp32_read_flash_example:esp32_get_target_info_example"
+      - CHIP: esp32h2
+        BUILD_TYPE: ram
+        PATHS: "esp32_load_ram_example"
+  script:
+    - cd $CI_PROJECT_DIR
+    - python3 test/build_target_example.py ${CHIP} ${BUILD_TYPE} $(echo ${PATHS} | tr ':' ' ')
+
 run_pre_commit:
   stage: pre_check
   image: python:3.11-bookworm
@@ -49,11 +96,13 @@ check_stub_source_correctness:
     - idf.py reconfigure -DSERIAL_FLASHER_STUB_PULL_VERSION='0.3.0'
     - git diff --exit-code
 
-.build_idf_template:
-  stage: build
+.build_host_template:
+  stage: build_host_examples
   tags:
     - build
     - internet
+  needs:
+    - build_target_example
   before_script:
     - apt install ccache
     - pip install -U idf-build-apps --prefer-binary
@@ -66,6 +115,7 @@ check_stub_source_correctness:
     EXTRA_CXXFLAGS: "${PEDANTIC_FLAGS}"
     BUILD_DIR: "build"
   script:
+
     # CCACHE_RECACHE Used when invalidating the current cache.
     # could be enabled by MR label "ccache:recache"
     - |
@@ -77,7 +127,7 @@ check_stub_source_correctness:
       if [ -n "${TARGETS}" ]; then
           python -m idf_build_apps build -v -p . \
               --recursive \
-              --exclude ./examples/binaries \
+              --exclude ./test/target-example-src \
               --config "sdkconfig.defaults*" \
               --build-dir ${BUILD_DIR}_@w \
               --check-warnings \
@@ -85,7 +135,7 @@ check_stub_source_correctness:
       else
           python -m idf_build_apps build -v -p . \
               --recursive \
-              --exclude ./examples/binaries \
+              --exclude ./test/target-example-src \
               --config-rules "sdkconfig.defaults*" \
               --build-dir ${BUILD_DIR}_@w \
               --check-warnings
@@ -93,37 +143,37 @@ check_stub_source_correctness:
     # Show ccache statistics if enabled globally
     - test "$CI_CCACHE_STATS" == 1 && test -n "$(which ccache)" && ccache --show-stats -vv || true
 
-build_idf_v4.3:
+build_host_idf_v4.3:
   image: espressif/idf:release-v4.3
-  extends: .build_idf_template
+  extends: .build_host_template
   variables:
     TARGETS: "esp32"
 
-build_idf_v4.4:
+build_host_idf_v4.4:
   image: espressif/idf:release-v4.4
-  extends: .build_idf_template
+  extends: .build_host_template
 
-build_idf_v5.0:
+build_host_idf_v5.0:
   image: espressif/idf:release-v5.0
-  extends: .build_idf_template
+  extends: .build_host_template
 
-build_idf_v5.1:
+build_host_idf_v5.1:
   image: espressif/idf:release-v5.1
-  extends: .build_idf_template
+  extends: .build_host_template
 
-build_idf_v5.2:
+build_host_idf_v5.2:
   image: espressif/idf:release-v5.2
-  extends: .build_idf_template
+  extends: .build_host_template
 
-build_idf_v5.3:
+build_host_idf_v5.3:
   image: espressif/idf:release-v5.3
-  extends: .build_idf_template
+  extends: .build_host_template
 
-build_idf_v5.4:
+build_host_idf_v5.4:
   image: espressif/idf:release-v5.4
-  extends: .build_idf_template
+  extends: .build_host_template
 
-build_idf_v5.5:
+build_host_idf_v5.5:
   image: espressif/idf:release-v5.5
   variables:
     BUILD_DIR: "build_stable"
@@ -139,14 +189,14 @@ build_idf_v5.5:
       - "**/build*/partition_table/*.bin"
     when: always
     expire_in: 3 days
-  extends: .build_idf_template
+  extends: .build_host_template
 
-build_idf_v6.0:
+build_host_idf_v6.0:
   image: espressif/idf:release-v6.0
-  extends: .build_idf_template
+  extends: .build_host_template
   allow_failure: true
 
-build_idf_master:
+build_host_idf_master:
   image: espressif/idf:latest
   variables:
     BUILD_DIR: "build_master"
@@ -162,12 +212,14 @@ build_idf_master:
       - "**/build*/partition_table/*.bin"
     when: always
     expire_in: 3 days
-  extends: .build_idf_template
+  extends: .build_host_template
   allow_failure: true
 
-build_stm32:
-  stage: build
+build_host_stm32:
+  stage: build_host_examples
   image: debian:latest
+  needs:
+    - build_target_example
   before_script:
     - apt-get update
     - apt-get install -y git wget cmake ninja-build xz-utils
@@ -191,9 +243,11 @@ build_stm32:
     - cmake -DSTM32_TOOLCHAIN_PATH=$CI_PROJECT_DIR/gcc-arm-none-eabi -DSTM32_CUBE_H7_PATH=$CI_PROJECT_DIR/STM32CubeH7 -DMD5_ENABLED=1 -G Ninja ..
     - cmake --build .
 
-build_zephyr:
-  stage: build
+build_host_zephyr:
+  stage: build_host_examples
   image: debian:latest
+  needs:
+    - build_target_example
   before_script:
     - apt-get update
     - apt-get install -y git cmake ninja-build wget python3 python3-pip python3-venv xz-utils
@@ -233,12 +287,14 @@ build_zephyr:
     - west update hal_espressif
     - west build -p -b esp32_devkitc_wroom/esp32/procpu $CI_PROJECT_DIR/examples/zephyr_example -DZEPHYR_EXTRA_MODULES=$CI_PROJECT_DIR -DMD5_ENABLED=1
 
-build_pi_pico:
-  stage: build
+build_host_pi_pico:
+  stage: build_host_examples
   image: debian:latest
   tags:
     - build
     - internet
+  needs:
+    - build_target_example
   before_script:
     - apt-get update
     - apt-get install -y git wget cmake build-essential python3 python3-pip
@@ -262,11 +318,13 @@ build_pi_pico:
     - cmake -DMD5_ENABLED=1 ..
     - cmake --build .
 
-build_pi:
-  stage: build
+build_host_pi:
+  stage: build_host_examples
   image: dtcooper/raspberrypi-os:latest
   tags:
     - ESF-RPI-01
+  needs:
+    - build_target_example
   before_script:
     - apt-get update
     - apt-get install -y cmake gcc g++ make pigpio
@@ -280,7 +338,7 @@ build_pi:
     when: always
     expire_in: 3 days
 
-test_qemu:
+test_host_qemu:
   stage: test
   image: ${CI_DOCKER_REGISTRY}/qemu:esp-develop-20191124
   tags:
@@ -311,6 +369,9 @@ test_esp1:
   extends: .test_template
   tags:
     - ESF-RPI-02
+  needs:
+    - build_host_idf_v5.5
+    - build_host_idf_master
   parallel:
     matrix:
       - CI_BUILD_FOLDER:
@@ -328,6 +389,9 @@ test_esp2:
   extends: .test_template
   tags:
     - ESF-RPI-01
+  needs:
+    - build_host_idf_v5.5
+    - build_host_idf_master
   parallel:
     matrix:
       - CI_BUILD_FOLDER:
@@ -347,6 +411,8 @@ test_zephyr:
   extends: .test_template
   tags:
     - ESF-RPI-03
+  needs:
+    - build_host_zephyr
   script:
     - cd $CI_PROJECT_DIR
     - pytest --target=zephyr --port=/dev/serial_ports/ESP32_ESP32
@@ -355,6 +421,8 @@ test_stm32:
   extends: .test_template
   tags:
     - ESF-RPI-03
+  needs:
+    - build_host_stm32
   script:
     - pytest --target=stm32 --port=/dev/serial_ports/STM32_ESP32
 
@@ -362,6 +430,8 @@ test_pi_pico:
   extends: .test_template
   tags:
     - ESF-RPI-03
+  needs:
+    - build_host_pi_pico
   script:
     - pytest --target=pi_pico --port=/dev/serial_ports/pico_ESP32
 
@@ -370,6 +440,8 @@ test_rpi:
   image: dtcooper/raspberrypi-os:latest
   tags:
     - ESF-RPI-01
+  needs:
+    - build_host_pi
   before_script:
     - apt-get update
     - apt-get install -y pigpio python3 python3-pip python3-venv libffi-dev

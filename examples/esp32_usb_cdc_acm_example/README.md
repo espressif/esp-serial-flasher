@@ -51,6 +51,16 @@ This example uses the **USB CDC ACM interface**. For detailed interface informat
 
 **No additional wiring required** - communication is entirely over USB.
 
+## Prepare Target Firmware
+
+Place the required target firmware binaries in the `target-firmware/` directory. You can use your own binaries, build them from the esp-idf examples, or build them from the source in the `test/target-example-src` directory.
+
+**Required binaries:**
+
+- `bootloader.bin` - ESP bootloader binary
+- `partition-table.bin` - Partition table configuration
+- `app.bin` - Main application binary
+
 ## Building and Flashing
 
 To run the example, type the following command:

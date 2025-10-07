@@ -49,6 +49,14 @@ You can find the target SDIO pins for each target [here](https://docs.espressif.
 > [!NOTE]
 > SDIO pins CMD and DAT0-3 may require pullup resistors depending on your hardware setup. Please take a look at the [SD Pull-up Requirements](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/sd_pullup_requirements.html) for more info.
 
+## Prepare Target Firmware
+
+Place the required target firmware binary in the `target-firmware/` directory. You can use your own binary or build it from the example source as shown below.
+
+**Required binary:**
+
+- `app.bin` - RAM executable binary
+
 ## Build and Flash
 
 To run the example, type the following command:

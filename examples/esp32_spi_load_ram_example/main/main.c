@@ -20,6 +20,11 @@
 #include "example_common.h"
 #include "freertos/FreeRTOS.h"
 
+// Embedded RAM binary files using bin2array.cmake
+extern const uint8_t app_bin[];
+extern const uint32_t app_bin_size;
+extern const uint8_t app_bin_md5[];
+
 static const char *TAG = "spi_ram_loader";
 
 // Max line size
@@ -56,7 +61,6 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-    example_ram_app_binary_t bin;
 
     const loader_esp32_spi_config_t config = {
         .spi_bus = SPI2_HOST,
@@ -80,9 +84,9 @@ void app_main(void)
     }
 
     if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
-        get_example_ram_app_binary(esp_loader_get_target(), &bin);
+
         ESP_LOGI(TAG, "Loading app to RAM ...");
-        esp_loader_error_t err = load_ram_binary(bin.ram_app.data);
+        esp_loader_error_t err = load_ram_binary(app_bin);
         if (err == ESP_LOADER_SUCCESS) {
             // Forward slave's serial output
             ESP_LOGI(TAG, "********************************************");

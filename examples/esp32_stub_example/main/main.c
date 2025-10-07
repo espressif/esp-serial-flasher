@@ -17,6 +17,17 @@
 #include "esp_loader.h"
 #include "example_common.h"
 
+// Embedded binary files using bin2array.cmake
+extern const uint8_t bootloader_bin[];
+extern const uint32_t bootloader_bin_size;
+extern const uint8_t bootloader_bin_md5[];
+extern const uint8_t partition_table_bin[];
+extern const uint32_t partition_table_bin_size;
+extern const uint8_t partition_table_bin_md5[];
+extern const uint8_t app_bin[];
+extern const uint32_t app_bin_size;
+extern const uint8_t app_bin_md5[];
+
 static const char *TAG = "serial_stub_flasher";
 
 // Max line size
@@ -39,7 +50,6 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-    example_binaries_t bin;
 
     const loader_esp32_config_t config = {
         .baud_rate = 115200,
@@ -70,14 +80,14 @@ void app_main(void)
             return;
         }
 
-        get_example_binaries(esp_loader_get_target(), &bin);
-
         ESP_LOGI(TAG, "Loading bootloader...");
-        flash_binary(bin.boot.data, bin.boot.size, bin.boot.addr);
+        target_chip_t chip = esp_loader_get_target();
+        uint32_t bootloader_addr = get_bootloader_address(chip);
+        flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
         ESP_LOGI(TAG, "Loading partition table...");
-        flash_binary(bin.part.data, bin.part.size, bin.part.addr);
+        flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
         ESP_LOGI(TAG, "Loading app...");
-        flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
+        flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
         ESP_LOGI(TAG, "Done!");
         esp_loader_reset_target();
 

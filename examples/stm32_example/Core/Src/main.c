@@ -28,6 +28,17 @@
 #include "stm32_port.h"
 #include "esp_loader.h"
 #include "example_common.h"
+
+// Embedded binary files using bin2array.cmake
+extern const uint8_t bootloader_bin[];
+extern const uint32_t bootloader_bin_size;
+extern const uint8_t bootloader_bin_md5[];
+extern const uint8_t partition_table_bin[];
+extern const uint32_t partition_table_bin_size;
+extern const uint8_t partition_table_bin_md5[];
+extern const uint8_t app_bin[];
+extern const uint32_t app_bin_size;
+extern const uint8_t app_bin_md5[];
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -76,7 +87,6 @@ static void MX_USART2_UART_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  example_binaries_t bin;
   static uint8_t buf[BUF_LEN] = {0};
   /* USER CODE END 1 */
 
@@ -111,19 +121,19 @@ int main(void)
   };
 
   loader_port_stm32_init(&config);
-    
+
   if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
-        
-    get_example_binaries(esp_loader_get_target(), &bin);
 
     printf("Loading bootloader...\n");
-    flash_binary(bin.boot.data, bin.boot.size, bin.boot.addr);
+    target_chip_t chip = esp_loader_get_target();
+    uint32_t bootloader_addr = get_bootloader_address(chip);
+    flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
     printf("Loading partition table...\n");
-    flash_binary(bin.part.data, bin.part.size, bin.part.addr);
+    flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
     printf("Loading app...\n");
-    flash_binary(bin.app.data,  bin.app.size,  bin.app.addr);
+    flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
     esp_loader_reset_target();
-    
+
 #if (HIGHER_BAUDRATE != 115200)
     HAL_UART_DeInit(&huart2);
     huart2.Init.BaudRate = 115200;
@@ -144,7 +154,7 @@ int main(void)
       printf("%s", buf);
       memset(buf, 0, BUF_LEN);
     }
-  
+
   }
   /* USER CODE END 2 */
 

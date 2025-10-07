@@ -13,15 +13,17 @@ zephyr_library_sources(
 
 zephyr_library_include_directories(
   ../common
-  ../binaries
   )
 
 # Needed for example_common
 add_compile_definitions(SERIAL_FLASHER_INTERFACE_UART)
 
-# Embed binaries into the app.
-include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)
-create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/Hello-world ${CMAKE_BINARY_DIR}/binaries.c)
-set_property(SOURCE ${CMAKE_BINARY_DIR}/binaries.c PROPERTY GENERATED 1)
+# Convert binary files to C source files using bin2array.cmake
+include(${CMAKE_SOURCE_DIR}/../common/bin2array.cmake)
+create_resources(${CMAKE_SOURCE_DIR}/target-firmware ${CMAKE_BINARY_DIR}/target_firmware_data.c)
+set_property(SOURCE ${CMAKE_BINARY_DIR}/target_firmware_data.c PROPERTY GENERATED 1)
 
-target_sources(app PRIVATE src/main.c  ${CMAKE_BINARY_DIR}/binaries.c)
+target_sources(app PRIVATE
+    src/main.c
+    ${CMAKE_BINARY_DIR}/target_firmware_data.c
+)

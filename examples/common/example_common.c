@@ -23,324 +23,30 @@
 #include "esp_loader.h"
 #include "example_common.h"
 
-#ifndef SINGLE_TARGET_SUPPORT
+#define BIN_HEADER_SIZE    0x8
+#define BIN_HEADER_EXT_SIZE 0x18
+// Maximum block sized for RAM and Flash writes, respectively.
+#define ESP_RAM_BLOCK               0x1800
 
+// Only bootloader addresses vary by chip
+// DO NOT specify array size - let compiler determine it from initializers
+static const uint32_t bootloader_addresses[] = {
+    [ESP8266_CHIP] = 0x0,
+    [ESP32_CHIP]   = 0x1000,
+    [ESP32S2_CHIP] = 0x1000,
+    [ESP32C3_CHIP] = 0x0,
+    [ESP32S3_CHIP] = 0x0,
+    [ESP32C2_CHIP] = 0x0,
+    [ESP32C5_CHIP] = 0x2000,
+    [ESP32H2_CHIP] = 0x0,
+    [ESP32C6_CHIP] = 0x0,
+    [ESP32P4_CHIP] = 0x2000
+};
 
-// For esp32, esp32s2
-#define BOOTLOADER_ADDRESS_V0       0x1000
-// For esp8266, esp32s3 and later chips
-#define BOOTLOADER_ADDRESS_V1       0x0
-// For esp32c5 and esp32p4
-#define BOOTLOADER_ADDRESS_V2       0x2000
-#define PARTITION_ADDRESS           0x8000
-#define APPLICATION_ADDRESS         0x10000
-
-extern const uint8_t  ESP32_bootloader_bin[];
-extern const uint32_t ESP32_bootloader_bin_size;
-extern const uint8_t  ESP32_bootloader_bin_md5[];
-extern const uint8_t  ESP32_hello_world_bin[];
-extern const uint32_t ESP32_hello_world_bin_size;
-extern const uint8_t  ESP32_hello_world_bin_md5[];
-extern const uint8_t  ESP32_partition_table_bin[];
-extern const uint32_t ESP32_partition_table_bin_size;
-extern const uint8_t  ESP32_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_S2_bootloader_bin[];
-extern const uint32_t ESP32_S2_bootloader_bin_size;
-extern const uint8_t  ESP32_S2_bootloader_bin_md5[];
-extern const uint8_t  ESP32_S2_hello_world_bin[];
-extern const uint32_t ESP32_S2_hello_world_bin_size;
-extern const uint8_t  ESP32_S2_hello_world_bin_md5[];
-extern const uint8_t  ESP32_S2_partition_table_bin[];
-extern const uint32_t ESP32_S2_partition_table_bin_size;
-extern const uint8_t  ESP32_S2_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_S3_bootloader_bin[];
-extern const uint32_t ESP32_S3_bootloader_bin_size;
-extern const uint8_t  ESP32_S3_bootloader_bin_md5[];
-extern const uint8_t  ESP32_S3_hello_world_bin[];
-extern const uint32_t ESP32_S3_hello_world_bin_size;
-extern const uint8_t  ESP32_S3_hello_world_bin_md5[];
-extern const uint8_t  ESP32_S3_partition_table_bin[];
-extern const uint32_t ESP32_S3_partition_table_bin_size;
-extern const uint8_t  ESP32_S3_partition_table_bin_md5[];
-
-extern const uint8_t  ESP8266_bootloader_bin[];
-extern const uint32_t ESP8266_bootloader_bin_size;
-extern const uint8_t  ESP8266_bootloader_bin_md5[];
-extern const uint8_t  ESP8266_hello_world_bin[];
-extern const uint32_t ESP8266_hello_world_bin_size;
-extern const uint8_t  ESP8266_hello_world_bin_md5[];
-extern const uint8_t  ESP8266_partition_table_bin[];
-extern const uint32_t ESP8266_partition_table_bin_size;
-extern const uint8_t  ESP8266_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_H2_bootloader_bin[];
-extern const uint32_t ESP32_H2_bootloader_bin_size;
-extern const uint8_t  ESP32_H2_bootloader_bin_md5[];
-extern const uint8_t  ESP32_H2_hello_world_bin[];
-extern const uint32_t ESP32_H2_hello_world_bin_size;
-extern const uint8_t  ESP32_H2_hello_world_bin_md5[];
-extern const uint8_t  ESP32_H2_partition_table_bin[];
-extern const uint32_t ESP32_H2_partition_table_bin_size;
-extern const uint8_t  ESP32_H2_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_C2_bootloader_bin[];
-extern const uint32_t ESP32_C2_bootloader_bin_size;
-extern const uint8_t  ESP32_C2_bootloader_bin_md5[];
-extern const uint8_t  ESP32_C2_hello_world_bin[];
-extern const uint32_t ESP32_C2_hello_world_bin_size;
-extern const uint8_t  ESP32_C2_hello_world_bin_md5[];
-extern const uint8_t  ESP32_C2_partition_table_bin[];
-extern const uint32_t ESP32_C2_partition_table_bin_size;
-extern const uint8_t  ESP32_C2_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_C3_bootloader_bin[];
-extern const uint32_t ESP32_C3_bootloader_bin_size;
-extern const uint8_t  ESP32_C3_bootloader_bin_md5[];
-extern const uint8_t  ESP32_C3_hello_world_bin[];
-extern const uint32_t ESP32_C3_hello_world_bin_size;
-extern const uint8_t  ESP32_C3_hello_world_bin_md5[];
-extern const uint8_t  ESP32_C3_partition_table_bin[];
-extern const uint32_t ESP32_C3_partition_table_bin_size;
-extern const uint8_t  ESP32_C3_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_C6_bootloader_bin[];
-extern const uint32_t ESP32_C6_bootloader_bin_size;
-extern const uint8_t  ESP32_C6_bootloader_bin_md5[];
-extern const uint8_t  ESP32_C6_hello_world_bin[];
-extern const uint32_t ESP32_C6_hello_world_bin_size;
-extern const uint8_t  ESP32_C6_hello_world_bin_md5[];
-extern const uint8_t  ESP32_C6_partition_table_bin[];
-extern const uint32_t ESP32_C6_partition_table_bin_size;
-extern const uint8_t  ESP32_C6_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_C5_bootloader_bin[];
-extern const uint32_t ESP32_C5_bootloader_bin_size;
-extern const uint8_t  ESP32_C5_bootloader_bin_md5[];
-extern const uint8_t  ESP32_C5_hello_world_bin[];
-extern const uint32_t ESP32_C5_hello_world_bin_size;
-extern const uint8_t  ESP32_C5_hello_world_bin_md5[];
-extern const uint8_t  ESP32_C5_partition_table_bin[];
-extern const uint32_t ESP32_C5_partition_table_bin_size;
-extern const uint8_t  ESP32_C5_partition_table_bin_md5[];
-
-extern const uint8_t  ESP32_P4_bootloader_bin[];
-extern const uint32_t ESP32_P4_bootloader_bin_size;
-extern const uint8_t  ESP32_P4_bootloader_bin_md5[];
-extern const uint8_t  ESP32_P4_hello_world_bin[];
-extern const uint32_t ESP32_P4_hello_world_bin_size;
-extern const uint8_t  ESP32_P4_hello_world_bin_md5[];
-extern const uint8_t  ESP32_P4_partition_table_bin[];
-extern const uint32_t ESP32_P4_partition_table_bin_size;
-extern const uint8_t  ESP32_P4_partition_table_bin_md5[];
-
-void get_example_binaries(target_chip_t target, example_binaries_t *bins)
-{
-    if (target == ESP8266_CHIP) {
-        bins->boot.data = ESP8266_bootloader_bin;
-        bins->boot.size = ESP8266_bootloader_bin_size;
-        bins->boot.md5 = ESP8266_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
-        bins->part.data = ESP8266_partition_table_bin;
-        bins->part.size = ESP8266_partition_table_bin_size;
-        bins->part.md5 = ESP8266_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP8266_hello_world_bin;
-        bins->app.size  = ESP8266_hello_world_bin_size;
-        bins->app.md5 = ESP8266_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32_CHIP) {
-        bins->boot.data = ESP32_bootloader_bin;
-        bins->boot.size = ESP32_bootloader_bin_size;
-        bins->boot.md5 = ESP32_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V0;
-        bins->part.data = ESP32_partition_table_bin;
-        bins->part.size = ESP32_partition_table_bin_size;
-        bins->part.md5 = ESP32_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_hello_world_bin;
-        bins->app.size  = ESP32_hello_world_bin_size;
-        bins->app.md5 = ESP32_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32S2_CHIP) {
-        bins->boot.data = ESP32_S2_bootloader_bin;
-        bins->boot.size = ESP32_S2_bootloader_bin_size;
-        bins->boot.md5 = ESP32_S2_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V0;
-        bins->part.data = ESP32_S2_partition_table_bin;
-        bins->part.size = ESP32_S2_partition_table_bin_size;
-        bins->part.md5 = ESP32_S2_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_S2_hello_world_bin;
-        bins->app.size  = ESP32_S2_hello_world_bin_size;
-        bins->app.md5 = ESP32_S2_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32H2_CHIP) {
-        bins->boot.data = ESP32_H2_bootloader_bin;
-        bins->boot.size = ESP32_H2_bootloader_bin_size;
-        bins->boot.md5 = ESP32_H2_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
-        bins->part.data = ESP32_H2_partition_table_bin;
-        bins->part.size = ESP32_H2_partition_table_bin_size;
-        bins->part.md5 = ESP32_H2_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_H2_hello_world_bin;
-        bins->app.size  = ESP32_H2_hello_world_bin_size;
-        bins->app.md5 = ESP32_H2_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32C2_CHIP) {
-        bins->boot.data = ESP32_C2_bootloader_bin;
-        bins->boot.size = ESP32_C2_bootloader_bin_size;
-        bins->boot.md5 = ESP32_C2_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
-        bins->part.data = ESP32_C2_partition_table_bin;
-        bins->part.size = ESP32_C2_partition_table_bin_size;
-        bins->part.md5 = ESP32_C2_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_C2_hello_world_bin;
-        bins->app.size  = ESP32_C2_hello_world_bin_size;
-        bins->app.md5 = ESP32_C2_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32C3_CHIP) {
-        bins->boot.data = ESP32_C3_bootloader_bin;
-        bins->boot.size = ESP32_C3_bootloader_bin_size;
-        bins->boot.md5 = ESP32_C3_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
-        bins->part.data = ESP32_C3_partition_table_bin;
-        bins->part.size = ESP32_C3_partition_table_bin_size;
-        bins->part.md5 = ESP32_C3_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_C3_hello_world_bin;
-        bins->app.size  = ESP32_C3_hello_world_bin_size;
-        bins->app.md5 = ESP32_C3_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32C6_CHIP) {
-        bins->boot.data = ESP32_C6_bootloader_bin;
-        bins->boot.size = ESP32_C6_bootloader_bin_size;
-        bins->boot.md5 = ESP32_C6_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
-        bins->part.data = ESP32_C6_partition_table_bin;
-        bins->part.size = ESP32_C6_partition_table_bin_size;
-        bins->part.md5 = ESP32_C6_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_C6_hello_world_bin;
-        bins->app.size  = ESP32_C6_hello_world_bin_size;
-        bins->app.md5 = ESP32_C6_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32S3_CHIP) {
-        bins->boot.data = ESP32_S3_bootloader_bin;
-        bins->boot.size = ESP32_S3_bootloader_bin_size;
-        bins->boot.md5 = ESP32_S3_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
-        bins->part.data = ESP32_S3_partition_table_bin;
-        bins->part.size = ESP32_S3_partition_table_bin_size;
-        bins->part.md5 = ESP32_S3_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_S3_hello_world_bin;
-        bins->app.size  = ESP32_S3_hello_world_bin_size;
-        bins->app.md5 = ESP32_S3_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32C5_CHIP) {
-        bins->boot.data = ESP32_C5_bootloader_bin;
-        bins->boot.size = ESP32_C5_bootloader_bin_size;
-        bins->boot.md5 = ESP32_C5_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V2;
-        bins->part.data = ESP32_C5_partition_table_bin;
-        bins->part.size = ESP32_C5_partition_table_bin_size;
-        bins->part.md5 = ESP32_C5_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_C5_hello_world_bin;
-        bins->app.size  = ESP32_C5_hello_world_bin_size;
-        bins->app.md5 = ESP32_C5_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else if (target == ESP32P4_CHIP) {
-        bins->boot.data = ESP32_P4_bootloader_bin;
-        bins->boot.size = ESP32_P4_bootloader_bin_size;
-        bins->boot.md5 = ESP32_P4_bootloader_bin_md5;
-        bins->boot.addr = BOOTLOADER_ADDRESS_V2;
-        bins->part.data = ESP32_P4_partition_table_bin;
-        bins->part.size = ESP32_P4_partition_table_bin_size;
-        bins->part.md5 = ESP32_P4_partition_table_bin_md5;
-        bins->part.addr = PARTITION_ADDRESS;
-        bins->app.data  = ESP32_P4_hello_world_bin;
-        bins->app.size  = ESP32_P4_hello_world_bin_size;
-        bins->app.md5 = ESP32_P4_hello_world_bin_md5;
-        bins->app.addr  = APPLICATION_ADDRESS;
-    } else {
-        abort();
-    }
-}
-
-
-extern const uint8_t  ESP32_app_bin[];
-extern const uint32_t ESP32_app_bin_size;
-extern const uint8_t  ESP32_C2_app_bin[];
-extern const uint32_t ESP32_C2_app_bin_size;
-extern const uint8_t  ESP32_C3_app_bin[];
-extern const uint32_t ESP32_C3_app_bin_size;
-extern const uint8_t  ESP32_H2_app_bin[];
-extern const uint32_t ESP32_H2_app_bin_size;
-extern const uint8_t  ESP32_S3_app_bin[];
-extern const uint32_t ESP32_S3_app_bin_size;
-extern const uint8_t  ESP32_C6_app_bin[];
-extern const uint32_t ESP32_C6_app_bin_size;
-extern const uint8_t  ESP32_C5_app_bin[];
-extern const uint32_t ESP32_C5_app_bin_size;
-extern const uint8_t  ESP32_P4_app_bin[];
-extern const uint32_t ESP32_P4_app_bin_size;
-
-
-void get_example_ram_app_binary(target_chip_t target, example_ram_app_binary_t *bin)
-{
-    switch (target) {
-    case ESP32_CHIP: {
-        bin->ram_app.data = ESP32_app_bin;
-        bin->ram_app.size = ESP32_app_bin_size;
-        break;
-    }
-    case ESP32C2_CHIP: {
-        bin->ram_app.data = ESP32_C2_app_bin;
-        bin->ram_app.size = ESP32_C2_app_bin_size;
-        break;
-    }
-    case ESP32C3_CHIP: {
-        bin->ram_app.data = ESP32_C3_app_bin;
-        bin->ram_app.size = ESP32_C3_app_bin_size;
-        break;
-    }
-    case ESP32H2_CHIP: {
-        bin->ram_app.data = ESP32_H2_app_bin;
-        bin->ram_app.size = ESP32_H2_app_bin_size;
-        break;
-    }
-    case ESP32S3_CHIP: {
-        bin->ram_app.data = ESP32_S3_app_bin;
-        bin->ram_app.size = ESP32_S3_app_bin_size;
-        break;
-    }
-    case ESP32C6_CHIP: {
-        bin->ram_app.data = ESP32_C6_app_bin;
-        bin->ram_app.size = ESP32_C6_app_bin_size;
-        break;
-    }
-    case ESP32C5_CHIP: {
-        bin->ram_app.data = ESP32_C5_app_bin;
-        bin->ram_app.size = ESP32_C5_app_bin_size;
-        break;
-    }
-    case ESP32P4_CHIP: {
-        bin->ram_app.data = ESP32_P4_app_bin;
-        bin->ram_app.size = ESP32_P4_app_bin_size;
-        break;
-    }
-    default: {
-        abort();
-    }
-    }
-}
-
-#endif
+// If someone adds a new chip but forgets to update the array, compilation FAILS
+_Static_assert(sizeof(bootloader_addresses) / sizeof(bootloader_addresses[0]) == ESP_MAX_CHIP,
+               "bootloader_addresses array size mismatch! "
+               "If you added a new chip to target_chip_t, you MUST add its address to bootloader_addresses[]");
 
 static const char *get_error_string(const esp_loader_error_t error)
 {
@@ -502,6 +208,12 @@ esp_loader_error_t flash_binary(const uint8_t *bin, size_t size, size_t address)
     return ESP_LOADER_SUCCESS;
 }
 #endif /* SERIAL_FLASHER_INTERFACE_SPI */
+
+uint32_t get_bootloader_address(target_chip_t chip)
+{
+    return bootloader_addresses[chip];
+}
+
 
 esp_loader_error_t load_ram_binary(const uint8_t *bin)
 {
