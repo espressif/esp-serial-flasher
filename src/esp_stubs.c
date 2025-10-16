@@ -42,7 +42,8 @@ _Static_assert(ESP32C5_CHIP == 6, "Stub order matches target_chip_t enumeration"
 _Static_assert(ESP32H2_CHIP == 7, "Stub order matches target_chip_t enumeration");
 _Static_assert(ESP32C6_CHIP == 8, "Stub order matches target_chip_t enumeration");
 _Static_assert(ESP32P4_CHIP == 9, "Stub order matches target_chip_t enumeration");
-_Static_assert(ESP_MAX_CHIP == 10, "Stub order matches target_chip_t enumeration");
+_Static_assert(ESP32C61_CHIP == 10, "Stub order matches target_chip_t enumeration");
+_Static_assert(ESP_MAX_CHIP == 11, "Stub order matches target_chip_t enumeration");
 #endif
 
 const esp_stub_t esp_stub[ESP_MAX_CHIP] = {
@@ -188,6 +189,8 @@ const esp_stub_t esp_stub[ESP_MAX_CHIP] = {
     // placeholder
     {},
 
+    // placeholder
+    {},
 };
 
 #endif
