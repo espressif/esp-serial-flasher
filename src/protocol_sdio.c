@@ -132,6 +132,20 @@ static const esp_sdio_target_t esp_sdio_target[ESP_MAX_CHIP] = {
     },
     // ESP32P4
     {},
+    // ESP32C6
+    {
+        .sdio_supported = true,
+        .slchost_device_id = 0x1014,
+        .slchost_state_w0_addr = 0x64,
+        .slchost_conf_w5_addr = 0x80,
+        .slchost_win_cmd_addr = 0x84,
+        .slchost_packet_space_end = 0x1f800,
+        .slc_conf1_addr = 0x70,
+        .slc_len_conf_addr = 0xF4,
+        .slc_conf1_tx_stitch_en = (1 << 5),
+        .slc_conf1_rx_stitch_en = (1 << 6),
+        .slc_len_conf_tx_packet_load_en = (1 << 24),
+    },
 };
 
 static esp_loader_error_t slave_read_register(esp_loader_t *loader, const uint32_t addr, uint32_t *reg)

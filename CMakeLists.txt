@@ -18,6 +18,7 @@ set(srcs
     src/stubs/esp_stub_esp32c6.c
     src/stubs/esp_stub_esp32p4.c
     src/stubs/esp_stub_esp32p4rev1.c
+    src/stubs/esp_stub_esp32c61.c
     src/protocol_serial.c
     src/protocol_uart.c
     src/protocol_spi.c
