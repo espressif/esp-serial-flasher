@@ -30,7 +30,8 @@ static const uint32_t bootloader_addresses[] = {
     [ESP32C5_CHIP] = 0x2000,
     [ESP32H2_CHIP] = 0x0,
     [ESP32C6_CHIP] = 0x0,
-    [ESP32P4_CHIP] = 0x2000
+    [ESP32P4_CHIP] = 0x2000,
+    [ESP32C61_CHIP] = 0x0
 };
 
 // If someone adds a new chip but forgets to update the array, compilation FAILS
