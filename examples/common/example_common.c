@@ -135,6 +135,16 @@ extern const uint8_t  ESP32_P4_partition_table_bin[];
 extern const uint32_t ESP32_P4_partition_table_bin_size;
 extern const uint8_t  ESP32_P4_partition_table_bin_md5[];
 
+extern const uint8_t  ESP32_C61_bootloader_bin[];
+extern const uint32_t ESP32_C61_bootloader_bin_size;
+extern const uint8_t  ESP32_C61_bootloader_bin_md5[];
+extern const uint8_t  ESP32_C61_hello_world_bin[];
+extern const uint32_t ESP32_C61_hello_world_bin_size;
+extern const uint8_t  ESP32_C61_hello_world_bin_md5[];
+extern const uint8_t  ESP32_C61_partition_table_bin[];
+extern const uint32_t ESP32_C61_partition_table_bin_size;
+extern const uint8_t  ESP32_C61_partition_table_bin_md5[];
+
 void get_example_binaries(target_chip_t target, example_binaries_t *bins)
 {
     if (target == ESP8266_CHIP) {
@@ -267,6 +277,19 @@ void get_example_binaries(target_chip_t target, example_binaries_t *bins)
         bins->app.size  = ESP32_P4_hello_world_bin_size;
         bins->app.md5 = ESP32_P4_hello_world_bin_md5;
         bins->app.addr  = APPLICATION_ADDRESS;
+    } else if (target == ESP32C61_CHIP) {
+        bins->boot.data = ESP32_C61_bootloader_bin;
+        bins->boot.size = ESP32_C61_bootloader_bin_size;
+        bins->boot.md5 = ESP32_C61_bootloader_bin_md5;
+        bins->boot.addr = BOOTLOADER_ADDRESS_V1;
+        bins->part.data = ESP32_C61_partition_table_bin;
+        bins->part.size = ESP32_C61_partition_table_bin_size;
+        bins->part.md5 = ESP32_C61_partition_table_bin_md5;
+        bins->part.addr = PARTITION_ADDRESS;
+        bins->app.data  = ESP32_C61_hello_world_bin;
+        bins->app.size  = ESP32_C61_hello_world_bin_size;
+        bins->app.md5 = ESP32_C61_hello_world_bin_md5;
+        bins->app.addr  = APPLICATION_ADDRESS;
     } else {
         abort();
     }
@@ -289,6 +312,8 @@ extern const uint8_t  ESP32_C5_app_bin[];
 extern const uint32_t ESP32_C5_app_bin_size;
 extern const uint8_t  ESP32_P4_app_bin[];
 extern const uint32_t ESP32_P4_app_bin_size;
+extern const uint8_t  ESP32_C61_app_bin[];
+extern const uint32_t ESP32_C61_app_bin_size;
 
 
 void get_example_ram_app_binary(target_chip_t target, example_ram_app_binary_t *bin)
@@ -332,6 +357,11 @@ void get_example_ram_app_binary(target_chip_t target, example_ram_app_binary_t *
     case ESP32P4_CHIP: {
         bin->ram_app.data = ESP32_P4_app_bin;
         bin->ram_app.size = ESP32_P4_app_bin_size;
+        break;
+    }
+    case ESP32C61_CHIP: {
+        bin->ram_app.data = ESP32_C61_app_bin;
+        bin->ram_app.size = ESP32_C61_app_bin_size;
         break;
     }
     default: {
