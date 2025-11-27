@@ -51,6 +51,14 @@ This example uses the **SPI interface**. For detailed interface information, str
 > - **Strapping Pins**: Configuration varies by target chip - consult the target's Technical Reference Manual for the specific strapping pin values required
 > - **UART Monitoring**: Optional 2-pin UART connection for real-time target output
 
+## Prepare Target Firmware
+
+Place the required target firmware binary in the `target-firmware/` directory. You can use your own binary or build it from the example source as shown below.
+
+**Required binary:**
+
+- `app.bin` - RAM executable binary
+
 ## Build and Flash
 
 To run the example, type the following command:

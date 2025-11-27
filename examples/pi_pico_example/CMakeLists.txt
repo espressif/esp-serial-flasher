@@ -7,12 +7,14 @@ set(CMAKE_C_STANDARD 11)
 
 pico_sdk_init()
 
-include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)
-create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/Hello-world binaries.c)
+# Convert binary files to C source files using bin2array.cmake
+include(${CMAKE_SOURCE_DIR}/../common/bin2array.cmake)
+create_resources(${CMAKE_SOURCE_DIR}/target-firmware ${CMAKE_CURRENT_BINARY_DIR}/target_firmware_data.c)
+set_property(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/target_firmware_data.c PROPERTY GENERATED 1)
 
 add_executable(${PROJECT_NAME}
     ../common/example_common.c
-    binaries.c
+    ${CMAKE_CURRENT_BINARY_DIR}/target_firmware_data.c
     main.c
 )
 

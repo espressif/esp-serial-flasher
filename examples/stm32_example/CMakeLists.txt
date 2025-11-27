@@ -10,8 +10,10 @@ find_package(HAL COMPONENTS STM32H7_M7 PWR RCC GPIO UART CORTEX REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} Core/Inc)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../common/bin2array.cmake)
-create_resources(${CMAKE_CURRENT_LIST_DIR}/../binaries/Hello-world Core/Src/binaries.c)
+# Convert binary files to C source files using bin2array.cmake
+include(${CMAKE_SOURCE_DIR}/../common/bin2array.cmake)
+create_resources(${CMAKE_SOURCE_DIR}/target-firmware ${CMAKE_CURRENT_BINARY_DIR}/target_firmware_data.c)
+set_property(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/target_firmware_data.c PROPERTY GENERATED 1)
 
 add_executable(${CMAKE_PROJECT_NAME}
     ../common/example_common.c
@@ -19,7 +21,7 @@ add_executable(${CMAKE_PROJECT_NAME}
     Core/Src/stm32h7xx_hal_msp.c
     Core/Src/stm32h7xx_it.c
     Core/Src/libc_compat.c
-    Core/Src/binaries.c
+    ${CMAKE_CURRENT_BINARY_DIR}/target_firmware_data.c
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ../common)

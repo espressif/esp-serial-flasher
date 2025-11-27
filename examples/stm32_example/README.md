@@ -37,6 +37,30 @@ This example uses the **UART interface**. For detailed interface information and
 **Optional Debug Connection:**
 UART-to-USB bridge can be connected to PA9(TX) and PA10(RX) for debug purposes (same pins can be used to flash STM32 in bootloader mode).
 
+## Prepare Target Firmware
+
+Place the required target firmware binaries in the `target-firmware/` directory. You can use your own binaries, build them from the esp-idf examples, or build them from the source in the `test/target-example-src` directory.
+
+**Required binaries:**
+
+- `bootloader.bin` - ESP bootloader binary
+- `partition-table.bin` - Partition table configuration
+- `app.bin` - Main application binary
+
+To build from the example source:
+
+```bash
+cd test/target-example-src/hello-world-ESP32-src
+idf.py set-target esp32s3  # Set target chip (esp32, esp32s3, esp32c3, etc.)
+idf.py fullclean
+idf.py -D SDKCONFIG_DEFAULTS=sdkconfig.defaults.flash reconfigure build
+
+# Copy binaries to example
+cp build/bootloader/bootloader.bin ../../stm32_example/target-firmware/
+cp build/partition_table/partition-table.bin ../../stm32_example/target-firmware/
+cp build/hello_world.bin ../../stm32_example/target-firmware/app.bin
+```
+
 ## Build and Flash
 
 To compile the example:

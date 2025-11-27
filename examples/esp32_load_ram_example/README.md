@@ -40,6 +40,14 @@ This example uses the **UART interface**. For detailed interface information and
 |     IO4      |          RX0           |
 |     IO5      |          TX0           |
 
+## Prepare Target Firmware
+
+Place the required target firmware binary in the `target-firmware/` directory. You can use your own binary or build it from the example source as shown below.
+
+**Required binary:**
+
+- `app.bin` - RAM executable binary
+
 ## Build and Flash
 
 To run the example, type the following command:

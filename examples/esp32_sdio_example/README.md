@@ -47,6 +47,16 @@ You can find target SDIO pin mappings [here](https://docs.espressif.com/projects
 > [!NOTE]
 > SDIO pins CMD and DAT0-3 may require pullup resistors depending on your hardware setup. Please take a look at the [SD Pull-up Requirements](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/sd_pullup_requirements.html) for more info.
 
+## Prepare Target Firmware
+
+Place the required target firmware binaries in the `target-firmware/` directory. You can use your own binaries, build them from the esp-idf examples, or build them from the source in the `test/target-example-src` directory.
+
+**Required binaries:**
+
+- `bootloader.bin` - ESP bootloader binary
+- `partition-table.bin` - Partition table configuration
+- `app.bin` - Main application binary
+
 ## Build and Flash
 
 To run the example, type the following command:

@@ -30,12 +30,33 @@ To install all the necessary tools for running the Build and Target tests just r
 
 ### Build
 
+The build process consists of two steps:
+
+1. **Build target firmware binaries** - These are the firmware images that will be flashed onto the target ESP devices
+2. **Build host examples** - These are the examples that run on the host device and perform the flashing
+
+#### Step 1: Build Target Firmware Binaries
+
+Target firmware binaries must be built separately before building the host examples. These binaries are built from the source in `test/target-example-src/` and then copied to the appropriate `examples/*/target-firmware/` directories.
+
+For detailed instructions on building target firmware, see [test/target-example-src/README.md](target-example-src/README.md).
+
+After building the target firmware, copy the binaries to the example directories using the provided script:
+
+```bash
+python3 test/copy_target_binaries.py
+```
+
+This script will automatically copy the appropriate binaries from `test/target-example-src/hello-world-ESP32-src/build-*/` to the corresponding `examples/*/target-firmware/` directories based on the chip type and build configuration.
+
+#### Step 2: Build Host Examples
+
 Each example can be built according its README. To make things simpler, there is a tool to build all Espressif SoC examples with one command called [idf-build-apps](https://docs.espressif.com/projects/idf-build-apps/en/latest/). Before executing the [idf-build-apps](https://docs.espressif.com/projects/idf-build-apps/en/latest/), you need to run export script of [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html). After this, you are able to run the following command to build the examples:
 
 ```bash
 python -m idf_build_apps build -v -p .
       --recursive
-      --exclude ./examples/binaries
+      --exclude ./test/target-example-src
       --config "sdkconfig.defaults*"
       --build-dir "build_"@w
       --check-warnings
