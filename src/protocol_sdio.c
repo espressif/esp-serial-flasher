@@ -29,6 +29,16 @@
 #define SD_IO_CCCR_FN_ENABLE 0x02
 #define SD_IO_CCR_FN_ENABLE_FUNC1_EN (1 << 1)
 #define SD_IO_CCCR_FN_READY 0x03
+#define SD_IO_CCCR_FN_ID 0x09
+#define SD_IO_CCCR_FN_ID1 0x0A
+#define SD_IO_CCCR_FN_ID2 0x0B
+
+#define SD_IO_TUPLE_CODE 0x20
+#define SD_IO_TUPLE_SIZE 4
+#define SD_IO_ESPRESSIF_VENDOR_ID 0x0092
+// Minimum size of the CIS region for Espressif devices, should contain the manufacturer and device ID.
+#define SD_IO_CIS_MINIMUM_SIZE 32
+
 #define SD_BLOCK_SIZE 512
 
 /* Stub defines */
@@ -54,8 +64,7 @@ typedef struct {
        on-target concurrency issues */
     /* The host writes into CONF registers to send data to the slave, and reads back from STATE registers */
     /* Uses a different target base address from SLC slave registers, read or write with regular transactions */
-    uint32_t slchost_date_addr;
-    uint32_t slchost_date_expected_val;
+    uint16_t slchost_device_id;
     uint32_t slchost_state_w0_addr;
     uint32_t slchost_conf_w5_addr;
     uint32_t slchost_win_cmd_addr;
@@ -85,8 +94,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
     // ESP32
     {
         .sdio_supported = true,
-        .slchost_date_addr = 0x178,
-        .slchost_date_expected_val = 0x16022500,
+        .slchost_device_id = 0x0,
         .slchost_state_w0_addr = 0x64,
         .slchost_conf_w5_addr = 0x80,
         .slchost_win_cmd_addr = 0x84,
@@ -111,7 +119,19 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
     {},
 
     // ESP32C5
-    {},
+    {
+        .sdio_supported = true,
+        .slchost_device_id = 0x1017,
+        .slchost_state_w0_addr = 0x64,
+        .slchost_conf_w5_addr = 0x80,
+        .slchost_win_cmd_addr = 0x84,
+        .slchost_packet_space_end = 0x1f800,
+        .slc_conf1_addr = 0x70,
+        .slc_len_conf_addr = 0xF4,
+        .slc_conf1_tx_stitch_en = (1 << 5),
+        .slc_conf1_rx_stitch_en = (1 << 6),
+        .slc_len_conf_tx_packet_load_en = (1 << 24),
+    },
 
     // ESP32H2
     {},
@@ -119,8 +139,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
     // ESP32C6
     {
         .sdio_supported = true,
-        .slchost_date_addr = 0x178,
-        .slchost_date_expected_val = 0x21060700,
+        .slchost_device_id = 0x100D,
         .slchost_state_w0_addr = 0x64,
         .slchost_conf_w5_addr = 0x80,
         .slchost_win_cmd_addr = 0x84,
@@ -243,21 +262,40 @@ static esp_loader_error_t slave_detect_chip(void)
 {
     RETURN_ON_ERROR(slave_wait_ready(100));
 
-    for (int chip = 0; chip < ESP_MAX_CHIP; chip++) {
-        if (!esp_target[chip].sdio_supported) {
-            continue;
+    // CIS region exist in 0x1000~0x17FFF of FUNC 0, get the start address of it
+    // from CCCR register.
+    uint8_t cis[3] __attribute__((aligned(4)));
+    RETURN_ON_ERROR(loader_port_read(0, SD_IO_CCCR_FN_ID, cis, sizeof(cis), 0));
+    const uint32_t cis_ptr = cis[0] | (cis[1] << 8) | (cis[2] << 16);
+
+    uint32_t addr = cis_ptr;
+    uint16_t vendor_id = 0;
+    uint16_t device_id = 0;
+    // Not really max, but reasonable enough for reading manufacturer and device ID,
+    // which should be in the first
+    const uint32_t max_addr = addr + SD_IO_CIS_MINIMUM_SIZE;
+    while (addr < max_addr) {
+        uint8_t header[2] __attribute__((aligned(4)));
+        RETURN_ON_ERROR(loader_port_read(0, addr, header, sizeof(header), 0));
+        addr += sizeof(header);
+        const uint8_t tuple_code = header[0];
+        const uint8_t tuple_size = header[1];
+        if (tuple_code == SD_IO_TUPLE_CODE && tuple_size == SD_IO_TUPLE_SIZE) {
+            uint8_t ids[tuple_size] __attribute__((aligned(4)));
+            RETURN_ON_ERROR(loader_port_read(0, addr, ids, sizeof(ids), 0));
+            vendor_id = ids[0] | (ids[1] << 8);
+            device_id = ids[2] | (ids[3] << 8);
+            break;
         }
+        addr += tuple_size;
+    }
 
-        uint32_t reg;
-        RETURN_ON_ERROR(loader_port_read(1,
-                                         esp_target[chip].slchost_date_addr,
-                                         (uint8_t *)&reg,
-                                         sizeof(uint32_t),
-                                         loader_port_remaining_time()));
-
-        if (reg == esp_target[chip].slchost_date_expected_val) {
-            s_target_chip = (target_chip_t)chip;
-            return ESP_LOADER_SUCCESS;
+    if (vendor_id == SD_IO_ESPRESSIF_VENDOR_ID) {
+        for (target_chip_t chip = 0; chip < ESP_MAX_CHIP; chip++) {
+            if (esp_target[chip].sdio_supported && esp_target[chip].slchost_device_id == device_id) {
+                s_target_chip = chip;
+                return ESP_LOADER_SUCCESS;
+            }
         }
     }
 
@@ -402,10 +440,6 @@ static esp_loader_error_t initialize_connection(esp_loader_connect_args_t *conne
 
     RETURN_ON_ERROR(slave_init_io());
 
-    RETURN_ON_ERROR(slave_detect_chip());
-
-    RETURN_ON_ERROR(slave_init_link());
-
     return ESP_LOADER_SUCCESS;
 }
 
@@ -415,11 +449,17 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
 
     RETURN_ON_ERROR(initialize_connection(connect_args));
 
+    RETURN_ON_ERROR(slave_detect_chip());
+
+    RETURN_ON_ERROR(slave_init_link());
+
     RETURN_ON_ERROR(slave_upload_stub());
 
     loader_port_delay_ms(STUB_BOOT_TIMEOUT);
 
     RETURN_ON_ERROR(initialize_connection(connect_args));
+
+    RETURN_ON_ERROR(slave_init_link());
 
     RETURN_ON_ERROR(stub_wait_ready(STUB_DEFAULT_TIMEOUT, false));
 
@@ -561,6 +601,7 @@ esp_loader_error_t loader_mem_begin_cmd(uint32_t offset, uint32_t size, uint32_t
         esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
         loader_port_enter_bootloader();
         RETURN_ON_ERROR(initialize_connection(&connect_config));
+        RETURN_ON_ERROR(slave_init_link());
         esp_stub_set_running(false);
     }
     s_mem_offset = offset;
