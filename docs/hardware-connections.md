@@ -50,20 +50,25 @@ SDIO (Secure Digital Input Output) interface provides high-speed communication u
 
 ### Connection Pattern
 
-The SDIO connection requires 8 pins plus UART for monitoring:
+The SDIO connection requires 5 pins plus UART for monitoring:
 
 | Signal  |   Host Pin    |   Target Pin    | Description                 |
 | :-----: | :-----------: | :-------------: | :-------------------------- |
 |   CLK   | Host SDIO CLK |   Target CLK    | Clock signal                |
 |   CMD   | Host SDIO CMD |   Target CMD    | Command/response line       |
 |   D0    | Host SDIO D0  |    Target D0    | Data line 0                 |
-|   D1    | Host SDIO D1  |    Target D1    | Data line 1                 |
-|   D2    | Host SDIO D2  |    Target D2    | Data line 2                 |
-|   D3    | Host SDIO D3  |    Target D3    | Data line 3                 |
 |  RESET  |   Host GPIO   |  Target RESET   | Target device reset control |
 |  BOOT   |   Host GPIO   |   Target BOOT   | Boot mode selection         |
 | UART_RX | Host UART RX  | Target UART0_TX | Monitor output from target  |
 | UART_TX | Host UART TX  | Target UART0_RX | Send commands to target     |
+
+**4-bit Mode Pins (Optional)**: Additional pins for 4-bit SDIO interface:
+
+| Signal |   Host Pin   | Target Pin | Description              |
+| :----: | :----------: | :--------: | :----------------------- |
+|   D1   | Host SDIO D1 | Target D1  | Data line 1 (4-bit mode) |
+|   D2   | Host SDIO D2 | Target D2  | Data line 2 (4-bit mode) |
+|   D3   | Host SDIO D3 | Target D3  | Data line 3 (4-bit mode) |
 
 ### Hardware Requirements
 
@@ -73,7 +78,7 @@ The SDIO connection requires 8 pins plus UART for monitoring:
 **Pullup Guidelines**:
 
 - **Resistor Values**: 10kΩ to 47kΩ when needed
-- **Pins**: CMD, D0, D1, D2, D3
+- **Pins**: CMD, D0 (required), D1, D2, D3 (when using 4-bit mode)
 - **Power Rail**: Connect pullups to target device's VDD (3.3V)
 - **Note**: Some development boards may work without external pullups, but adding them improves signal integrity
 

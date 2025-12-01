@@ -50,7 +50,7 @@ esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t 
     s_reset_trigger_pin = config->reset_trigger_pin;
     s_boot_pin = config->boot_pin;
     s_card_config = (sdmmc_host_t)SDMMC_HOST_DEFAULT();
-    s_card_config.flags = SDMMC_HOST_FLAG_4BIT;
+    s_card_config.flags = config->bus_width == SDIO_1BIT ? SDMMC_HOST_FLAG_1BIT : SDMMC_HOST_FLAG_4BIT;
     s_card_config.max_freq_khz = config->max_freq_khz;
     s_card_config.slot = config->slot;
 
@@ -61,7 +61,7 @@ esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t 
         this flag ensures that SDMMC Driver allocates custom aligned buffer and memcpy the data to it.
         This should be reworked when the new sdmmc driver-ng comes out as it would not need same alignment for size and buffer.
     */
-    s_card_config.flags = SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
+    s_card_config.flags |= SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
 #endif
 
     if (!config->dont_initialize_host_driver) {
@@ -70,7 +70,8 @@ esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t 
         }
 
         sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-        slot_config.width = 4;
+        slot_config.flags = SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+        slot_config.width = config->bus_width == SDIO_1BIT ? 1 : 4;
 #if SOC_SDMMC_USE_GPIO_MATRIX
         slot_config.clk = config->sdio_clk_pin;
         slot_config.cmd = config->sdio_cmd_pin;
