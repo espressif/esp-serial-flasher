@@ -23,7 +23,7 @@ This library enables you to program Espressif SoCs from various host platforms u
 - **SDIO** - Secure Digital Input/Output (experimental)
 
 > [!NOTE]
-> SDIO interface is experimental and currently supported only with ESP32-P4 as host and ESP32-C6 as target. The implementation uses a custom stub that will be made available as part of the migration to [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
+> SDIO interface is experimental and currently supports only ESP32-C5 and ESP32-C6 as target. The implementation uses a custom stub that will be made available as part of the migration to [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
 
 ### Supported Host Platforms (device running this library and performing flashing)
 
@@ -45,7 +45,7 @@ This library enables you to program Espressif SoCs from various host platforms u
 | ESP32-C3 |  ✅  | ✅  |  ❌  |     ✅      |
 | ESP32-H2 |  ✅  | ✅  |  ❌  |     ✅      |
 | ESP32-C6 |  ✅  | ❌  |  ✅  |     ✅      |
-| ESP32-C5 |  ✅  | ❌  |  🚧  |     ✅      |
+| ESP32-C5 |  ✅  | ❌  |  ✅  |     ✅      |
 | ESP32-P4 |  ✅  | 🚧  |  ❌  |     ✅      |
 
 **Legend**: ✅ Supported | ❌ Not supported | 🚧 Under development

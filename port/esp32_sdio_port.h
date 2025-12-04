@@ -22,6 +22,11 @@
 extern "C" {
 #endif
 
+typedef enum {
+    SDIO_4BIT = 0,
+    SDIO_1BIT,
+} sdio_bus_width_t;
+
 typedef struct {
     /* The SDIO slot to use, changes the pin mapping when SOC_SDMMC_USE_IOMUX is used. */
     int slot;
@@ -45,6 +50,7 @@ typedef struct {
        for instance when you have multiple devices on the bus.
        All configuration values except reset and strapping pins are unused if set.*/
     bool dont_initialize_host_driver;
+    sdio_bus_width_t bus_width;
 } loader_esp32_sdio_config_t;
 
 /**

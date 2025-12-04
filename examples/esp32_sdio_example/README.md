@@ -14,8 +14,8 @@ The following steps are performed in order to re-program the targets memory:
 
 ## Hardware Required
 
-- **Host**: ESP32-P4 development board (with SDIO support)
-- **Target**: ESP32-C6 development board (with SDIO download support)
+- **Host**: Espressif SoC development board with SDIO Host support
+- **Target**: Espressif SoC development board with SDIO download support (e.g., ESP32-C6, ESP32-C5)
 - One or two USB cables for power supply and programming.
 - Jumper cables for host-to-target connections.
 - **Pullup resistors**: 10kΩ to 47kΩ resistors for SDIO signal lines (may be required - see connection details below).

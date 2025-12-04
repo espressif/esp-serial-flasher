@@ -64,6 +64,7 @@ void app_main(void)
         .max_freq_khz = SDMMC_FREQ_DEFAULT,
         .reset_trigger_pin = GPIO_NUM_54,
         .boot_pin = GPIO_NUM_53,
+        .bus_width = SDIO_4BIT,
         .sdio_d0_pin = GPIO_NUM_50,
         .sdio_d1_pin = GPIO_NUM_49,
         .sdio_d2_pin = GPIO_NUM_48,
