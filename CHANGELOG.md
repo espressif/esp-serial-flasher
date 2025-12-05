@@ -20,6 +20,18 @@
 </div>
 <hr>
 
+## v1.11.0 (2025-12-05)
+
+### ✨ New Features
+
+- Add SDIO support for ESP32-C5 as a target *(Jaroslav Burian - 4591799)*
+- Add support for 1-bit SDIO *(Jaroslav Burian - 4d54095)*
+
+### 🐛 Bug Fixes
+
+- Correct flash boundary check for read/verify operations *(RevK - bdf7b62)*
+
+
 ## v1.10.0 (2025-09-25)
 
 ### ✨ New Features
