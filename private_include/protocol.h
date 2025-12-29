@@ -279,6 +279,13 @@ esp_loader_error_t loader_flash_data_cmd(const uint8_t *data, uint32_t size);
 
 esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader);
 
+esp_loader_error_t loader_flash_deflate_begin_cmd(uint32_t offset, uint32_t erase_size, uint32_t block_size,
+        uint32_t blocks_to_write, bool encryption);
+
+esp_loader_error_t loader_flash_deflate_data_cmd(const uint8_t *data, uint32_t size);
+
+esp_loader_error_t loader_flash_deflate_end_cmd(bool stay_in_loader);
+
 #ifndef SERIAL_FLASHER_INTERFACE_SPI
 esp_loader_error_t loader_md5_cmd(uint32_t address, uint32_t size, uint8_t *md5_out);
 

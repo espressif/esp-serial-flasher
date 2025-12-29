@@ -409,6 +409,67 @@ esp_loader_error_t esp_loader_flash_finish(bool reboot)
     return loader_flash_end_cmd(!reboot);
 }
 
+/* Compressed flash download is not yet supported by SDIO interface */
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+
+esp_loader_error_t esp_loader_flash_deflate_start(uint32_t offset, uint32_t image_size,
+        uint32_t compressed_size, uint32_t block_size)
+{
+    s_flash_write_size = block_size;
+
+    // Address must be aligned to 4 bytes
+    if (offset % 4 != 0) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    // ESP8266 ROM does not support deflate
+    if (s_target == ESP8266_CHIP && !esp_stub_get_running()) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    }
+
+    RETURN_ON_ERROR(init_flash_params());
+    if (image_size + offset > s_target_flash_size) {
+        return ESP_LOADER_ERROR_IMAGE_SIZE;
+    }
+
+    bool encryption_in_cmd = encryption_in_begin_flash_cmd(s_target) && !esp_stub_get_running();
+    const uint32_t erase_size = calc_erase_size(esp_loader_get_target(), offset, image_size);
+    const uint32_t blocks_to_write = (compressed_size + block_size - 1) / block_size;
+
+    loader_port_start_timer(timeout_per_mb(erase_size, ERASE_FLASH_TIMEOUT_PER_MB));
+    return loader_flash_deflate_begin_cmd(offset, erase_size, block_size, blocks_to_write, encryption_in_cmd);
+}
+
+
+esp_loader_error_t esp_loader_flash_deflate_write(void *payload, uint32_t size)
+{
+    if (size > s_flash_write_size) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    unsigned int attempt = 0;
+    esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;
+    do {
+        loader_port_start_timer(DEFAULT_TIMEOUT);
+        result = loader_flash_deflate_data_cmd(payload, size);
+        attempt++;
+    } while (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
+
+    return result;
+}
+
+
+esp_loader_error_t esp_loader_flash_deflate_finish(bool reboot)
+{
+    if (!reboot && !esp_stub_get_running()) {
+        return ESP_LOADER_SUCCESS;
+    }
+
+    loader_port_start_timer(DEFAULT_TIMEOUT);
+    return loader_flash_deflate_end_cmd(!reboot);
+}
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
+
 esp_loader_error_t esp_loader_flash_erase(void)
 {
     if (esp_stub_get_running()) {

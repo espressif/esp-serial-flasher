@@ -137,6 +137,81 @@ esp_loader_error_t loader_flash_end_cmd(bool stay_in_loader)
     return send_cmd(&cmd_config);
 }
 
+esp_loader_error_t loader_flash_deflate_begin_cmd(uint32_t offset,
+        uint32_t erase_size,
+        uint32_t block_size,
+        uint32_t blocks_to_write,
+        bool encryption)
+{
+    flash_begin_command_t flash_begin_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = FLASH_DEFL_BEGIN,
+            .size = CMD_SIZE(flash_begin_cmd) - (encryption ? 0 : sizeof(uint32_t)),
+            .checksum = 0
+        },
+        .erase_size = erase_size,
+        .packet_count = blocks_to_write,
+        .packet_size = block_size,
+        .offset = offset,
+        .encrypted = 0
+    };
+
+    s_sequence_number = 0;
+
+    const send_cmd_config cmd_config = {
+        .cmd = &flash_begin_cmd,
+        .cmd_size = sizeof(flash_begin_cmd) - (encryption ? 0 : sizeof(uint32_t)),
+    };
+
+    return send_cmd(&cmd_config);
+}
+
+
+esp_loader_error_t loader_flash_deflate_data_cmd(const uint8_t *data, uint32_t size)
+{
+    data_command_t data_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = FLASH_DEFL_DATA,
+            .size = CMD_SIZE(data_cmd) + size,
+            .checksum = compute_checksum(data, size)
+        },
+        .data_size = size,
+        .sequence_number = s_sequence_number++,
+    };
+
+    const send_cmd_config cmd_config = {
+        .cmd = &data_cmd,
+        .cmd_size = sizeof(data_cmd),
+        .data = data,
+        .data_size = size,
+    };
+
+    return send_cmd(&cmd_config);
+}
+
+
+esp_loader_error_t loader_flash_deflate_end_cmd(bool stay_in_loader)
+{
+    flash_end_command_t end_cmd = {
+        .common = {
+            .direction = WRITE_DIRECTION,
+            .command = FLASH_DEFL_END,
+            .size = CMD_SIZE(end_cmd),
+            .checksum = 0
+        },
+        .stay_in_loader = stay_in_loader
+    };
+
+    const send_cmd_config cmd_config = {
+        .cmd = &end_cmd,
+        .cmd_size = sizeof(end_cmd)
+    };
+
+    return send_cmd(&cmd_config);
+}
+
 
 esp_loader_error_t loader_flash_read_rom_cmd(const uint32_t address, uint8_t *data)
 {
