@@ -33,12 +33,12 @@ repos:
         args: [--options=astyle_config]
         exclude: *excludes
   - repo: https://github.com/espressif/conventional-precommit-linter
-    rev: v1.10.0
+    rev: v1.11.0
     hooks:
       - id: conventional-precommit-linter
         stages: [commit-msg]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.3
+    rev: v0.14.10
     hooks:
       - id: ruff # Runs ruff linter
         args: [--fix, --exit-non-zero-on-fix] # --fix for fixing errors
@@ -60,7 +60,7 @@ repos:
               CHANGELOG\.md
             )$
   - repo: https://github.com/executablebooks/mdformat
-    rev: 0.7.22
+    rev: 1.0.0
     hooks:
       - id: mdformat
         args: [--number] # Keep numbering for ordered lists
