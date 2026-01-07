@@ -228,6 +228,65 @@ esp_loader_error_t esp_loader_flash_write(void *payload, uint32_t size);
   */
 esp_loader_error_t esp_loader_flash_finish(bool reboot);
 
+/* Compressed flash download is not yet supported by SDIO interface */
+#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+
+/**
+  * @brief Initiates compressed flash operation (DEFLATE/zlib stream).
+  *
+  * @param offset[in]          Address from which flash operation will be
+  *                            performed. Must be 4 byte aligned.
+  * @param image_size[in]      Size of the uncompressed data in bytes.
+  *                            Must be 4 byte aligned.
+  * @param compressed_size[in] Size of the compressed data in bytes.
+  * @param block_size[in]      Size of each compressed block sent in
+  *                            esp_loader_flash_deflate_write().
+  *
+  * @note The compressed stream must use zlib headers (zlib.compress()).
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_IMAGE_SIZE Image exceeds flash size
+  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid parameter
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
+  */
+esp_loader_error_t esp_loader_flash_deflate_start(uint32_t offset,
+        uint32_t image_size,
+        uint32_t compressed_size,
+        uint32_t block_size);
+
+/**
+  * @brief Writes a compressed data block to target flash memory.
+  *
+  * @param payload[in] Data buffer containing a zlib-compressed block.
+  * @param size[in]    Size of payload in bytes (must not exceed block_size).
+  *
+  * @note  size must not be greater than block_size supplied to previously called
+  *        esp_loader_flash_deflate_start function.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid parameter
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  */
+esp_loader_error_t esp_loader_flash_deflate_write(void *payload, uint32_t size);
+
+/**
+  * @brief Ends compressed flash operation.
+  *
+  * @param reboot[in] reboot the target if true.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  */
+esp_loader_error_t esp_loader_flash_deflate_finish(bool reboot);
+
+#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
+
 /**
   * @brief Detects the size of the flash chip used by target
   *

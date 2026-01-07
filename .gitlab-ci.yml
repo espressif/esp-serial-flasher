@@ -32,6 +32,7 @@ cache:
 
 
 build_target_example:
+  # Build examples that will be flashed by the esp-serial-flasher host
   stage: build_target_example
   image: espressif/idf:release-v5.5
   tags:
@@ -51,30 +52,36 @@ build_target_example:
     CCACHE_SLOPPINESS: "time_macros"
   parallel:
     matrix:
-      - CHIP: esp32
+      - TARGET_CHIP: esp32
         BUILD_TYPE: flash
         PATHS: "stm32_example:zephyr_example:pi_pico_example:raspberry_example"
-      - CHIP: esp32c3
+      - TARGET_CHIP: esp32c3
         BUILD_TYPE: flash
         PATHS: "esp32_usb_cdc_acm_example"
-      - CHIP: esp32c3
+      - TARGET_CHIP: esp32c3
         BUILD_TYPE: ram
         PATHS: "esp32_spi_load_ram_example"
-      - CHIP: esp32c6
+      - TARGET_CHIP: esp32c6
         BUILD_TYPE: flash
         PATHS: "esp32_sdio_example"
-      - CHIP: esp32c6
+      - TARGET_CHIP: esp32c6
         BUILD_TYPE: ram
         PATHS: "esp32_sdio_load_ram_example"
-      - CHIP: esp32h2
+      - TARGET_CHIP: esp32h2
         BUILD_TYPE: flash
-        PATHS: "esp32_example:esp32_stub_example:esp32_fast_reflash_example:esp32_read_flash_example:esp32_get_target_info_example"
-      - CHIP: esp32h2
+        PATHS: "esp32_example:esp32_stub_example:esp32_fast_reflash_example:esp32_read_flash_example:esp32_get_target_info_example:esp32_deflate_example"
+      - TARGET_CHIP: esp32h2
         BUILD_TYPE: ram
         PATHS: "esp32_load_ram_example"
   script:
     - cd $CI_PROJECT_DIR
-    - python3 test/build_target_example.py ${CHIP} ${BUILD_TYPE} $(echo ${PATHS} | tr ':' ' ')
+    - python3 test/build_target_example.py ${TARGET_CHIP} ${BUILD_TYPE} $(echo ${PATHS} | tr ':' ' ')
+    - |
+      if echo ${PATHS} | grep -q "esp32_deflate_example"; then
+        # esp32_deflate_example needs to have target firmware binaries compressed for deflate flashing, because it flashes compressed data
+        echo "Running compress_firmware.py for esp32_deflate_example..."
+        python3 examples/esp32_deflate_example/target-firmware/compress_firmware.py
+      fi
 
 run_pre_commit:
   stage: pre_check
