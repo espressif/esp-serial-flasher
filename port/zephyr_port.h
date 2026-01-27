@@ -16,22 +16,15 @@
 
 #pragma once
 
-#include "esp_loader_io.h"
-#include <zephyr/kernel.h>
-#include <zephyr/drivers/gpio.h>
-#include <stdint.h>
+#include <esp_loader.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct {
-    const struct device *uart_dev;
-    const struct gpio_dt_spec enable_spec;
-    const struct gpio_dt_spec boot_spec;
-} loader_zephyr_config_t;
+#define loader_port_debug_print(str) LOG_DBG(str)
 
-esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config);
+esp_loader_error_t loader_port_zephyr_init(void);
 
 #ifdef __cplusplus
 }

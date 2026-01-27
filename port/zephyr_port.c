@@ -14,33 +14,26 @@
  * limitations under the License.
  */
 
-#include "zephyr_port.h"
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/console/tty.h>
 
-static const struct device *uart_dev;
-static struct gpio_dt_spec enable_spec;
-static struct gpio_dt_spec boot_spec;
+#include <zephyr_port.h>
+#include <esp_loader_io.h>
+
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(esf, CONFIG_ESP_SERIAL_FLASHER_LOG_LEVEL);
+
+/* Get chip interface from the DTS */
+#define ESF_NODE DT_NODELABEL(esp_loader0)
+static const struct device *uart_dev = DEVICE_DT_GET(DT_PHANDLE(ESF_NODE, uart));
+static struct gpio_dt_spec reset_spec = GPIO_DT_SPEC_GET(ESF_NODE, reset_gpios);
+static struct gpio_dt_spec boot_spec = GPIO_DT_SPEC_GET(ESF_NODE, boot_gpios);
 
 static struct tty_serial tty;
 static char tty_rx_buf[CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE];
 static char tty_tx_buf[CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE];
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
-{
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printk("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printk("%02x ", data[i]);
-    }
-}
-#endif
 
 esp_loader_error_t configure_tty()
 {
@@ -70,9 +63,8 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
         if (read < 0) {
             return ESP_LOADER_ERROR_TIMEOUT;
         }
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, read, false);
-#endif
+        LOG_HEXDUMP_DBG(data, read, "READ");
+
         total_read += read;
         remaining -= read;
     }
@@ -97,9 +89,8 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
         if (written < 0) {
             return ESP_LOADER_ERROR_TIMEOUT;
         }
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, written, true);
-#endif
+        LOG_HEXDUMP_DBG(data, written, "WRITE");
+
         total_written += written;
         remaining -= written;
     }
@@ -107,27 +98,38 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config)
-{
-    uart_dev = config->uart_dev;
-    enable_spec = config->enable_spec;
-    boot_spec = config->boot_spec;
-    return configure_tty();
-}
-
 void loader_port_reset_target(void)
 {
-    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? true : false);
+#ifdef CONFIG_SERIAL_FLASHER_RESET_INVERT
+    gpio_pin_set_dt(&reset_spec, 0);
+#else
+    gpio_pin_set_dt(&reset_spec, 1);
+#endif
     loader_port_delay_ms(CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? false : true);
+
+#ifdef CONFIG_SERIAL_FLASHER_RESET_INVERT
+    gpio_pin_set_dt(&reset_spec, 1);
+#else
+    gpio_pin_set_dt(&reset_spec, 0);
+#endif
 }
 
 void loader_port_enter_bootloader(void)
 {
-    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? true : false);
+#ifdef CONFIG_SERIAL_FLASHER_BOOT_INVERT
+    gpio_pin_set_dt(&boot_spec, 0);
+#else
+    gpio_pin_set_dt(&boot_spec, 1);
+#endif
+
     loader_port_reset_target();
     loader_port_delay_ms(CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? false : true);
+
+#ifdef CONFIG_SERIAL_FLASHER_BOOT_INVERT
+    gpio_pin_set_dt(&boot_spec, 1);
+#else
+    gpio_pin_set_dt(&boot_spec, 0);
+#endif
 }
 
 void loader_port_delay_ms(uint32_t ms)
@@ -168,3 +170,40 @@ esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
     /* bitrate-change can require tty re-configuration */
     return configure_tty();
 }
+
+esp_loader_error_t loader_port_zephyr_init(void)
+{
+    if (!device_is_ready(uart_dev)) {
+        printk("ESP UART not ready");
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    if (!device_is_ready(boot_spec.port)) {
+        printk("ESP boot GPIO not ready");
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    if (!device_is_ready(reset_spec.port)) {
+        printk("ESP reset GPIO not ready");
+        return ESP_LOADER_ERROR_INVALID_RESPONSE;
+    }
+
+    /* Disengage pins */
+    gpio_pin_configure_dt(&boot_spec, GPIO_OUTPUT_INACTIVE);
+    gpio_pin_configure_dt(&reset_spec, GPIO_OUTPUT_INACTIVE);
+
+    return configure_tty();
+}
+
+static int loader_port_init(void)
+{
+    if (loader_port_zephyr_init() != ESP_LOADER_SUCCESS) {
+        LOG_ERR("ESP loader init failed");
+        return -EIO;
+    }
+    LOG_DBG("ESP loader init OK");
+
+    return 0;
+}
+
+SYS_INIT(loader_port_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);

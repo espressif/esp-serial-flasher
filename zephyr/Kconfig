@@ -1,9 +1,14 @@
+# Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
+# SPDX-License-Identifier: Apache-2.0
+
 config ESP_SERIAL_FLASHER
-    bool "Enable ESP serial flasher library"
-    default y
+    bool "ESP Serial Flasher support"
     select CONSOLE_SUBSYS
+    select GPIO
     help
-      Select this option to enable the ESP serial flasher library.
+      This option enables the ESP Serial Flasher library
+
+if ESP_SERIAL_FLASHER
 
 config ESP_SERIAL_FLASHER_UART_BUFSIZE
     int "ESP Serial Flasher UART buffer size"
@@ -11,6 +16,11 @@ config ESP_SERIAL_FLASHER_UART_BUFSIZE
     help
       Buffer size for UART TX and RX packets
 
-if ESP_SERIAL_FLASHER
-    rsource "../Kconfig"
-endif
+config ESP_SERIAL_FLASHER_LOG_LEVEL
+    int "ESP Serial flasher log level"
+    default 3
+    depends on LOG
+
+rsource "../Kconfig"
+
+endif # ESP_SERIAL_FLASHER
