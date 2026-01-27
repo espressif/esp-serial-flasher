@@ -1,0 +1,47 @@
+/*
+ * Copyright (c) 2026 Espressif Systems (Shanghai) Co., Ltd.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/ {
+	esp_loader0: esp_loader {
+		compatible = "espressif,esp-loader";
+		uart = <&uart1>;
+		default-baudrate = <115200>;
+		higher-baudrate = <230400>;
+		reset-gpios = <&gpio0 7 GPIO_PULL_UP>;
+		boot-gpios = <&gpio0 8 GPIO_PULL_UP>;
+		sync-timeout-ms = <100>;
+		num-trials = <10>;
+		status = "disabled";
+	};
+
+	chosen {
+		zephyr,esp-loader = &esp_loader0;
+	};
+};
+
+&pinctrl {
+	uart1_example: uart1_example {
+		group1 {
+			pinmux = <UART1_TX_GPIO18>;
+			output-high;
+		};
+		group2 {
+			pinmux = <UART1_RX_GPIO17>;
+			bias-pull-up;
+		};
+	};
+};
+
+&uart1 {
+	pinctrl-0 = <&uart1_example>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&esp_loader0 {
+	status = "okay";
+};

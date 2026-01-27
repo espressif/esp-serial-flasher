@@ -1,5 +1,7 @@
-name: esp-flasher
+name: esp-serial-flasher
 
 build:
-  cmake: zephyr
+  settings:
+    dts_root: zephyr
+  cmake: zephyr/subsys/esp_loader
   kconfig: zephyr/Kconfig
