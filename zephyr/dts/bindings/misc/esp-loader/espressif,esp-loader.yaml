@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  ESP Serial Flasher target interface. Controls a target ESP SoC over UART
+  using two GPIOs (reset and boot strapping) to enter and exit the ROM
+  download mode. Configure one node per target device; select the active
+  instance via the zephyr,esp-loader chosen property.
+
+compatible: "espressif,esp-loader"
+
+include:
+  - base.yaml
+
+properties:
+  uart:
+    type: phandle
+    required: true
+    description: UART node used for ROM protocol communication with the target.
+
+  reset-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      GPIO connected to the target EN/RST pin. Driven low to hold the target
+      in reset, then released to start execution. Use GPIO_ACTIVE_LOW when
+      the signal is inverted by external hardware.
+
+  boot-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      GPIO connected to the target IO0/BOOT pin. Driven low before releasing
+      reset to force the target into ROM download mode. Use GPIO_ACTIVE_LOW
+      when the signal is inverted by external hardware.
+
+  default-baudrate:
+    type: int
+    required: true
+    description: Initial UART baud rate used during ROM handshake and flashing.
+
+  higher-baudrate:
+    type: int
+    required: true
+    description: |
+      Optional higher baud rate negotiated with the target after a successful
+      connection to speed up flashing. Set to 0 to stay at default-baudrate.
+
+  num-trials:
+    type: int
+    required: true
+    description: Number of sync attempts before esp_loader_connect() gives up.
+
+  sync-timeout-ms:
+    type: int
+    required: true
+    description: Timeout in milliseconds for each individual sync attempt.

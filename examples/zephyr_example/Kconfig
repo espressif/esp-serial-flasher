@@ -1,0 +1,12 @@
+menu "Example config"
+
+source "Kconfig.zephyr"
+
+config ESP_SERIAL_FLASHER_SHELL
+    bool "ESP Serial Flasher shell user interface"
+    select SHELL
+    help
+      This option enables the user interactive SHELL
+      in Zephyr example application
+
+endmenu

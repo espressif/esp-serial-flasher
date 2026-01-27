@@ -51,7 +51,7 @@ No pre-built example project is provided for STM32, as STM32 projects are chip-s
 
 ## Zephyr Setup
 
-**Testing Status**: Regularly tested with Zephyr RTOS v4.0.0 and Zephyr SDK v0.17.0.
+**Testing Status**: Regularly tested with Zephyr RTOS v4.3.0 and Zephyr SDK v0.17.0.
 
 ### Prerequisites
 
@@ -61,31 +61,35 @@ No pre-built example project is provided for STM32, as STM32 projects are chip-s
 
 ### Setup
 
-ESP Serial Flasher can be integrated as a Zephyr module. Add the following to your West manifest file (`west.yml`):
+ESP Serial Flasher can be integrated as an external Zephyr module. Add the `zephyr/submanifest/esf.yaml` file with the following content:
 
 ```yaml
 manifest:
   projects:
-    - name: esp-flasher
+    - name: esp-serial-flasher
       url: https://github.com/espressif/esp-serial-flasher
       revision: master
-      path: modules/lib/esp_flasher
+      path: modules/lib/esp_serial_flasher # adjust the path as needed
 ```
 
-After updating the manifest, fetch the module:
+After updating the submanifest, update all modules:
 
 ```bash
 west update
 ```
 
+Or fetch only the `esp-serial-flasher` module:
+
+```bash
+west update esp-serial-flasher
+```
+
 ### Project Configuration
 
-Add these configuration options to your `prj.conf`:
+All necessary configuration options are set in the example `prj.conf`. However, you can pass additional configuration options
+on the command line or add them to the `prj.conf`.
 
-```text
-CONFIG_ESP_SERIAL_FLASHER=y
-CONFIG_CONSOLE_GETCHAR=y
-```
+Please refer to the Zephyr example [README.md](../examples/zephyr_example/README.md) for more details on usage.
 
 ### Example Code
 
