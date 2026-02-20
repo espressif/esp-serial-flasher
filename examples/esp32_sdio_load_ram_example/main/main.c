@@ -58,7 +58,6 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-
     const loader_esp32_sdio_config_t config = {
         .slot = SDMMC_HOST_SLOT_1,
         .max_freq_khz = SDMMC_FREQ_DEFAULT,
@@ -73,16 +72,21 @@ void app_main(void)
         .sdio_cmd_pin = GPIO_NUM_52,
     };
 
+    esp_loader_t loader;
+
     if (loader_port_esp32_sdio_init(&config) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, " SDIO initialization failed.");
         abort();
     }
+    if (esp_loader_init_sdio(&loader, &esp32_sdio_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, " SDIO initialization failed.");
+        abort();
+    }
 
-    if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, 0) == ESP_LOADER_SUCCESS) {
 
         ESP_LOGI(TAG, "Loading app to RAM ...");
-        esp_loader_error_t err = load_ram_binary(app_bin);
-        loader_port_esp32_sdio_deinit();
+        esp_loader_error_t err = load_ram_binary(&loader, app_bin);
         if (err == ESP_LOADER_SUCCESS) {
             // Forward slave's serial output
             ESP_LOGI(TAG, "********************************************");

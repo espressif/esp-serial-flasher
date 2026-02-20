@@ -52,7 +52,7 @@ idf.py build
 
 **Time required**: 2-5 minutes depending on configuration
 **Configuration options**: Set via `idf.py menuconfig` or `-D` flags
-**Common build flags**: `-DMD5_ENABLED=1`, `-DSERIAL_FLASHER_INTERFACE_UART=1`
+**Common build flags**: `-DMD5_ENABLED=1`
 
 ### STM32 Build
 
@@ -234,12 +234,23 @@ port/                  # Platform-specific implementations
 
 ### Key Configuration Options
 
-**Interface Selection (choose one):**
+**Interface / Protocol Selection:**
 
-- `SERIAL_FLASHER_INTERFACE_UART` (default)
-- `SERIAL_FLASHER_INTERFACE_SPI` (RAM loading only)
-- `SERIAL_FLASHER_INTERFACE_USB`
-- `SERIAL_FLASHER_INTERFACE_SDIO` (experimental)
+In v2 there are no compile-time interface flags. The protocol is selected at runtime by calling the appropriate init function before any other `esp_loader_*` call:
+
+- `esp_loader_init_uart(&loader, &my_uart_port)` — UART
+- `esp_loader_init_usb(&loader, &my_usb_port)` — USB CDC-ACM
+- `esp_loader_init_spi(&loader, &my_spi_port)` — SPI (RAM download only)
+- `esp_loader_init_sdio(&loader, &my_sdio_port)` — SDIO (experimental)
+
+For ESP-IDF / Kconfig builds, enable the port implementations you need with:
+
+- `CONFIG_SERIAL_FLASHER_PORT_UART=y`
+- `CONFIG_SERIAL_FLASHER_PORT_USB_CDC_ACM=y`
+- `CONFIG_SERIAL_FLASHER_PORT_SPI=y`
+- `CONFIG_SERIAL_FLASHER_PORT_SDIO=y`
+
+Each enabled option compiles the matching `*_port.c` and exposes an `esp_loader_port_t` instance (e.g. `esp32_uart_port`). Multiple ports can be enabled simultaneously.
 
 **Common Options:**
 

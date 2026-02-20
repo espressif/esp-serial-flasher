@@ -55,8 +55,9 @@ static bool baud_is_within_tolerance(const uint requested_baudrate, const uint g
     return (baudrate_error < 1.0f) ? true : false;
 }
 
-esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t pi_pico_uart_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
+    (void)port;
     const uint32_t deadline_ms = to_ms_since_boot(get_absolute_time()) + timeout;
 
     size_t pos = 0;
@@ -79,8 +80,9 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
 }
 
 
-esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t pi_pico_uart_read(esp_loader_port_t *port, uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
+    (void)port;
     const uint32_t deadline_ms = to_ms_since_boot(get_absolute_time()) + timeout;
 
     size_t pos = 0;
@@ -146,51 +148,58 @@ void loader_port_pi_pico_deinit(void)
     gpio_deinit(s_boot_pin_num);
 }
 
-void loader_port_enter_bootloader(void)
+static void pi_pico_uart_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
-    gpio_put(s_boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
-
-    loader_port_reset_target();
-    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-
-    gpio_put(s_boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
-}
-
-
-void loader_port_reset_target(void)
-{
-    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
-}
-
-
-void loader_port_delay_ms(const uint32_t ms)
-{
+    (void)port;
     sleep_ms(ms);
 }
 
 
-void loader_port_start_timer(const uint32_t ms)
+static void pi_pico_uart_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     s_time_end = to_ms_since_boot(get_absolute_time()) + ms;
 }
 
 
-uint32_t loader_port_remaining_time(void)
+static uint32_t pi_pico_uart_remaining_time(esp_loader_port_t *port)
 {
+    (void)port;
     int32_t remaining = s_time_end - to_ms_since_boot(get_absolute_time());
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
 
-void loader_port_debug_print(const char *str)
+static void pi_pico_uart_reset_target(esp_loader_port_t *port)
 {
+    (void)port;
+    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    sleep_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+}
+
+
+static void pi_pico_uart_enter_bootloader(esp_loader_port_t *port)
+{
+    (void)port;
+    gpio_put(s_boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
+    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    sleep_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    gpio_put(s_reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    sleep_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
+    gpio_put(s_boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
+}
+
+
+static void pi_pico_uart_debug_print(esp_loader_port_t *port, const char *str)
+{
+    (void)port;
     printf("DEBUG: %s\n", str);
 }
 
-esp_loader_error_t loader_port_change_transmission_rate(const uint32_t baudrate)
+static esp_loader_error_t pi_pico_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
+    (void)port;
     const uint got_baudrate = uart_set_baudrate(s_uart_inst, baudrate);
 
     if (!baud_is_within_tolerance(baudrate, got_baudrate)) {
@@ -199,3 +208,17 @@ esp_loader_error_t loader_port_change_transmission_rate(const uint32_t baudrate)
 
     return ESP_LOADER_SUCCESS;
 }
+
+static const esp_loader_port_ops_t pi_pico_uart_ops = {
+    .enter_bootloader         = pi_pico_uart_enter_bootloader,
+    .reset_target             = pi_pico_uart_reset_target,
+    .start_timer              = pi_pico_uart_start_timer,
+    .remaining_time           = pi_pico_uart_remaining_time,
+    .delay_ms                 = pi_pico_uart_delay_ms,
+    .debug_print              = pi_pico_uart_debug_print,
+    .change_transmission_rate = pi_pico_uart_change_rate,
+    .write                    = pi_pico_uart_write,
+    .read                     = pi_pico_uart_read,
+};
+
+esp_loader_port_t pi_pico_uart_port = { .ops = &pi_pico_uart_ops };

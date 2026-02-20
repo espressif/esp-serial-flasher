@@ -112,6 +112,8 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  esp_loader_t loader;
+
   loader_stm32_config_t config = {
       .huart = &huart2,
       .port_io0 = TARGET_IO0_GPIO_Port,
@@ -121,18 +123,19 @@ int main(void)
   };
 
   loader_port_stm32_init(&config);
+  esp_loader_init_uart(&loader, &stm32_uart_port);
 
-  if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+  if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
     printf("Loading bootloader...\n");
-    target_chip_t chip = esp_loader_get_target();
+    target_chip_t chip = esp_loader_get_target(&loader);
     uint32_t bootloader_addr = get_bootloader_address(chip);
-    flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
+    flash_binary(&loader, bootloader_bin, bootloader_bin_size, bootloader_addr);
     printf("Loading partition table...\n");
-    flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
+    flash_binary(&loader, partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
     printf("Loading app...\n");
-    flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
-    esp_loader_reset_target();
+    flash_binary(&loader, app_bin, app_bin_size, APPLICATION_ADDRESS);
+    esp_loader_reset_target(&loader);
 
 #if (HIGHER_BAUDRATE != 115200)
     HAL_UART_DeInit(&huart2);

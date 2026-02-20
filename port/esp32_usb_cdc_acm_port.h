@@ -55,6 +55,14 @@ typedef struct {
     loader_port_esp32_usb_cdc_acm_callback_t acm_host_serial_state_callback;
 } loader_esp32_usb_cdc_acm_config_t;
 
+/** Port operations vtable for the ESP32 USB CDC-ACM port. */
+extern esp_loader_port_t esp32_usb_cdc_acm_port;
+
+/**
+  * @brief Initializes the USB CDC-ACM hardware.
+  *
+  * Call this before esp_loader_init() to open the CDC-ACM device.
+  */
 esp_loader_error_t loader_port_esp32_usb_cdc_acm_init(const loader_esp32_usb_cdc_acm_config_t *config);
 
 esp_loader_error_t loader_port_esp32_usb_cdc_acm_deinit(void);

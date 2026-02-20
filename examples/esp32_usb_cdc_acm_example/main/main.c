@@ -68,6 +68,8 @@ static void device_disconnected_callback(void)
  */
 void app_main(void)
 {
+    esp_loader_t loader;
+
     /* Install USB Host driver. Should only be called once in entire application */
     ESP_LOGI(TAG, "Installing USB Host");
     const usb_host_config_t host_config = {
@@ -101,22 +103,25 @@ void app_main(void)
         if (loader_port_esp32_usb_cdc_acm_init(&config) != ESP_LOADER_SUCCESS) {
             continue;
         }
+        if (esp_loader_init_usb(&loader, &esp32_usb_cdc_acm_port) != ESP_LOADER_SUCCESS) {
+            continue;
+        }
 
         device_disconnected_sem = xSemaphoreCreateBinary();
         assert(device_disconnected_sem);
 
         /* The ESP32-S3 ignores the line coding set commands,
            so we don't set the higher baudrate argument */
-        if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
+        if (connect_to_target(&loader, 0) == ESP_LOADER_SUCCESS) {
 
             ESP_LOGI(TAG, "Loading bootloader...");
-            target_chip_t chip = esp_loader_get_target();
+            target_chip_t chip = esp_loader_get_target(&loader);
             uint32_t bootloader_addr = get_bootloader_address(chip);
-            flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
+            flash_binary(&loader, bootloader_bin, bootloader_bin_size, bootloader_addr);
             ESP_LOGI(TAG, "Loading partition table...");
-            flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
+            flash_binary(&loader, partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
             ESP_LOGI(TAG, "Loading app...");
-            flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
+            flash_binary(&loader, app_bin, app_bin_size, APPLICATION_ADDRESS);
             ESP_LOGI(TAG, "Done!");
         }
 

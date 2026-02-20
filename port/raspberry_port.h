@@ -29,7 +29,16 @@ typedef struct {
     uint32_t gpio0_trigger_pin;
 } loader_raspberry_config_t;
 
+/** Port operations vtable for the Raspberry Pi UART port. */
+extern esp_loader_port_t raspi_uart_port;
+
+/**
+  * @brief Initializes the Raspberry Pi UART hardware.
+  *
+  * Call this before esp_loader_init() to open and configure the serial device.
+  */
 esp_loader_error_t loader_port_raspberry_init(const loader_raspberry_config_t *config);
+
 void loader_port_deinit(void);
 
 #ifdef __cplusplus

@@ -215,3 +215,4 @@ After successful platform setup:
 1. **Review the [Configuration Guide](configuration.md)** for library configuration options
 2. **Check platform-specific examples** in the `examples/` directory
 3. **Read the [API documentation](../README.md)** for usage details
+4. **Upgrading from v1?** See the [Migration Guide](migration-v1-to-v2.md)

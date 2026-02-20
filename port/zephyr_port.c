@@ -42,6 +42,8 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 }
 #endif
 
+static uint64_t s_time_end;
+
 esp_loader_error_t configure_tty()
 {
     if (tty_init(&tty, uart_dev) < 0 ||
@@ -53,8 +55,9 @@ esp_loader_error_t configure_tty()
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t zephyr_uart_read(esp_loader_port_t *port, uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
+    (void)port;
     if (!device_is_ready(uart_dev) || data == NULL || size == 0) {
         return ESP_LOADER_ERROR_FAIL;
     }
@@ -80,8 +83,9 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t zephyr_uart_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
+    (void)port;
     if (!device_is_ready(uart_dev) || data == NULL || size == 0) {
         return ESP_LOADER_ERROR_FAIL;
     }
@@ -115,41 +119,47 @@ esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config)
     return configure_tty();
 }
 
-void loader_port_reset_target(void)
+static void zephyr_uart_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
-    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? true : false);
-    loader_port_delay_ms(CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? false : true);
-}
-
-void loader_port_enter_bootloader(void)
-{
-    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? true : false);
-    loader_port_reset_target();
-    loader_port_delay_ms(CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? false : true);
-}
-
-void loader_port_delay_ms(uint32_t ms)
-{
+    (void)port;
     k_msleep(ms);
 }
 
-static uint64_t s_time_end;
-
-void loader_port_start_timer(uint32_t ms)
+static void zephyr_uart_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     s_time_end = sys_timepoint_calc(Z_TIMEOUT_MS(ms)).tick;
 }
 
-uint32_t loader_port_remaining_time(void)
+static uint32_t zephyr_uart_remaining_time(esp_loader_port_t *port)
 {
+    (void)port;
     int64_t remaining = k_ticks_to_ms_floor64(s_time_end - k_uptime_ticks());
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
-esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
+static void zephyr_uart_reset_target(esp_loader_port_t *port)
 {
+    (void)port;
+    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? true : false);
+    k_msleep(CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? false : true);
+}
+
+static void zephyr_uart_enter_bootloader(esp_loader_port_t *port)
+{
+    (void)port;
+    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? true : false);
+    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? true : false);
+    k_msleep(CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    gpio_pin_set_dt(&enable_spec, SERIAL_FLASHER_RESET_INVERT ? false : true);
+    k_msleep(CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
+    gpio_pin_set_dt(&boot_spec, SERIAL_FLASHER_BOOT_INVERT ? false : true);
+}
+
+static esp_loader_error_t zephyr_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
+{
+    (void)port;
     struct uart_config uart_config;
 
     if (!device_is_ready(uart_dev)) {
@@ -168,3 +178,17 @@ esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
     /* bitrate-change can require tty re-configuration */
     return configure_tty();
 }
+
+static const esp_loader_port_ops_t zephyr_uart_ops = {
+    .enter_bootloader         = zephyr_uart_enter_bootloader,
+    .reset_target             = zephyr_uart_reset_target,
+    .start_timer              = zephyr_uart_start_timer,
+    .remaining_time           = zephyr_uart_remaining_time,
+    .delay_ms                 = zephyr_uart_delay_ms,
+    .debug_print              = NULL,
+    .change_transmission_rate = zephyr_uart_change_rate,
+    .write                    = zephyr_uart_write,
+    .read                     = zephyr_uart_read,
+};
+
+esp_loader_port_t zephyr_uart_port = { .ops = &zephyr_uart_ops };

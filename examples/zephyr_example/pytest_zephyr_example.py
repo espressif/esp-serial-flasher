@@ -30,6 +30,7 @@ def flash_zephyr(app_path: str, build_dir: str, port: str) -> None:
                 block = block + bytes([0xFF]) * (esp.FLASH_WRITE_SIZE - len(block))
                 esp.flash_block(block, i + FLASH_ADDRESS)
             esp.flash_finish()
+            print("\n")
             print("Flashed successfully")
 
             esp.hard_reset()

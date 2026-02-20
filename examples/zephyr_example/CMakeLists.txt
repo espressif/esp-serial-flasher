@@ -15,9 +15,6 @@ zephyr_library_include_directories(
   ../common
   )
 
-# Needed for example_common
-add_compile_definitions(SERIAL_FLASHER_INTERFACE_UART)
-
 # Convert binary files to C source files using bin2array.cmake
 include(${CMAKE_SOURCE_DIR}/../common/bin2array.cmake)
 create_resources(${CMAKE_SOURCE_DIR}/target-firmware ${CMAKE_BINARY_DIR}/target_firmware_data.c)

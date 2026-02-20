@@ -22,19 +22,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "esp_loader.h"
-
-static bool s_stub_running = false;
-
-bool esp_stub_get_running(void)
-{
-    return s_stub_running;
-}
-
-void esp_stub_set_running(bool stub_status)
-{
-    s_stub_running = stub_status;
-}
+#include "esp_stubs.h"
 
 #if __STDC_VERSION__ >= 201112L
 _Static_assert(ESP8266_CHIP == 0, "Stub order matches target_chip_t enumeration");
@@ -50,12 +38,7 @@ _Static_assert(ESP32P4_CHIP == 9, "Stub order matches target_chip_t enumeration"
 _Static_assert(ESP_MAX_CHIP == 10, "Stub order matches target_chip_t enumeration");
 #endif
 
-typedef struct {
-    esp_loader_bin_header_t header;
-    esp_loader_bin_segment_t segments[3];
-} esp_stub_t;
-
-const esp_stub_t esp_stub[ESP_MAX_CHIP] = {
+const sdio_esp_stub_t esp_stub_sdio[ESP_MAX_CHIP] = {
     // placeholder
     {},
 

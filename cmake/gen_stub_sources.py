@@ -128,4 +128,4 @@ if __name__ == "__main__":
                     ) as url:
                         cfile.write(read_stub_json(url))
 
-        cfile.write("};\n\n#endif\n")
+        cfile.write("};\n")

@@ -53,9 +53,29 @@ This library enables you to program Espressif SoCs from various host platforms u
 > [!NOTE]
 > **Stub support**: ESP8266, ESP32-C5, and ESP32-P4 stub support is under development
 
+### Feature Support by Interface
+
+|             Feature              | UART | USB CDC ACM | SPI | SDIO |
+| :------------------------------: | :--: | :---------: | :-: | :--: |
+|     Connect (ROM bootloader)     |  ✅  |     ✅      | ✅  |  ✅  |
+|        Connect with stub         |  ✅  |     ✅      | ❌  |  ❌  |
+|       Secure Download Mode       |  ✅  |     ✅      | ❌  |  ❌  |
+|           Flash write            |  ✅  |     ✅      | ❌  |  ✅  |
+| Compressed flash write (deflate) |  🔶  |     🔶      | ❌  |  ❌  |
+|        Flash read (fast)         |  🔶  |     🔶      | ❌  |  ❌  |
+|        Flash read (slow)         |  ✅  |     ✅      | ❌  |  ❌  |
+|        Flash erase (chip)        |  ✅  |     ✅      | ❌  |  ✅  |
+|       Flash erase (region)       |  ✅  |     ✅      | ❌  |  ❌  |
+|         Flash MD5 verify         |  ✅  |     ✅      | ❌  |  ✅  |
+|           RAM download           |  ✅  |     ✅      | ✅  |  ✅  |
+|        Get security info         |  ✅  |     ✅      | ❌  |  ❌  |
+|     Change baud / clock rate     |  ✅  |     ✅      | ❌  |  ❌  |
+
+**Legend**: ✅ Supported | ❌ Not supported | 🔶 Requires connecting with stub (`esp_loader_connect_with_stub()`)
+
 ### Public API
 
-- Public headers: [include/esp_loader.h](include/esp_loader.h) and [include/esp_loader_io.h](include/esp_loader_io.h) define the stable public API of this library.
+- Public headers: [include/esp_loader.h](include/esp_loader.h), [include/esp_loader_io.h](include/esp_loader_io.h), and [include/esp_loader_error.h](include/esp_loader_error.h) define the stable public API of this library.
 - Examples and helpers: [examples/common/](examples/common/) contains helper utilities used by the examples; not part of the library API, but can be used as a reference.
 
 ### Versioning and Compatibility
@@ -63,6 +83,9 @@ This library enables you to program Espressif SoCs from various host platforms u
 This library follows [Semantic Versioning](https://semver.org/). The public API defined in `include/` folder maintains backward compatibility within the same major version — no breaking changes are introduced in minor or patch releases.
 
 Port implementations (under `port/`) are reference implementations that depend on the SDK of the target platform. They are tested against the specific SDK versions listed in the [Platform Setup Guide](docs/platform-setup.md) and do not carry their own semver guarantee. Ports are maintained on a best-effort basis — breaking changes to them are minimized, but are sometimes necessary to stay up to date with upstream platform SDKs. When such an update is needed, it is released as a minor or patch version of this library.
+
+> [!IMPORTANT]
+> **Upgrading from v1?** v2 introduces breaking changes to the public API and the port layer. See the [Migration Guide](docs/migration-v1-to-v2.md) for a complete list of changes and step-by-step upgrade instructions.
 
 ## Getting Started
 
@@ -92,41 +115,56 @@ For implementing custom platform support, see [Supporting New Platforms Guide](d
 
 ```c
 #include "esp_loader.h"
+#include "esp32_port.h"  // replace with the port header for your platform
 
 esp_loader_error_t err;
 
-// Initialize and connect
-esp_loader_connect_args_t config = ESP_LOADER_CONNECT_DEFAULT();
-err = esp_loader_connect(&config);
-if (err != ESP_LOADER_SUCCESS) {
-    printf("Connection failed: %s\n", esp_loader_error_string(err));
-    return err;
-}
+// 1. Initialize the hardware peripheral (platform-specific)
+const loader_esp32_config_t port_config = {
+    .baud_rate = 115200,
+    .uart_port = UART_NUM_1,
+    .uart_rx_pin = GPIO_NUM_5,
+    .uart_tx_pin = GPIO_NUM_4,
+    .reset_trigger_pin = GPIO_NUM_25,
+    .gpio0_trigger_pin = GPIO_NUM_26,
+};
+loader_port_esp32_init(&port_config);
 
-// Flash binary (example: 64KB at 0x10000)
-const uint32_t addr = 0x10000;
-const size_t size = 65536;
-const size_t block_size = 4096;
+// 2. Initialize the loader context — binds the protocol and port vtable
+esp_loader_t loader;
+err = esp_loader_init_uart(&loader, &esp32_uart_port_ops);
+if (err != ESP_LOADER_SUCCESS) return err;
+
+// 3. Connect to the target chip
+esp_loader_connect_args_t connect_args = ESP_LOADER_CONNECT_DEFAULT();
+err = esp_loader_connect(&loader, &connect_args);
+if (err != ESP_LOADER_SUCCESS) return err;
+
+// 4. Flash a binary (example: 64KB at 0x10000)
 // Variable holding your binary image. Typical sources:
 // - Read from storage (SD card, filesystem, flash)
-// - Received over a link (UART/SPI/USB/Wi‑Fi) into a RAM buffer
+// - Received over a link (UART/SPI/USB/Wi-Fi) into a RAM buffer
 // - Compiled-in C array generated from a .bin
 const uint8_t *data = /* pointer to your firmware image buffer */;
 
-err = esp_loader_flash_start(addr, size, block_size);
+esp_loader_flash_cfg_t flash_cfg = {
+    .offset     = 0x10000,
+    .image_size = 65536,
+    .block_size = 4096,
+};
+err = esp_loader_flash_start(&loader, &flash_cfg);
 if (err != ESP_LOADER_SUCCESS) return err;
 
-// Write data in chunks
 size_t offset = 0;
-while (offset < size) {
-   size_t chunk = MIN(block_size, size - offset);
-   err = esp_loader_flash_write(data + offset, chunk);
-   if (err != ESP_LOADER_SUCCESS) return err;
-   offset += chunk;
+while (offset < flash_cfg.image_size) {
+    size_t chunk = MIN(flash_cfg.block_size, flash_cfg.image_size - offset);
+    err = esp_loader_flash_write(&loader, &flash_cfg, (void *)(data + offset), chunk);
+    if (err != ESP_LOADER_SUCCESS) return err;
+    offset += chunk;
 }
 
-esp_loader_reset_target();
-return err
+err = esp_loader_flash_finish(&loader, &flash_cfg, true);
+if (err != ESP_LOADER_SUCCESS) return err;
 ```
 
 ### Examples
@@ -147,31 +185,19 @@ For complete implementation examples, see the [examples](examples/) directory:
 
 ## Configuration
 
-ESP Serial Flasher provides several configuration options to customize its behavior. These options are set as **CMake cache variables**.
+ESP Serial Flasher provides several configuration options to customize its behavior. These options are set as **CMake cache variables** (plain CMake builds) or **Kconfig options** (ESP-IDF / Zephyr builds).
 
 ### Basic Configuration
 
 The most common configuration options:
 
 ```bash
-# Enable SPI interface instead of UART
-cmake -DSERIAL_FLASHER_INTERFACE_SPI=1 ..
-
 # Disable MD5 verification
 cmake -DMD5_ENABLED=0 ..
 
 # Set custom retry count
 cmake -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 ..
 ```
-
-### Interface Selection
-
-Choose one interface (UART is default):
-
-- `SERIAL_FLASHER_INTERFACE_UART` - UART communication (default)
-- `SERIAL_FLASHER_INTERFACE_SPI` - SPI communication
-- `SERIAL_FLASHER_INTERFACE_USB` - USB CDC ACM
-- `SERIAL_FLASHER_INTERFACE_SDIO` - SDIO (experimental)
 
 For complete configuration reference, see [Configuration Documentation](docs/configuration.md).
 
@@ -187,7 +213,7 @@ For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Adding New Platform Support
 
-If you want to add support for a new host platform, see [Supporting New Host Platforms Guide](docs/supporting-new-platforms.md).
+If you want to add support for a new host platform, see [Supporting New Host Platforms Guide](docs/supporting-new-platform.md).
 
 ## License
 
@@ -201,7 +227,6 @@ The following limitations are currently known:
 - ESP8266 targets require `MD5_ENABLED=0` due to ROM bootloader limitations
 - SPI interface only supports RAM download operations
 - SDIO interface is experimental with limited platform support
-- Only one target can be flashed at a time (library holds state in static variables)
-- Communication interface must be selected at compile time (no runtime switching)
+- Only one target can be flashed at a time
 
 For additional limitations and current issues, see the [GitHub Issues](https://github.com/espressif/esp-serial-flasher/issues) page.

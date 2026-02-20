@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2026 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,8 @@
  * limitations under the License.
  */
 
-#warning Please replace serial_io.h with esp_loader_io.h and change the function names \
-to match the new API
-
-/* Defines used to avoid breaking existing ports */
-#define loader_port_change_baudrate loader_port_change_transmission_rate
-#define loader_port_serial_write loader_port_write
-#define loader_port_serial_read loader_port_read
-
-#include "esp_loader_io.h"
+#error "serial_io.h has been removed in v2. The free-function port API \
+(loader_port_write, loader_port_read, loader_port_change_transmission_rate, …) \
+no longer exists. Port implementations must now provide an esp_loader_ *_port_ops_t \
+vtable and include esp_loader_io.h instead. \
+See docs / migration - v1 - to - v2.md Section 4 for upgrade instructions."

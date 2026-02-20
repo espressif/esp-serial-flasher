@@ -51,7 +51,6 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-
     const loader_esp32_config_t config = {
         .baud_rate = 115200,
         .uart_port = UART_NUM_1,
@@ -61,15 +60,21 @@ void app_main(void)
         .gpio0_trigger_pin = GPIO_NUM_26,
     };
 
+    esp_loader_t loader;
+
     if (loader_port_esp32_init(&config) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "serial initialization failed.");
         abort();
     }
+    if (esp_loader_init_uart(&loader, &esp32_uart_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, "serial initialization failed.");
+        abort();
+    }
 
-    if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
         ESP_LOGI(TAG, "Loading app to RAM ...");
-        esp_loader_error_t err = load_ram_binary(app_bin);
+        esp_loader_error_t err = load_ram_binary(&loader, app_bin);
         if (err == ESP_LOADER_SUCCESS) {
             // Forward slave's serial output
             ESP_LOGI(TAG, "********************************************");

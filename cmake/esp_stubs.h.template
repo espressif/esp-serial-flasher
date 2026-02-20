@@ -25,19 +25,18 @@
 extern "C" {{
 #endif
 
-bool esp_stub_get_running(void);
-void esp_stub_set_running(bool stub_status);
-
-#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
-
 typedef struct {{
     esp_loader_bin_header_t header;
     esp_loader_bin_segment_t segments[2];
 }} esp_stub_t;
 
-extern const esp_stub_t esp_stub[ESP_MAX_CHIP];
+typedef struct {{
+    esp_loader_bin_header_t header;
+    esp_loader_bin_segment_t segments[3];
+}} sdio_esp_stub_t;
 
-#endif
+extern const esp_stub_t esp_stub[ESP_MAX_CHIP];
+extern const sdio_esp_stub_t esp_stub_sdio[ESP_MAX_CHIP];
 
 #ifdef __cplusplus
 }}

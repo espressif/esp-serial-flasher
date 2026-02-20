@@ -55,24 +55,30 @@ void app_main(void)
         .gpio0_trigger_pin = GPIO_NUM_26,
     };
 
+    esp_loader_t loader;
+
     if (loader_port_esp32_init(&config) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "serial initialization failed.");
         return;
     }
+    if (esp_loader_init_uart(&loader, &esp32_uart_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, "serial initialization failed.");
+        return;
+    }
 
-    if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
         esp_loader_error_t err;
-        err = esp_loader_flash_erase();
+        err = esp_loader_flash_erase(&loader);
         if (err != ESP_LOADER_SUCCESS) {
             ESP_LOGE(TAG, "Failed to erase flash");
             return;
         }
 
         ESP_LOGI(TAG, "Loading example data");
-        flash_binary(example_data, sizeof(example_data), 0x00000000);
+        flash_binary(&loader, example_data, sizeof(example_data), 0x00000000);
 
-        if (esp_loader_flash_read(read_buf, 0x00000000, sizeof(read_buf)) == ESP_LOADER_SUCCESS) {
+        if (esp_loader_flash_read(&loader, read_buf, 0x00000000, sizeof(read_buf)) == ESP_LOADER_SUCCESS) {
             if (!memcmp(example_data, read_buf, sizeof(read_buf))) {
                 ESP_LOGI(TAG, "Flash contents match example data");
             } else {

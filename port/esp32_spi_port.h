@@ -40,8 +40,13 @@ typedef struct {
                                  useful when sharing the bus with other devices. */
 } loader_esp32_spi_config_t;
 
+/** Port operations vtable for the ESP32 SPI port. */
+extern esp_loader_port_t esp32_spi_port;
+
 /**
-  * @brief Initializes the SPI interface.
+  * @brief Initializes the SPI hardware.
+  *
+  * Call this before esp_loader_init() to configure the SPI peripheral.
   *
   * @param config[in] Configuration structure
   *

@@ -64,7 +64,6 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-
     const loader_esp32_sdio_config_t config = {
         .slot = SDMMC_HOST_SLOT_1,
         .max_freq_khz = SDMMC_FREQ_DEFAULT,
@@ -79,23 +78,29 @@ void app_main(void)
         .sdio_cmd_pin = GPIO_NUM_52,
     };
 
+    esp_loader_t loader;
+
     if (loader_port_esp32_sdio_init(&config) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, " SDIO initialization failed.");
         abort();
     }
+    if (esp_loader_init_sdio(&loader, &esp32_sdio_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, " SDIO initialization failed.");
+        abort();
+    }
 
-    if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, 0) == ESP_LOADER_SUCCESS) {
 
         ESP_LOGI(TAG, "Loading bootloader...");
-        target_chip_t chip = esp_loader_get_target();
+        target_chip_t chip = esp_loader_get_target(&loader);
         uint32_t bootloader_addr = get_bootloader_address(chip);
-        flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
+        flash_binary(&loader, bootloader_bin, bootloader_bin_size, bootloader_addr);
         ESP_LOGI(TAG, "Loading partition table...");
-        flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
+        flash_binary(&loader, partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
         ESP_LOGI(TAG, "Loading app...");
-        flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
+        flash_binary(&loader, app_bin, app_bin_size, APPLICATION_ADDRESS);
         ESP_LOGI(TAG, "Done!");
-        esp_loader_reset_target();
+        esp_loader_reset_target(&loader);
 
         // Delay for skipping the boot message of the targets
         vTaskDelay(500 / portTICK_PERIOD_MS);

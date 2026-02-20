@@ -106,8 +106,9 @@ void loader_port_esp32_deinit(void)
 }
 
 
-esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_t timeout)
+static esp_loader_error_t esp32_uart_write(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout)
 {
+    (void)port;
     uart_write_bytes(s_uart_port, (const char *)data, size);
     esp_err_t err = uart_wait_tx_done(s_uart_port, pdMS_TO_TICKS(timeout));
 
@@ -124,8 +125,9 @@ esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_
 }
 
 
-esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeout)
+static esp_loader_error_t esp32_uart_read(esp_loader_port_t *port, uint8_t *data, uint16_t size, uint32_t timeout)
 {
+    (void)port;
     int read = uart_read_bytes(s_uart_port, data, size, pdMS_TO_TICKS(timeout));
 
     if (read < 0) {
@@ -144,49 +146,72 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
 }
 
 
-void loader_port_enter_bootloader(void)
+static void esp32_uart_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
-    gpio_set_level(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
-    loader_port_reset_target();
-    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    gpio_set_level(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
-}
-
-
-void loader_port_reset_target(void)
-{
-    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
-}
-
-
-void loader_port_delay_ms(uint32_t ms)
-{
+    (void)port;
     usleep(ms * 1000);
 }
 
 
-void loader_port_start_timer(uint32_t ms)
+static void esp32_uart_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     s_time_end = esp_timer_get_time() + ms * 1000;
 }
 
 
-uint32_t loader_port_remaining_time(void)
+static uint32_t esp32_uart_remaining_time(esp_loader_port_t *port)
 {
+    (void)port;
     int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
 
-void loader_port_debug_print(const char *str)
+static void esp32_uart_reset_target(esp_loader_port_t *port)
 {
+    (void)port;
+    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
+    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+}
+
+
+static void esp32_uart_enter_bootloader(esp_loader_port_t *port)
+{
+    (void)port;
+    gpio_set_level(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
+    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
+    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
+    gpio_set_level(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
+}
+
+
+static void esp32_uart_debug_print(esp_loader_port_t *port, const char *str)
+{
+    (void)port;
     printf("DEBUG: %s\n", str);
 }
 
-esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
+static esp_loader_error_t esp32_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
+    (void)port;
     esp_err_t err = uart_set_baudrate(s_uart_port, baudrate);
     return (err == ESP_OK) ? ESP_LOADER_SUCCESS : ESP_LOADER_ERROR_FAIL;
 }
+
+static const esp_loader_port_ops_t esp32_uart_ops = {
+    .enter_bootloader         = esp32_uart_enter_bootloader,
+    .reset_target             = esp32_uart_reset_target,
+    .start_timer              = esp32_uart_start_timer,
+    .remaining_time           = esp32_uart_remaining_time,
+    .delay_ms                 = esp32_uart_delay_ms,
+    .debug_print              = esp32_uart_debug_print,
+    .change_transmission_rate = esp32_uart_change_rate,
+    .write                    = esp32_uart_write,
+    .read                     = esp32_uart_read,
+};
+
+esp_loader_port_t esp32_uart_port = { .ops = &esp32_uart_ops };

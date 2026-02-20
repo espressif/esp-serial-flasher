@@ -47,22 +47,28 @@ void app_main(void)
         .gpio0_trigger_pin = GPIO_NUM_26,
     };
 
+    esp_loader_t loader;
+
     if (loader_port_esp32_init(&config) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "serial initialization failed.");
         return;
     }
+    if (esp_loader_init_uart(&loader, &esp32_uart_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, "serial initialization failed.");
+        return;
+    }
 
-    if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
         uint32_t flash_size = 0;
-        if (esp_loader_flash_detect_size(&flash_size) == ESP_LOADER_SUCCESS) {
+        if (esp_loader_flash_detect_size(&loader, &flash_size) == ESP_LOADER_SUCCESS) {
             ESP_LOGI(TAG, "Target flash size [B]: %u", (unsigned int)flash_size);
         } else {
             ESP_LOGE(TAG, "Could not read flash size!");
         }
 
         uint8_t mac[6] = {0};
-        if (esp_loader_read_mac(mac) == ESP_LOADER_SUCCESS) {
+        if (esp_loader_read_mac(&loader, mac) == ESP_LOADER_SUCCESS) {
             ESP_LOGI(TAG, "Target WIFI MAC:");
             ESP_LOG_BUFFER_HEX(TAG, mac, sizeof(mac));
         } else {
@@ -70,7 +76,7 @@ void app_main(void)
         }
 
         esp_loader_target_security_info_t security_info;
-        esp_loader_error_t err = esp_loader_get_security_info(&security_info);
+        esp_loader_error_t err = esp_loader_get_security_info(&loader, &security_info);
         if (err == ESP_LOADER_SUCCESS) {
             ESP_LOGI(TAG, "Target Security Information:");
             ESP_LOGI(TAG, "Target chip: %s", get_target_string(security_info.target_chip));

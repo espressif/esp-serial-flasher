@@ -13,10 +13,12 @@
  * limitations under the License.
  */
 
+#include "esp_loader.h"
+#include "esp_loader_protocol.h"
 #include "esp_targets.h"
 #include <stddef.h>
 
-typedef esp_loader_error_t (*read_spi_config_t)(uint32_t efuse_base, uint32_t *spi_config);
+typedef esp_loader_error_t (*read_spi_config_t)(esp_loader_t *loader, uint32_t efuse_base, uint32_t *spi_config);
 
 typedef struct {
     target_registers_t regs;
@@ -48,9 +50,9 @@ typedef struct {
 #define ESP32P4_SPI_DATE_REG_MASK 0x7FFFFFF
 #define ESP32P4_SPI_DATE_REG_VALUE 0x2207202
 
-static esp_loader_error_t spi_config_esp32(uint32_t efuse_base, uint32_t *spi_config);
-static esp_loader_error_t spi_config_esp32xx(uint32_t efuse_base, uint32_t *spi_config);
-static esp_loader_error_t spi_config_unsupported(uint32_t efuse_base, uint32_t *spi_config);
+static esp_loader_error_t spi_config_esp32(esp_loader_t *loader, uint32_t efuse_base, uint32_t *spi_config);
+static esp_loader_error_t spi_config_esp32xx(esp_loader_t *loader, uint32_t efuse_base, uint32_t *spi_config);
+static esp_loader_error_t spi_config_unsupported(esp_loader_t *loader, uint32_t efuse_base, uint32_t *spi_config);
 
 static const esp_target_t esp_target[ESP_MAX_CHIP] = {
 
@@ -261,29 +263,32 @@ const target_registers_t *get_esp_target_data(target_chip_t chip)
     return (const target_registers_t *)&esp_target[chip];
 }
 
-esp_loader_error_t loader_detect_chip(target_chip_t *target_chip, const target_registers_t **target_data)
+esp_loader_error_t loader_detect_chip(esp_loader_t *loader)
 {
-#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+
+    /* If the chip is already known (e.g. identified by SDIO card enumeration during
+     * initialize_conn), skip the detection sequence and only look up the register table. */
+    if (loader->_target != ESP_UNKNOWN_CHIP) {
+        loader->_reg = (const target_registers_t *)&esp_target[loader->_target];
+        return ESP_LOADER_SUCCESS;
+    }
+
     /* First, attempt to get the target info using GET_SECURITY_INFO command.
        This won't work if the target does not support the command. */
     esp_loader_target_security_info_t security_info;
-
-    if (esp_loader_get_security_info(&security_info) == ESP_LOADER_SUCCESS) {
-        *target_chip = security_info.target_chip;
-        *target_data = (target_registers_t *)&esp_target[security_info.target_chip];
-        return ESP_LOADER_SUCCESS;
+    if (esp_loader_get_security_info(loader, &security_info) == ESP_LOADER_SUCCESS) {
+        loader->_target = security_info.target_chip;
+        goto success;
     }
-#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
     uint32_t magic_value;
-    RETURN_ON_ERROR( esp_loader_read_register(CHIP_DETECT_MAGIC_REG_ADDR,  &magic_value) );
+    RETURN_ON_ERROR(esp_loader_read_register(loader, CHIP_DETECT_MAGIC_REG_ADDR, &magic_value));
 
     for (int chip = 0; chip < ESP_MAX_CHIP; chip++) {
         for (int index = 0; index < esp_target[chip].magic_values_count; index++) {
             if (magic_value == esp_target[chip].chip_magic_value[index]) {
-                *target_chip = (target_chip_t)chip;
-                *target_data = (target_registers_t *)&esp_target[chip];
-                return ESP_LOADER_SUCCESS;
+                loader->_target = (target_chip_t)chip;
+                goto success;
             }
         }
     }
@@ -292,30 +297,34 @@ esp_loader_error_t loader_detect_chip(target_chip_t *target_chip, const target_r
     // to detect the chip. Date register of SPI peripheral is used instead. There is low probability
     // that the date register will have same value as for other chips and it will also be at different
     // address.
-    RETURN_ON_ERROR(esp_loader_read_register(ESP32P4_SPI_DATE_REG, &magic_value));
+    RETURN_ON_ERROR(esp_loader_read_register(loader, ESP32P4_SPI_DATE_REG, &magic_value));
     if ((magic_value & ESP32P4_SPI_DATE_REG_MASK) == ESP32P4_SPI_DATE_REG_VALUE) {
-        *target_chip = ESP32P4_CHIP;
-        *target_data = (target_registers_t *)&esp_target[ESP32P4_CHIP];
-        return ESP_LOADER_SUCCESS;
+        loader->_target = ESP32P4_CHIP;
+        goto success;
     }
+
     return ESP_LOADER_ERROR_INVALID_TARGET;
+
+success:
+    loader->_reg = (const target_registers_t *)&esp_target[loader->_target];
+    return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t loader_read_spi_config(target_chip_t target_chip, uint32_t *spi_config)
+esp_loader_error_t loader_read_spi_config(esp_loader_t *loader, target_chip_t target_chip, uint32_t *spi_config)
 {
     const esp_target_t *target = &esp_target[target_chip];
-    return target->read_spi_config(target->efuse_base, spi_config);
+    return target->read_spi_config(loader, target->efuse_base, spi_config);
 }
 
-esp_loader_error_t loader_read_mac(const target_chip_t target_code, uint8_t *mac)
+esp_loader_error_t loader_read_mac(esp_loader_t *loader, const target_chip_t target_code, uint8_t *mac)
 {
     const esp_target_t *target = &esp_target[target_code];
 
     uint32_t part1 = 0;
     uint32_t part2 = 0;
 
-    RETURN_ON_ERROR(esp_loader_read_register(target->efuse_base + target->mac_efuse_offset, &part1));
-    RETURN_ON_ERROR(esp_loader_read_register(target->efuse_base + target->mac_efuse_offset + sizeof(uint32_t), &part2));
+    RETURN_ON_ERROR(esp_loader_read_register(loader, target->efuse_base + target->mac_efuse_offset, &part1));
+    RETURN_ON_ERROR(esp_loader_read_register(loader, target->efuse_base + target->mac_efuse_offset + sizeof(uint32_t), &part2));
 
     mac[0] = (part2 >> 8) & 0xff;
     mac[1] = (part2 >> 0) & 0xff;
@@ -339,13 +348,13 @@ static inline uint8_t adjust_pin_number(uint8_t num)
 }
 
 
-static esp_loader_error_t spi_config_esp32(uint32_t efuse_base, uint32_t *spi_config)
+static esp_loader_error_t spi_config_esp32(esp_loader_t *loader, uint32_t efuse_base, uint32_t *spi_config)
 {
     *spi_config = 0;
 
     uint32_t reg5, reg3;
-    RETURN_ON_ERROR( esp_loader_read_register(efuse_word_addr(efuse_base, 5), &reg5) );
-    RETURN_ON_ERROR( esp_loader_read_register(efuse_word_addr(efuse_base, 3), &reg3) );
+    RETURN_ON_ERROR( esp_loader_read_register(loader, efuse_word_addr(efuse_base, 5), &reg5) );
+    RETURN_ON_ERROR( esp_loader_read_register(loader, efuse_word_addr(efuse_base, 3), &reg3) );
 
     uint32_t pins = reg5 & 0xfffff;
 
@@ -369,13 +378,13 @@ static esp_loader_error_t spi_config_esp32(uint32_t efuse_base, uint32_t *spi_co
 }
 
 // Applies for esp32s2, esp32c3 and esp32c3
-static esp_loader_error_t spi_config_esp32xx(uint32_t efuse_base, uint32_t *spi_config)
+static esp_loader_error_t spi_config_esp32xx(esp_loader_t *loader, uint32_t efuse_base, uint32_t *spi_config)
 {
     *spi_config = 0;
 
     uint32_t reg1, reg2;
-    RETURN_ON_ERROR( esp_loader_read_register(efuse_word_addr(efuse_base, 18), &reg1) );
-    RETURN_ON_ERROR( esp_loader_read_register(efuse_word_addr(efuse_base, 19), &reg2) );
+    RETURN_ON_ERROR( esp_loader_read_register(loader, efuse_word_addr(efuse_base, 18), &reg1) );
+    RETURN_ON_ERROR( esp_loader_read_register(loader, efuse_word_addr(efuse_base, 19), &reg2) );
 
     uint32_t pins = ((reg1 >> 16) | ((reg2 & 0xfffff) << 16)) & 0x3fffffff;
 
@@ -388,8 +397,9 @@ static esp_loader_error_t spi_config_esp32xx(uint32_t efuse_base, uint32_t *spi_
 }
 
 // Some newer chips like the esp32c6 do not support configurable SPI
-static esp_loader_error_t spi_config_unsupported(uint32_t efuse_base, uint32_t *spi_config)
+static esp_loader_error_t spi_config_unsupported(esp_loader_t *loader, uint32_t efuse_base, uint32_t *spi_config)
 {
+    (void)(loader);
     (void)(efuse_base);
 
     *spi_config = 0;

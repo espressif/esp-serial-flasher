@@ -31,6 +31,14 @@ typedef struct {
     const struct gpio_dt_spec boot_spec;
 } loader_zephyr_config_t;
 
+/** Port operations vtable for the Zephyr UART port. */
+extern esp_loader_port_t zephyr_uart_port;
+
+/**
+  * @brief Initializes the Zephyr UART hardware.
+  *
+  * Call this before esp_loader_init() to configure the UART device.
+  */
 esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config);
 
 #ifdef __cplusplus

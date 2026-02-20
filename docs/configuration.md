@@ -16,36 +16,57 @@ ESP Serial Flasher supports various configuration options that can be set as **C
 - **Default**: Disabled
 - **Description**: Enables debug tracing output (transfer data tracing).
 
-### Interface Selection
+### Protocol / Interface Selection
 
-> [!IMPORTANT]
-> Only one interface can be enabled at a time. These options are mutually exclusive. There is plan to add runtime interface selection in the future.
+Starting from v2, the communication protocol is **selected at runtime** by calling the appropriate per-protocol init function. There are no compile-time interface flags.
 
-#### `SERIAL_FLASHER_INTERFACE_UART` (Default)
+```c
+esp_loader_t loader;
+esp_loader_init_uart(&loader, &esp32_uart_port_ops);   // UART
+esp_loader_init_usb(&loader, &esp32_usb_cdc_acm_port_ops); // USB CDC-ACM
+esp_loader_init_spi(&loader, &esp32_spi_port_ops);    // SPI
+esp_loader_init_sdio(&loader, &esp32_sdio_port_ops);  // SDIO
+```
 
-- **Type**: CMake cache variable
-- **Default**: Enabled (when no other interface is specified)
-- **Description**: Use UART interface for communication with the target device.
+Each init function accepts the matching per-protocol port ops type:
 
-#### `SERIAL_FLASHER_INTERFACE_SPI`
+| Init function            | Port ops type                | Interface   | Notes                                  |
+| ------------------------ | ---------------------------- | ----------- | -------------------------------------- |
+| `esp_loader_init_uart()` | `esp_loader_uart_port_ops_t` | UART        | Default; full feature set              |
+| `esp_loader_init_usb()`  | `esp_loader_usb_port_ops_t`  | USB CDC-ACM | Full feature set                       |
+| `esp_loader_init_spi()`  | `esp_loader_spi_port_ops_t`  | SPI         | RAM download only                      |
+| `esp_loader_init_sdio()` | `esp_loader_sdio_port_ops_t` | SDIO        | Experimental; limited platform support |
 
-- **Type**: CMake cache variable
+Functions not supported by a given protocol return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC`.
+
+### Port Compilation (ESP-IDF / Kconfig only)
+
+For ESP-IDF builds, you choose which port implementations to compile into the library. Multiple ports can be enabled simultaneously, enabling runtime switching between interfaces in the same firmware image.
+
+#### `CONFIG_SERIAL_FLASHER_PORT_UART`
+
+- **Type**: Kconfig (`bool`)
+- **Default**: Enabled (`y`)
+- **Description**: Compile the ESP32 UART port (`esp32_port.c`). Exposes `esp32_uart_port_ops`.
+
+#### `CONFIG_SERIAL_FLASHER_PORT_SPI`
+
+- **Type**: Kconfig (`bool`)
 - **Default**: Disabled
-- **Description**: Use SPI interface for communication with the target device.
-- **Note**: Only supported for RAM download operations.
+- **Description**: Compile the ESP32 SPI port (`esp32_spi_port.c`). Exposes `esp32_spi_port_ops`. Only supports RAM download operations.
 
-#### `SERIAL_FLASHER_INTERFACE_USB`
+#### `CONFIG_SERIAL_FLASHER_PORT_SDIO`
 
-- **Type**: CMake cache variable
+- **Type**: Kconfig (`bool`)
 - **Default**: Disabled
-- **Description**: Use USB CDC ACM interface for communication with the target device.
+- **Description**: Compile the ESP32 SDIO port (`esp32_sdio_port.c`). Exposes `esp32_sdio_port_ops`. Experimental; only available on targets with SDIO host support.
 
-#### `SERIAL_FLASHER_INTERFACE_SDIO`
+#### `CONFIG_SERIAL_FLASHER_PORT_USB_CDC_ACM`
 
-- **Type**: CMake cache variable
+- **Type**: Kconfig (`bool`)
 - **Default**: Disabled
-- **Description**: Use SDIO interface for communication with the target device.
-- **Note**: Experimental feature. Currently supported only with ESP32-P4 as host and ESP32-C6 as target.
+- **Depends on**: `SOC_USB_OTG_SUPPORTED`
+- **Description**: Compile the ESP32 USB CDC-ACM port (`esp32_usb_cdc_acm_port.c`). Exposes `esp32_usb_cdc_acm_port_ops`. Requires the `espressif/usb_host_cdc_acm` managed component.
 
 ### Flash Verification
 
@@ -108,7 +129,6 @@ cmake -DMD5_ENABLED=1 -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 .. && cmake --build
 
 ```bash
 cmake \
-  -DSERIAL_FLASHER_INTERFACE_SPI=1 \
   -DMD5_ENABLED=0 \
   -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 \
   -DSERIAL_FLASHER_RESET_HOLD_TIME_MS=200 \
@@ -121,6 +141,7 @@ When using ESP-IDF or Zephyr, configuration options can be set using **Kconfig**
 
 - `SERIAL_FLASHER_DEBUG_TRACE` → `CONFIG_SERIAL_FLASHER_DEBUG_TRACE`
 - `MD5_ENABLED` → `CONFIG_SERIAL_FLASHER_MD5_ENABLED`
+- Port compilation → `CONFIG_SERIAL_FLASHER_PORT_UART`, `CONFIG_SERIAL_FLASHER_PORT_SPI`, etc.
 
 You can configure these options using:
 
@@ -142,6 +163,8 @@ Alternatively, you can set them directly in your `sdkconfig` (ESP-IDF) or `prj.c
 # ESP-IDF sdkconfig or Zephyr prj.conf
 CONFIG_SERIAL_FLASHER_DEBUG_TRACE=y
 CONFIG_SERIAL_FLASHER_MD5_ENABLED=n
+CONFIG_SERIAL_FLASHER_PORT_UART=y
+CONFIG_SERIAL_FLASHER_PORT_SPI=y
 ```
 
 ## Platform-Specific Configuration

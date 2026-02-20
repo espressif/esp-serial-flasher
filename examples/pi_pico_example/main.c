@@ -47,25 +47,27 @@ int main(void)
 
     stdio_init_all();
 
+    esp_loader_t loader;
+
     loader_port_pi_pico_init(&config);
+    esp_loader_init_uart(&loader, &pi_pico_uart_port);
 
     // delay for the test to have time to connect to the device
     sleep_ms(500);
 
-    if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
         printf("Loading bootloader...");
-        target_chip_t chip = esp_loader_get_target();
+        target_chip_t chip = esp_loader_get_target(&loader);
         uint32_t bootloader_addr = get_bootloader_address(chip);
-        flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
+        flash_binary(&loader, bootloader_bin, bootloader_bin_size, bootloader_addr);
         printf("Loading partition table...");
-        flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
+        flash_binary(&loader, partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
         printf("Loading app...");
-        flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
+        flash_binary(&loader, app_bin, app_bin_size, APPLICATION_ADDRESS);
         printf("Done!");
 
-        esp_loader_reset_target();
-        loader_port_pi_pico_deinit();
+        esp_loader_reset_target(&loader);
 
         // Delay for skipping the boot message of the targets
         sleep_ms(500);

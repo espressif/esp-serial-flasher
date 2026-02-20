@@ -72,25 +72,31 @@ int main(void)
     gpio_pin_configure_dt(&esp_boot_spec, GPIO_OUTPUT_ACTIVE);
     gpio_pin_configure_dt(&esp_enable_spec, GPIO_OUTPUT_INACTIVE);
 
+    esp_loader_t loader;
+
     if (loader_port_zephyr_init(&config) != ESP_LOADER_SUCCESS) {
         printk("ESP loader init failed");
         return -EIO;
     }
-
-    if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
-        printk("Loading bootloader...\n");
-        target_chip_t chip = esp_loader_get_target();
-        uint32_t bootloader_addr = get_bootloader_address(chip);
-        flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
-        printk("Loading partition table...\n");
-        flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
-        printk("Loading app...\n");
-        flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
+    if (esp_loader_init_uart(&loader, &zephyr_uart_port) != ESP_LOADER_SUCCESS) {
+        printk("ESP loader init failed");
+        return -EIO;
     }
 
-    esp_loader_reset_target();
+    if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+        printk("Loading bootloader...\n");
+        target_chip_t chip = esp_loader_get_target(&loader);
+        uint32_t bootloader_addr = get_bootloader_address(chip);
+        flash_binary(&loader, bootloader_bin, bootloader_bin_size, bootloader_addr);
+        printk("Loading partition table...\n");
+        flash_binary(&loader, partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
+        printk("Loading app...\n");
+        flash_binary(&loader, app_bin, app_bin_size, APPLICATION_ADDRESS);
+    }
 
-    if (loader_port_change_transmission_rate(DEFAULT_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    esp_loader_reset_target(&loader);
+
+    if (zephyr_uart_port.ops->change_transmission_rate(&zephyr_uart_port, DEFAULT_BAUDRATE) == ESP_LOADER_SUCCESS) {
         // Delay for skipping the boot message of the targets
         k_msleep(500);
 

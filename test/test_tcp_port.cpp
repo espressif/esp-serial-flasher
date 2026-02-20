@@ -50,7 +50,7 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 }
 #endif
 
-esp_loader_error_t loader_port_test_init(const loader_serial_config_t *config)
+esp_loader_error_t esp_loader_port_test_init(const loader_serial_config_t *config)
 {
     struct sockaddr_in serv_addr;
 
@@ -83,7 +83,7 @@ esp_loader_error_t loader_port_test_init(const loader_serial_config_t *config)
 }
 
 
-void loader_port_test_deinit()
+void esp_loader_port_test_deinit()
 {
     if (sock != 0) {
         shutdown(sock, 0);
