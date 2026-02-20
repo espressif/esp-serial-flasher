@@ -58,6 +58,12 @@ This library enables you to program Espressif SoCs from various host platforms u
 - Public headers: [include/esp_loader.h](include/esp_loader.h) and [include/esp_loader_io.h](include/esp_loader_io.h) define the stable public API of this library.
 - Examples and helpers: [examples/common/](examples/common/) contains helper utilities used by the examples; not part of the library API, but can be used as a reference.
 
+### Versioning and Compatibility
+
+This library follows [Semantic Versioning](https://semver.org/). The public API defined in `include/` folder maintains backward compatibility within the same major version — no breaking changes are introduced in minor or patch releases.
+
+Port implementations (under `port/`) are reference implementations that depend on the SDK of the target platform. They are tested against the specific SDK versions listed in the [Platform Setup Guide](docs/platform-setup.md) and do not carry their own semver guarantee. Ports are maintained on a best-effort basis — breaking changes to them are minimized, but are sometimes necessary to stay up to date with upstream platform SDKs. When such an update is needed, it is released as a minor or patch version of this library.
+
 ## Getting Started
 
 ### Prerequisites
