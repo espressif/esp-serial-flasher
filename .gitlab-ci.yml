@@ -130,6 +130,13 @@ check_stub_source_correctness:
         export CCACHE_RECACHE="1"
         echo "INFO: ccache recache enabled"
       fi
+    # ESP32P4_SELECTS_REV_LESS_V3 is needed for ESP32-P4 to work with ESP-IDF v5.4 and newer, because in the CI we use older ESP32-P4
+    # Newer chip will be used when stable version is released - TODO: ESF-258
+    - |
+      if [[ "${ESP_IDF_VERSION}" > "5.4" ]] || [[ "${ESP_IDF_VERSION}" == "5.4" ]]; then
+        echo "CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y" >> examples/esp32_sdio_example/sdkconfig.defaults
+        echo "CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y" >> examples/esp32_sdio_load_ram_example/sdkconfig.defaults
+      fi
     - |
       if [ -n "${TARGETS}" ]; then
           python -m idf_build_apps build -v -p . \
