@@ -54,34 +54,32 @@ init but before any other `esp_loader_*` call.
 
 All public functions now take the loader context as their first argument.
 
-| v1                                                           | v2                                                                                                                             |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `esp_loader_connect(&args)`                                  | `esp_loader_connect(&loader, &args)`                                                                                           |
-| `esp_loader_connect_with_stub(&args)`                        | `esp_loader_connect_with_stub(&loader, &args)`                                                                                 |
-| `esp_loader_connect_secure_download_mode(&args, size, chip)` | `esp_loader_connect_secure_download_mode(&loader, &args, size, chip)`                                                          |
-| `esp_loader_get_target()`                                    | `esp_loader_get_target(&loader)`                                                                                               |
-| `esp_loader_flash_start(offset, size, block)`                | `esp_loader_flash_start(&loader, &flash_cfg)` — see [Section 3](#3-use-operation-context-structs-for-flash-and-ram-operations) |
-| `esp_loader_flash_write(buf, size)`                          | `esp_loader_flash_write(&loader, &flash_cfg, buf, size)`                                                                       |
-| `esp_loader_flash_finish(reboot)`                            | `esp_loader_flash_finish(&loader, &flash_cfg, reboot)`                                                                         |
-| `esp_loader_flash_deflate_write(buf, size)`                  | `esp_loader_flash_deflate_write(&loader, &defl_cfg, buf, size)`                                                                |
-| `esp_loader_flash_deflate_finish(reboot)`                    | `esp_loader_flash_deflate_finish(&loader, &defl_cfg, reboot)`                                                                  |
-| `esp_loader_flash_detect_size(&size)`                        | `esp_loader_flash_detect_size(&loader, &size)`                                                                                 |
-| `esp_loader_flash_read(buf, addr, len)`                      | `esp_loader_flash_read(&loader, buf, addr, len)`                                                                               |
-| `esp_loader_flash_erase()`                                   | `esp_loader_flash_erase(&loader)`                                                                                              |
-| `esp_loader_flash_erase_region(offset, size)`                | `esp_loader_flash_erase_region(&loader, offset, size)`                                                                         |
-| `esp_loader_flash_verify_known_md5(addr, size, md5)`         | `esp_loader_flash_verify_known_md5(&loader, addr, size, md5)`                                                                  |
-| `esp_loader_mem_start(offset, size, block)`                  | `esp_loader_mem_start(&loader, &mem_cfg)` — see [Section 3](#3-use-operation-context-structs-for-flash-and-ram-operations)     |
-| `esp_loader_mem_write(buf, size)`                            | `esp_loader_mem_write(&loader, &mem_cfg, buf, size)`                                                                           |
-| `esp_loader_mem_finish(entry)`                               | `esp_loader_mem_finish(&loader, &mem_cfg, entry)`                                                                              |
-| `esp_loader_read_mac(&mac)`                                  | `esp_loader_read_mac(&loader, &mac)`                                                                                           |
-| `esp_loader_write_register(addr, val)`                       | `esp_loader_write_register(&loader, addr, val)`                                                                                |
-| `esp_loader_read_register(addr, &val)`                       | `esp_loader_read_register(&loader, addr, &val)`                                                                                |
-| `esp_loader_change_transmission_rate(rate)`                  | `esp_loader_change_transmission_rate(&loader, rate)`                                                                           |
-| `esp_loader_change_transmission_rate_stub(old, new)`         | `esp_loader_change_transmission_rate_stub(&loader, old, new)`                                                                  |
-| `esp_loader_get_security_info(&info)`                        | `esp_loader_get_security_info(&loader, &info)`                                                                                 |
-| `esp_loader_reset_target()`                                  | `esp_loader_reset_target(&loader)`                                                                                             |
-
----
+| v1                                                           | v2                                                                                                                                                                  |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `esp_loader_connect(&args)`                                  | `esp_loader_connect(&loader, &args)`                                                                                                                                |
+| `esp_loader_connect_with_stub(&args)`                        | `esp_loader_connect_with_stub(&loader, &args)`                                                                                                                      |
+| `esp_loader_connect_secure_download_mode(&args, size, chip)` | `esp_loader_connect_secure_download_mode(&loader, &args, size, chip)`                                                                                               |
+| `esp_loader_get_target()`                                    | `esp_loader_get_target(&loader)`                                                                                                                                    |
+| `esp_loader_flash_start(offset, size, block)`                | `esp_loader_flash_start(&loader, &flash_cfg)` — see [Section 3](#3-use-operation-context-structs-for-flash-and-ram-operations)                                      |
+| `esp_loader_flash_write(buf, size)`                          | `esp_loader_flash_write(&loader, &flash_cfg, buf, size)`                                                                                                            |
+| `esp_loader_flash_finish(reboot)`                            | `esp_loader_flash_finish(&loader, &flash_cfg, reboot)`                                                                                                              |
+| `esp_loader_flash_deflate_write(buf, size)`                  | `esp_loader_flash_deflate_write(&loader, &defl_cfg, buf, size)`                                                                                                     |
+| `esp_loader_flash_deflate_finish(reboot)`                    | `esp_loader_flash_deflate_finish(&loader, &defl_cfg, reboot)`                                                                                                       |
+| `esp_loader_flash_detect_size(&size)`                        | `esp_loader_flash_detect_size(&loader, &size)`                                                                                                                      |
+| `esp_loader_flash_read(buf, addr, len)`                      | `esp_loader_flash_read(&loader, buf, addr, len)`                                                                                                                    |
+| `esp_loader_flash_erase()`                                   | `esp_loader_flash_erase(&loader)`                                                                                                                                   |
+| `esp_loader_flash_erase_region(offset, size)`                | `esp_loader_flash_erase_region(&loader, offset, size)`                                                                                                              |
+| `esp_loader_flash_verify()`                                  | Removed — MD5 verification now runs automatically inside `esp_loader_flash_finish()` by default; set `skip_verify = true` in `esp_loader_flash_cfg_t` to disable it |
+| `esp_loader_mem_start(offset, size, block)`                  | `esp_loader_mem_start(&loader, &mem_cfg)` — see [Section 3](#3-use-operation-context-structs-for-flash-and-ram-operations)                                          |
+| `esp_loader_mem_write(buf, size)`                            | `esp_loader_mem_write(&loader, &mem_cfg, buf, size)`                                                                                                                |
+| `esp_loader_mem_finish(entry)`                               | `esp_loader_mem_finish(&loader, &mem_cfg, entry)`                                                                                                                   |
+| `esp_loader_read_mac(&mac)`                                  | `esp_loader_read_mac(&loader, &mac)`                                                                                                                                |
+| `esp_loader_write_register(addr, val)`                       | `esp_loader_write_register(&loader, addr, val)`                                                                                                                     |
+| `esp_loader_read_register(addr, &val)`                       | `esp_loader_read_register(&loader, addr, &val)`                                                                                                                     |
+| `esp_loader_change_transmission_rate(rate)`                  | `esp_loader_change_transmission_rate(&loader, rate)`                                                                                                                |
+| `esp_loader_change_transmission_rate_stub(old, new)`         | `esp_loader_change_transmission_rate_stub(&loader, old, new)`                                                                                                       |
+| `esp_loader_get_security_info(&info)`                        | `esp_loader_get_security_info(&loader, &info)`                                                                                                                      |
+| `esp_loader_reset_target()`                                  | `esp_loader_reset_target(&loader)`                                                                                                                                  |
 
 ## 3. Use Operation Context Structs for Flash and RAM Operations
 
@@ -94,7 +92,7 @@ Flash, compressed flash, and RAM load operations each now require a dedicated co
 ```c
 esp_loader_flash_start(0x10000, image_size, 4096);
 esp_loader_flash_write(buf, chunk_size);
-esp_loader_flash_finish(true);
+esp_loader_flash_finish(false);
 ```
 
 **v2:**
@@ -114,7 +112,7 @@ while (remaining > 0) {
     // ...
 }
 
-esp_loader_flash_finish(&loader, &flash_cfg, true);
+esp_loader_flash_finish(&loader, &flash_cfg, false);
 ```
 
 The `_state` sub-struct inside `esp_loader_flash_cfg_t` is managed entirely by the library. Do not read or write its fields.
@@ -348,7 +346,7 @@ void app_main(void)
         offset += chunk;
     }
 
-    esp_loader_flash_finish(&loader, &flash_cfg, true);
+    esp_loader_flash_finish(&loader, &flash_cfg, false);
     esp_loader_reset_target(&loader);
 }
 ```

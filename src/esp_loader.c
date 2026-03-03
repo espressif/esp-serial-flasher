@@ -41,7 +41,6 @@ typedef enum {
     SPI_FLASH_READ_ID = 0x9F
 } spi_flash_cmd_t;
 
-#if MD5_ENABLED
 
 static inline void init_md5(esp_loader_flash_cfg_t *cfg)
 {
@@ -57,8 +56,6 @@ static inline void md5_final(esp_loader_flash_cfg_t *cfg, uint8_t digest[16])
 {
     MD5Final(digest, &cfg->_state._md5_context);
 }
-
-#endif
 
 static uint32_t timeout_per_mb(uint32_t size_bytes, uint32_t time_per_mb)
 {
@@ -428,9 +425,9 @@ esp_loader_error_t esp_loader_flash_start(esp_loader_t *loader, esp_loader_flash
         return ESP_LOADER_ERROR_IMAGE_SIZE;
     }
 
-#if MD5_ENABLED
-    init_md5(cfg);
-#endif
+    if (!cfg->skip_verify) {
+        init_md5(cfg);
+    }
 
     bool encryption_in_cmd = encryption_in_begin_flash_cmd(loader->_target) && !loader->_stub_running;
     const uint32_t blocks_to_write = (cfg->image_size + cfg->block_size - 1) / cfg->block_size;
@@ -460,9 +457,9 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
         data[padding_index++] = padding_value;
     }
 
-#if MD5_ENABLED
-    md5_update(cfg, payload, (size + 3) & ~3);
-#endif
+    if (!cfg->skip_verify) {
+        md5_update(cfg, payload, (size + 3) & ~3);
+    }
 
     unsigned int attempt = 0;
     esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;
@@ -475,17 +472,36 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
     return result;
 }
 
+static void hexify(const uint8_t raw_md5[16], uint8_t hex_md5_out[32])
+{
+    static const uint8_t dec_to_hex[] = {
+        '0', '1', '2', '3', '4', '5', '6', '7',
+        '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
+    for (int i = 0; i < 16; i++) {
+        *hex_md5_out++ = dec_to_hex[raw_md5[i] >> 4];
+        *hex_md5_out++ = dec_to_hex[raw_md5[i] & 0xF];
+    }
+}
 
 esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, bool reboot)
 {
-    (void)cfg;
     if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
-    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+    if (!cfg->skip_verify) {
+        uint8_t raw_md5[16] = {0};
+        uint8_t hex_md5[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
+        md5_final(cfg, raw_md5);
+        hexify(raw_md5, hex_md5);
+        RETURN_ON_ERROR(esp_loader_flash_verify_known_md5(loader,
+                        cfg->offset, cfg->image_size, hex_md5));
+    }
 
-    return loader_flash_end_cmd(loader, !reboot);
+    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+    RETURN_ON_ERROR(loader_flash_end_cmd(loader, !reboot));
+    return ESP_LOADER_SUCCESS;
 }
 
 esp_loader_error_t esp_loader_flash_deflate_start(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg)
@@ -578,6 +594,7 @@ esp_loader_error_t esp_loader_flash_erase(esp_loader_t *loader)
             .offset = 0,
             .image_size = flash_size,
             .block_size = ROM_FLASH_BLOCK_SIZE,
+            .skip_verify = true,
         };
         RETURN_ON_ERROR(esp_loader_flash_start(loader, &cfg));
     }
@@ -610,6 +627,7 @@ esp_loader_error_t esp_loader_flash_erase_region(esp_loader_t *loader, uint32_t 
             .offset = offset,
             .image_size = size,
             .block_size = ROM_FLASH_BLOCK_SIZE,
+            .skip_verify = true,
         };
         RETURN_ON_ERROR(esp_loader_flash_start(loader, &cfg));
     }
@@ -897,19 +915,6 @@ esp_loader_error_t esp_loader_change_transmission_rate(esp_loader_t *loader, uin
     return err;
 }
 
-#if MD5_ENABLED
-static void hexify(const uint8_t raw_md5[16], uint8_t hex_md5_out[32])
-{
-    static const uint8_t dec_to_hex[] = {
-        '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-    };
-    for (int i = 0; i < 16; i++) {
-        *hex_md5_out++ = dec_to_hex[raw_md5[i] >> 4];
-        *hex_md5_out++ = dec_to_hex[raw_md5[i] & 0xF];
-    }
-}
-
 esp_loader_error_t esp_loader_flash_verify_known_md5(esp_loader_t *loader,
         uint32_t address,
         uint32_t size,
@@ -953,18 +958,6 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(esp_loader_t *loader,
 
     return ESP_LOADER_SUCCESS;
 }
-
-esp_loader_error_t esp_loader_flash_verify(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg)
-{
-
-    uint8_t raw_md5[16] = {0};
-    uint8_t hex_md5[MAX(MD5_SIZE_ROM, MD5_SIZE_STUB) + 1] = {0};
-    md5_final(cfg, raw_md5);
-    hexify(raw_md5, hex_md5);
-
-    return esp_loader_flash_verify_known_md5(loader, cfg->offset, cfg->image_size, hex_md5);
-}
-#endif /* MD5_ENABLED */
 
 void esp_loader_reset_target(esp_loader_t *loader)
 {

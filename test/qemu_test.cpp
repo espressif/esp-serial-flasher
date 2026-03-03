@@ -55,7 +55,7 @@ void flash_application(ifstream &image)
     int32_t count = 0;
     size_t image_size = file_size_is(image);
 
-    ESP_ERR_CHECK( esp_loader_flash_start(APP_START_ADDRESS, image_size, sizeof(payload)) );
+    ESP_ERR_CHECK( esp_loader_flash_start(APP_START_ADDRESS, image_size, sizeof(payload), true) );
 
     while (image_size > 0) {
         size_t to_read = min(image_size, sizeof(payload));
@@ -105,7 +105,7 @@ TEST_CASE( "Can write application to flash" )
 
     REQUIRE ( file_compare(new_image, qemu_image, new_image_size) );
 
-    ESP_ERR_CHECK ( esp_loader_flash_verify() );
+    ESP_ERR_CHECK ( esp_loader_flash_finish(false) );
 
     // NOTE: loader_flash_finish() is not called to prevent reset of target
 }

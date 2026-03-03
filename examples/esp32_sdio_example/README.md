@@ -72,13 +72,7 @@ See the Getting Started Guide for full steps to configure and use ESP-IDF to bui
 ## Configuration
 
 For details about available configuration options, please refer to the top level [README.md](../../README.md).
-Compile definitions can be specified in the command line when running `idf.py`, for example:
-
-```bash
-idf.py build -DMD5_ENABLED=1
-```
-
-Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array. Without explicitly enabling MD5 check, flash integrity verification is disabled by default.
+Binaries to be flashed are placed in a separate folder (binaries.c) for each possible target and converted to C-array.
 
 ## Example output
 

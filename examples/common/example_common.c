@@ -185,17 +185,18 @@ esp_loader_error_t flash_binary(esp_loader_t *loader, const uint8_t *bin, size_t
 
     printf("\nFinished programming\n");
 
-#if MD5_ENABLED
-    err = esp_loader_flash_verify(loader, &flash_cfg);
-    if (err == ESP_LOADER_ERROR_UNSUPPORTED_FUNC) {
-        printf("ESP8266 does not support flash verify command.");
+    err = esp_loader_flash_finish(loader, &flash_cfg, false);
+    if (err == ESP_LOADER_ERROR_INVALID_MD5) {
+        printf("MD5 does not match. Flash verification failed.\n");
         return err;
     } else if (err != ESP_LOADER_SUCCESS) {
-        printf("MD5 does not match. Error: %s\n", get_error_string(err));
+        printf("Flash finish failed with error: %s\n", get_error_string(err));
         return err;
     }
-    printf("Flash verified\n");
-#endif
+
+    if (!flash_cfg.skip_verify) {
+        printf("Flash verified\n");
+    }
 
     return ESP_LOADER_SUCCESS;
 }

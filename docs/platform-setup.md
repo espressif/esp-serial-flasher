@@ -144,7 +144,6 @@ Add these configuration options to your `prj.conf`:
 ```text
 CONFIG_ESP_SERIAL_FLASHER=y
 CONFIG_CONSOLE_GETCHAR=y
-CONFIG_SERIAL_FLASHER_MD5_ENABLED=y
 ```
 
 ### Example Code

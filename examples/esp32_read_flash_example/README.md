@@ -54,11 +54,6 @@ See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/s
 ## Configuration
 
 For details about available configuration options, please refer to the top level [README.md](../../README.md).
-Compile definitions can be specified in the command line when running `idf.py`, for example:
-
-```bash
-idf.py build -DMD5_ENABLED=1
-```
 
 ## Example Output
 

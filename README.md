@@ -11,7 +11,7 @@ ESP Serial Flasher is a portable C library for programming and interacting with 
 This library enables you to program Espressif SoCs from various host platforms using different communication interfaces. It provides a unified API that abstracts the underlying communication protocol, making it easy to integrate ESP device programming into your projects. In this context, the host (flashing/programming device running this library) controls the target (the ESP-series SoC being programmed). It serves a similar purpose to [esptool](https://github.com/espressif/esptool), but is designed for embedded hosts without a PC or Python runtime or on less powerful single board computers.
 
 - **Connection and identification**: Connect to targets, autodetect chip family, read MAC address, retrieve security info.
-- **Flash operations**: Write, read, erase, detect flash size, and optionally verify data via MD5.
+- **Flash operations**: Write, read, erase, detect flash size, and verify data integrity via MD5.
 - **RAM download and execution**: Load binaries to RAM and run them.
 - **Registers and control**: Read/write registers, change transmission rate, reset the target.
 
@@ -192,9 +192,6 @@ ESP Serial Flasher provides several configuration options to customize its behav
 The most common configuration options:
 
 ```bash
-# Disable MD5 verification
-cmake -DMD5_ENABLED=0 ..
-
 # Set custom retry count
 cmake -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 ..
 ```
@@ -224,7 +221,7 @@ This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENS
 The following limitations are currently known:
 
 - Binary image size must be known before flashing
-- ESP8266 targets require `MD5_ENABLED=0` due to ROM bootloader limitations
+- ESP8266 targets do not support the MD5 verify command; set `skip_verify = true` in `esp_loader_flash_cfg_t` for ESP8266 targets
 - SPI interface only supports RAM download operations
 - SDIO interface is experimental with limited platform support
 - Only one target can be flashed at a time

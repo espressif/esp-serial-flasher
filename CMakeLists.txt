@@ -42,10 +42,6 @@ add_option(SERIAL_FLASHER_WRITE_BLOCK_RETRIES 3)
 add_option(SERIAL_FLASHER_RESET_INVERT false)
 add_option(SERIAL_FLASHER_BOOT_INVERT false)
 
-if (DEFINED MD5_ENABLED OR CONFIG_SERIAL_FLASHER_MD5_ENABLED)
-    list(APPEND defs MD5_ENABLED=1)
-endif()
-
 if (DEFINED ESP_PLATFORM)
     # Conditionally compile each ESP32 port based on Kconfig selection.
     # Each port exposes only static symbols, so multiple ports can coexist in the same build.

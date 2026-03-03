@@ -5,8 +5,6 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(zephyr_flasher)
 
-zephyr_compile_definitions_ifdef(CONFIG_SERIAL_FLASHER_MD5_ENABLED MD5_ENABLED)
-
 zephyr_library_sources(
   ../common/example_common.c
   )
