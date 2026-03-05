@@ -15,6 +15,7 @@ This guide describes the breaking changes introduced in v2 and explains how to u
 | Kconfig options             | `SERIAL_FLASHER_INTERFACE_*` choice                           | `SERIAL_FLASHER_PORT_*` booleans (multiple can be enabled)                                             |
 | Error type header           | Defined in `esp_loader.h`                                     | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                        |
 | Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*` | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable           |
+| `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues     | `reboot` parameter removed; **must now be called** — performs MD5 verification                         |
 
 ---
 
@@ -62,9 +63,9 @@ All public functions now take the loader context as their first argument.
 | `esp_loader_get_target()`                                    | `esp_loader_get_target(&loader)`                                                                                                                                    |
 | `esp_loader_flash_start(offset, size, block)`                | `esp_loader_flash_start(&loader, &flash_cfg)` — see [Section 3](#3-use-operation-context-structs-for-flash-and-ram-operations)                                      |
 | `esp_loader_flash_write(buf, size)`                          | `esp_loader_flash_write(&loader, &flash_cfg, buf, size)`                                                                                                            |
-| `esp_loader_flash_finish(reboot)`                            | `esp_loader_flash_finish(&loader, &flash_cfg, reboot)`                                                                                                              |
+| `esp_loader_flash_finish(reboot)`                            | `esp_loader_flash_finish(&loader, &flash_cfg)`                                                                                                                      |
 | `esp_loader_flash_deflate_write(buf, size)`                  | `esp_loader_flash_deflate_write(&loader, &defl_cfg, buf, size)`                                                                                                     |
-| `esp_loader_flash_deflate_finish(reboot)`                    | `esp_loader_flash_deflate_finish(&loader, &defl_cfg, reboot)`                                                                                                       |
+| `esp_loader_flash_deflate_finish(reboot)`                    | `esp_loader_flash_deflate_finish(&loader, &defl_cfg)`                                                                                                               |
 | `esp_loader_flash_detect_size(&size)`                        | `esp_loader_flash_detect_size(&loader, &size)`                                                                                                                      |
 | `esp_loader_flash_read(buf, addr, len)`                      | `esp_loader_flash_read(&loader, buf, addr, len)`                                                                                                                    |
 | `esp_loader_flash_erase()`                                   | `esp_loader_flash_erase(&loader)`                                                                                                                                   |
@@ -112,7 +113,7 @@ while (remaining > 0) {
     // ...
 }
 
-esp_loader_flash_finish(&loader, &flash_cfg, false);
+esp_loader_flash_finish(&loader, &flash_cfg);
 ```
 
 The `_state` sub-struct inside `esp_loader_flash_cfg_t` is managed entirely by the library. Do not read or write its fields.
@@ -135,7 +136,7 @@ while (remaining > 0) {
     // ...
 }
 
-esp_loader_flash_deflate_finish(&loader, &defl_cfg, true);
+esp_loader_flash_deflate_finish(&loader, &defl_cfg);
 ```
 
 ### RAM load
@@ -163,7 +164,30 @@ esp_loader_mem_finish(&loader, &mem_cfg, entrypoint);
 
 ---
 
-## 4. Update Port Implementations
+## 4. Always Call `esp_loader_flash_finish()` — Reboot Flag Removed
+
+In v1, `esp_loader_flash_finish(reboot)` accepted a boolean to optionally reboot the target after flashing. Due to issues with the ROM bootloader (it does not respond to further commands after the flash end command, and strapping pins are not re-read on the resulting reboot), the function was **not recommended** for use.
+
+In v2, the `reboot` parameter has been **removed** and `esp_loader_flash_finish()` **must always be called** after flashing — it performs MD5 verification of the written data unless `skip_verify = true` is set in `esp_loader_flash_cfg_t`.
+
+To reset the target after flashing, call `esp_loader_reset_target()` explicitly.
+
+**v1:**
+
+```c
+esp_loader_flash_finish(true);   // not recommended — reboot via flash end command
+```
+
+**v2:**
+
+```c
+esp_loader_flash_finish(&loader, &flash_cfg);   // required — runs MD5 verification
+esp_loader_reset_target(&loader);               // reset explicitly if needed
+```
+
+---
+
+## 5. Update Port Implementations
 
 The port layer contract changed from individual free functions to a single `esp_esp_loader_port_ops_t` vtable.
 
@@ -224,7 +248,7 @@ See `port/esp32_sdio_port.c` for a reference SDIO implementation.
 
 ---
 
-## 5. Update Interface / Protocol Selection
+## 6. Update Interface / Protocol Selection
 
 ### CMake (non-ESP-IDF) Builds
 
@@ -272,7 +296,7 @@ Each enabled port compiles its `*_port.c` file and exposes a `*_port_ops` vtable
 
 ---
 
-## 6. Conditionally-Compiled APIs are Now Always Available
+## 7. Conditionally-Compiled APIs are Now Always Available
 
 In v1, several functions were only declared when the matching interface macro was defined (e.g. `esp_loader_flash_read` was only available with `SERIAL_FLASHER_INTERFACE_UART`). In v2 these guards are removed — every function is always declared. Calling a function on an unsupported protocol returns `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` instead of causing a compile error.
 
@@ -280,13 +304,13 @@ This means you no longer need `#ifdef SERIAL_FLASHER_INTERFACE_UART` guards arou
 
 ---
 
-## 7. `esp_loader_error_t` Header Change
+## 8. `esp_loader_error_t` Header Change
 
 `esp_loader_error_t` is now defined in `include/esp_loader_error.h` (previously it was part of `esp_loader.h`). Including `esp_loader.h` still works — it automatically includes `esp_loader_error.h`. No source changes are required unless you included `esp_loader_io.h` independently to get the error type; in that case add `#include "esp_loader_error.h"` to your port code.
 
 ---
 
-## 8. Multiple Instances
+## 9. Multiple Instances
 
 Because all state is in `esp_loader_t`, you can now run multiple independent loader instances in the same program for example, only not simultaneously. Each instance needs its own `esp_loader_t` and its own `loader_port_*_init()` call.
 
@@ -346,7 +370,7 @@ void app_main(void)
         offset += chunk;
     }
 
-    esp_loader_flash_finish(&loader, &flash_cfg, false);
+    esp_loader_flash_finish(&loader, &flash_cfg);
     esp_loader_reset_target(&loader);
 }
 ```

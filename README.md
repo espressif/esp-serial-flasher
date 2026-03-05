@@ -163,7 +163,7 @@ while (offset < flash_cfg.image_size) {
     offset += chunk;
 }
 
-err = esp_loader_flash_finish(&loader, &flash_cfg, true);
+err = esp_loader_flash_finish(&loader, &flash_cfg);
 if (err != ESP_LOADER_SUCCESS) return err;
 ```
 

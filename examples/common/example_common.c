@@ -185,7 +185,7 @@ esp_loader_error_t flash_binary(esp_loader_t *loader, const uint8_t *bin, size_t
 
     printf("\nFinished programming\n");
 
-    err = esp_loader_flash_finish(loader, &flash_cfg, false);
+    err = esp_loader_flash_finish(loader, &flash_cfg);
     if (err == ESP_LOADER_ERROR_INVALID_MD5) {
         printf("MD5 does not match. Flash verification failed.\n");
         return err;

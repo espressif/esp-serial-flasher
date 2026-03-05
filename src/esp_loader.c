@@ -426,6 +426,9 @@ esp_loader_error_t esp_loader_flash_start(esp_loader_t *loader, esp_loader_flash
     }
 
     if (!cfg->skip_verify) {
+        if (loader->_target == ESP8266_CHIP && !loader->_stub_running) {
+            return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+        }
         init_md5(cfg);
     }
 
@@ -484,7 +487,7 @@ static void hexify(const uint8_t raw_md5[16], uint8_t hex_md5_out[32])
     }
 }
 
-esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, bool reboot)
+esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg)
 {
     if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
@@ -499,8 +502,13 @@ esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flas
                         cfg->offset, cfg->image_size, hex_md5));
     }
 
-    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-    RETURN_ON_ERROR(loader_flash_end_cmd(loader, !reboot));
+    // ROM does not respond to next commands after flash end, even when stay_in_loader is set to true.
+    // If set to false, the bootloader is rebooted, but reading of strapping pins is not done again, so it boots
+    // into the bootloader again.
+    if (loader->_stub_running) {
+        loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+        RETURN_ON_ERROR(loader_flash_end_cmd(loader, true));
+    }
     return ESP_LOADER_SUCCESS;
 }
 
@@ -558,7 +566,7 @@ esp_loader_error_t esp_loader_flash_deflate_write(esp_loader_t *loader, esp_load
 }
 
 
-esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg, bool reboot)
+esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg)
 {
     (void)cfg;
 
@@ -567,12 +575,12 @@ esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loa
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
-    if (!reboot && !loader->_stub_running) {
+    if (!loader->_stub_running) {
         return ESP_LOADER_SUCCESS;
     }
 
     loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-    return loader_flash_deflate_end_cmd(loader, !reboot);
+    return loader_flash_deflate_end_cmd(loader, true);
 }
 
 esp_loader_error_t esp_loader_flash_erase(esp_loader_t *loader)

@@ -312,6 +312,11 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
 /**
   * @brief Initiates flash operation
   *
+  * @note  Must be followed by esp_loader_flash_finish() after all esp_loader_flash_write()
+  *        calls, even when @p cfg->skip_verify is @c true. Skipping esp_loader_flash_finish()
+  *        causes the flash-end command to never be sent and, when @p cfg->skip_verify is @c false,
+  *        silently skips MD5 verification.
+  *
   * @param loader[in]  Pointer to initialized loader context.
   * @param cfg[in,out] Flash operation context. Caller fills offset, image_size and block_size
   *                    before calling. The _state sub-struct is initialized by this function
@@ -342,15 +347,14 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
 /**
   * @brief Ends flash operation.
   *
-  * Unless @p cfg->skip_verify was set to @c true, this function verifies flash integrity
-  * by comparing the MD5 digest accumulated during esp_loader_flash_write() calls against
-  * the digest computed by the target over the same flash region. Verification runs before
-  * the flash-end command is issued; if it fails, @c ESP_LOADER_ERROR_INVALID_MD5 is
-  * returned immediately and the flash-end command is not sent (the target stays in the loader).
+  * When @p cfg->skip_verify is @c false, this function verifies flash integrity by comparing the
+  * MD5 digest accumulated during esp_loader_flash_write() calls against the digest computed
+  * by the target over the same flash region. Verification runs before the flash-end command
+  * is issued; if it fails, @c ESP_LOADER_ERROR_INVALID_MD5 is returned immediately and the
+  * flash-end command is not sent (the target stays in the loader).
   *
   * @param loader[in]  Pointer to initialized loader context.
   * @param cfg[in]     Flash operation context initialized by esp_loader_flash_start().
-  * @param reboot[in]  Reboot the target if true. Has no effect when MD5 verification fails.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
@@ -359,7 +363,7 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, bool reboot);
+esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg);
 
 /**
   * @brief Initiates compressed flash operation (DEFLATE/zlib stream).
@@ -403,14 +407,13 @@ esp_loader_error_t esp_loader_flash_deflate_write(esp_loader_t *loader, esp_load
   *
   * @param loader[in]  Pointer to initialized loader context.
   * @param cfg[in]     Compressed flash context initialized by esp_loader_flash_deflate_start().
-  * @param reboot[in]  Reboot the target if true.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg, bool reboot);
+esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg);
 
 /**
   * @brief Detects the size of the flash chip used by target
