@@ -114,16 +114,16 @@ int main(void)
 
   esp_loader_t loader;
 
-  loader_stm32_config_t config = {
-      .huart = &huart2,
-      .port_io0 = TARGET_IO0_GPIO_Port,
+  stm32_port_t port = {
+      .port.ops    = &stm32_uart_ops,
+      .huart       = &huart2,
+      .port_io0    = TARGET_IO0_GPIO_Port,
       .pin_num_io0 = TARGET_IO0_Pin,
-      .port_rst = TARGET_RESET_GPIO_Port,
+      .port_rst    = TARGET_RESET_GPIO_Port,
       .pin_num_rst = TARGET_RESET_Pin,
   };
 
-  loader_port_stm32_init(&config);
-  esp_loader_init_uart(&loader, &stm32_uart_port);
+  esp_loader_init_uart(&loader, &port.port);
 
   if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 

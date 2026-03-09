@@ -119,20 +119,20 @@ For implementing custom platform support, see [Supporting New Platforms Guide](d
 
 esp_loader_error_t err;
 
-// 1. Initialize the hardware peripheral (platform-specific)
-const loader_esp32_config_t port_config = {
-    .baud_rate = 115200,
-    .uart_port = UART_NUM_1,
-    .uart_rx_pin = GPIO_NUM_5,
-    .uart_tx_pin = GPIO_NUM_4,
+// 1. Fill in the port struct with hardware parameters
+esp32_port_t port = {
+    .port.ops          = &esp32_uart_ops,
+    .baud_rate         = 115200,
+    .uart_port         = UART_NUM_1,
+    .uart_rx_pin       = GPIO_NUM_5,
+    .uart_tx_pin       = GPIO_NUM_4,
     .reset_trigger_pin = GPIO_NUM_25,
     .gpio0_trigger_pin = GPIO_NUM_26,
 };
-loader_port_esp32_init(&port_config);
 
 // 2. Initialize the loader context — binds the protocol and port vtable
 esp_loader_t loader;
-err = esp_loader_init_uart(&loader, &esp32_uart_port_ops);
+err = esp_loader_init_uart(&loader, &port.port);
 if (err != ESP_LOADER_SUCCESS) return err;
 
 // 3. Connect to the target chip

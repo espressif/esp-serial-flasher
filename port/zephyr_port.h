@@ -19,27 +19,48 @@
 #include "esp_loader_io.h"
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/console/tty.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/**
+ * @brief Concrete Zephyr UART port instance.
+ *
+ * Declare one of these, fill the config fields, then pass &port.port to
+ * esp_loader_init_uart(). Hardware initialisation is called automatically
+ * inside esp_loader_init_uart() — no separate init step is needed.
+ *
+ * @code
+ *   zephyr_port_t port = {
+ *       .port.ops    = &zephyr_uart_ops,
+ *       .uart_dev    = DEVICE_DT_GET(DT_ALIAS(uart)),
+ *       .enable_spec = GPIO_DT_SPEC_GET(DT_ALIAS(en), gpios),
+ *       .boot_spec   = GPIO_DT_SPEC_GET(DT_ALIAS(boot), gpios),
+ *   };
+ *   esp_loader_t loader;
+ *   esp_loader_init_uart(&loader, &port.port);
+ * @endcode
+ */
 typedef struct {
-    const struct device *uart_dev;
-    const struct gpio_dt_spec enable_spec;
-    const struct gpio_dt_spec boot_spec;
-} loader_zephyr_config_t;
+    esp_loader_port_t       port;        /*!< Embedded port base */
+
+    /* Configuration — fill before calling esp_loader_init_uart() */
+    const struct device    *uart_dev;
+    struct gpio_dt_spec     enable_spec;
+    struct gpio_dt_spec     boot_spec;
+
+    /* Private runtime state — do not access directly */
+    uint64_t                _time_end;
+    struct tty_serial       _tty;
+    char                    _tty_rx_buf[CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE];
+    char                    _tty_tx_buf[CONFIG_ESP_SERIAL_FLASHER_UART_BUFSIZE];
+} zephyr_port_t;
 
 /** Port operations vtable for the Zephyr UART port. */
-extern esp_loader_port_t zephyr_uart_port;
-
-/**
-  * @brief Initializes the Zephyr UART hardware.
-  *
-  * Call this before esp_loader_init() to configure the UART device.
-  */
-esp_loader_error_t loader_port_zephyr_init(const loader_zephyr_config_t *config);
+extern const esp_loader_port_ops_t zephyr_uart_ops;
 
 #ifdef __cplusplus
 }

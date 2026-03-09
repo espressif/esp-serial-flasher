@@ -15,7 +15,6 @@
 
 #include "esp32_sdio_port.h"
 #include "driver/gpio.h"
-#include "sdmmc_cmd.h"
 #include "esp_timer.h"
 #include <unistd.h>
 
@@ -37,94 +36,80 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 }
 #endif
 
-static sdmmc_card_t s_card;
-static sdmmc_host_t s_card_config;
-static int64_t s_time_end;
-static uint32_t s_reset_trigger_pin;
-static uint32_t s_boot_pin;
-static bool host_driver_needs_deinit;
-
-esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t *config)
+static esp_loader_error_t esp32_sdio_port_init(esp_loader_port_t *port)
 {
-    /* Initialize the global static variables*/
-    s_reset_trigger_pin = config->reset_trigger_pin;
-    s_boot_pin = config->boot_pin;
-    s_card_config = (sdmmc_host_t)SDMMC_HOST_DEFAULT();
-    s_card_config.flags = config->bus_width == SDIO_1BIT ? SDMMC_HOST_FLAG_1BIT : SDMMC_HOST_FLAG_4BIT;
-    s_card_config.max_freq_khz = config->max_freq_khz;
-    s_card_config.slot = config->slot;
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+
+    p->_card_config = (sdmmc_host_t)SDMMC_HOST_DEFAULT();
+    p->_card_config.flags = p->bus_width == SDIO_1BIT ? SDMMC_HOST_FLAG_1BIT : SDMMC_HOST_FLAG_4BIT;
+    p->_card_config.max_freq_khz = p->max_freq_khz;
+    p->_card_config.slot = p->slot;
 
 #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
-    /*
-        The buffer and length of the data passed to SDMMC Host Driver needs to be aligned.
-        The new L1 cache requires 64 bytes aligning of a buffer,
-        this flag ensures that SDMMC Driver allocates custom aligned buffer and memcpy the data to it.
-        This should be reworked when the new sdmmc driver-ng comes out as it would not need same alignment for size and buffer.
-    */
-    s_card_config.flags |= SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
+    p->_card_config.flags |= SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
 #endif
 
-    if (!config->dont_initialize_host_driver) {
+    if (!p->dont_initialize_host_driver) {
         if (sdmmc_host_init() != ESP_OK) {
             return ESP_LOADER_ERROR_FAIL;
         }
 
         sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
         slot_config.flags = SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
-        slot_config.width = config->bus_width == SDIO_1BIT ? 1 : 4;
+        slot_config.width = p->bus_width == SDIO_1BIT ? 1 : 4;
 #if SOC_SDMMC_USE_GPIO_MATRIX
-        slot_config.clk = config->sdio_clk_pin;
-        slot_config.cmd = config->sdio_cmd_pin;
-        slot_config.d0 = config->sdio_d0_pin;
-        slot_config.d1 = config->sdio_d1_pin;
-        slot_config.d2 = config->sdio_d2_pin;
-        slot_config.d3 = config->sdio_d3_pin;
+        slot_config.clk = p->sdio_clk_pin;
+        slot_config.cmd = p->sdio_cmd_pin;
+        slot_config.d0  = p->sdio_d0_pin;
+        slot_config.d1  = p->sdio_d1_pin;
+        slot_config.d2  = p->sdio_d2_pin;
+        slot_config.d3  = p->sdio_d3_pin;
 #endif
 
-        if (sdmmc_host_init_slot(config->slot, &slot_config) != ESP_OK) {
+        if (sdmmc_host_init_slot(p->slot, &slot_config) != ESP_OK) {
             return ESP_LOADER_ERROR_FAIL;
         }
 
-        host_driver_needs_deinit = true;
+        p->_host_driver_needs_deinit = true;
     }
 
-    gpio_reset_pin(s_reset_trigger_pin);
-    gpio_set_pull_mode(s_reset_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_reset_trigger_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->reset_trigger_pin);
+    gpio_set_pull_mode(p->reset_trigger_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->reset_trigger_pin, GPIO_MODE_OUTPUT);
 
-    gpio_reset_pin(s_boot_pin);
-    gpio_set_pull_mode(s_boot_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_boot_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->boot_pin);
+    gpio_set_pull_mode(p->boot_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->boot_pin, GPIO_MODE_OUTPUT);
 
     return ESP_LOADER_SUCCESS;
 }
 
-
-void loader_port_esp32_sdio_deinit(void)
+static void esp32_sdio_port_deinit(esp_loader_port_t *port)
 {
-    if (host_driver_needs_deinit) {
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+
+    if (p->_host_driver_needs_deinit) {
 #if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
-        free(s_card.host.dma_aligned_buffer);
+        free(p->_card.host.dma_aligned_buffer);
 #endif
         sdmmc_host_deinit();
-        host_driver_needs_deinit = false;
+        p->_host_driver_needs_deinit = false;
     }
-    gpio_reset_pin(s_reset_trigger_pin);
-    gpio_reset_pin(s_boot_pin);
+    gpio_reset_pin(p->reset_trigger_pin);
+    gpio_reset_pin(p->boot_pin);
 }
-
 
 static esp_loader_error_t esp32_sdio_write(esp_loader_port_t *port, uint32_t function, uint32_t addr,
         const uint8_t *data, uint16_t size, uint32_t timeout)
 {
-    (void)port;
-    (void) timeout; // Unused, there is a global timeout in the ESP-IDF driver
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+    (void)timeout;
 
     if (data == NULL || !WORD_ALIGNED(data)) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-    esp_err_t err = sdmmc_io_write_bytes(&s_card, function, addr, data, (size_t)size);
+    esp_err_t err = sdmmc_io_write_bytes(&p->_card, function, addr, data, (size_t)size);
 
     if (err == ESP_OK) {
 #if SERIAL_FLASHER_DEBUG_TRACE
@@ -138,18 +123,17 @@ static esp_loader_error_t esp32_sdio_write(esp_loader_port_t *port, uint32_t fun
     }
 }
 
-
 static esp_loader_error_t esp32_sdio_read(esp_loader_port_t *port, uint32_t function, uint32_t addr,
         uint8_t *data, uint16_t size, uint32_t timeout)
 {
-    (void)port;
-    (void) timeout; // Unused, there is a global timeout in the ESP-IDF driver
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+    (void)timeout;
 
     if (data == NULL || !WORD_ALIGNED(data)) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-    esp_err_t err = sdmmc_io_read_bytes(&s_card, function, addr, data, (size_t)size);
+    esp_err_t err = sdmmc_io_read_bytes(&p->_card, function, addr, data, (size_t)size);
 
     if (err == ESP_OK) {
 #if SERIAL_FLASHER_DEBUG_TRACE
@@ -163,11 +147,10 @@ static esp_loader_error_t esp32_sdio_read(esp_loader_port_t *port, uint32_t func
     }
 }
 
-
 static esp_loader_error_t esp32_sdio_card_init(esp_loader_port_t *port)
 {
-    (void)port;
-    const esp_loader_error_t err = sdmmc_card_init(&s_card_config, &s_card);
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+    esp_err_t err = sdmmc_card_init(&p->_card_config, &p->_card);
 
     if (err == ESP_OK) {
         return ESP_LOADER_SUCCESS;
@@ -178,49 +161,43 @@ static esp_loader_error_t esp32_sdio_card_init(esp_loader_port_t *port)
     }
 }
 
-
 static void esp32_sdio_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
     (void)port;
     usleep(ms * 1000);
 }
 
-
 static void esp32_sdio_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
-    (void)port;
-    s_time_end = esp_timer_get_time() + ms * 1000;
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+    p->_time_end = esp_timer_get_time() + ms * 1000;
 }
-
 
 static uint32_t esp32_sdio_remaining_time(esp_loader_port_t *port)
 {
-    (void)port;
-    int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+    int64_t remaining = (p->_time_end - esp_timer_get_time()) / 1000;
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
-
 static void esp32_sdio_reset_target(esp_loader_port_t *port)
 {
-    (void)port;
-    gpio_set_level(s_reset_trigger_pin, 0);
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+    gpio_set_level(p->reset_trigger_pin, 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_reset_trigger_pin, 1);
+    gpio_set_level(p->reset_trigger_pin, 1);
 }
-
 
 static void esp32_sdio_enter_bootloader(esp_loader_port_t *port)
 {
-    (void)port;
-    gpio_set_level(s_boot_pin, 0);
-    gpio_set_level(s_reset_trigger_pin, 0);
+    esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
+    gpio_set_level(p->boot_pin, 0);
+    gpio_set_level(p->reset_trigger_pin, 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_reset_trigger_pin, 1);
+    gpio_set_level(p->reset_trigger_pin, 1);
     usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_boot_pin, 1);
+    gpio_set_level(p->boot_pin, 1);
 }
-
 
 static void esp32_sdio_debug_print(esp_loader_port_t *port, const char *str)
 {
@@ -228,17 +205,18 @@ static void esp32_sdio_debug_print(esp_loader_port_t *port, const char *str)
     printf("DEBUG: %s\n", str);
 }
 
-
-esp_loader_error_t loader_port_wait_int(uint32_t timeout)
+esp_loader_error_t loader_port_wait_int(esp32_sdio_port_t *port, uint32_t timeout)
 {
-    if (sdmmc_io_wait_int(&s_card, timeout) == ESP_OK) {
+    if (sdmmc_io_wait_int(&port->_card, timeout) == ESP_OK) {
         return ESP_LOADER_SUCCESS;
     } else {
         return ESP_LOADER_ERROR_TIMEOUT;
     }
 }
 
-static const esp_loader_port_ops_t esp32_sdio_ops = {
+const esp_loader_port_ops_t esp32_sdio_ops = {
+    .init                     = esp32_sdio_port_init,
+    .deinit                   = esp32_sdio_port_deinit,
     .enter_bootloader         = esp32_sdio_enter_bootloader,
     .reset_target             = esp32_sdio_reset_target,
     .start_timer              = esp32_sdio_start_timer,
@@ -250,5 +228,3 @@ static const esp_loader_port_ops_t esp32_sdio_ops = {
     .sdio_read                = esp32_sdio_read,
     .sdio_card_init           = esp32_sdio_card_init,
 };
-
-esp_loader_port_t esp32_sdio_port = { .ops = &esp32_sdio_ops };

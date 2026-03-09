@@ -90,20 +90,18 @@ void app_main(void)
     ESP_LOGI(TAG, "Installing the USB CDC-ACM driver");
     ESP_ERROR_CHECK(cdc_acm_host_install(NULL));
 
-    while (true) {
-        const loader_esp32_usb_cdc_acm_config_t config = {
-            .device_vid = USB_VID_PID_AUTO_DETECT,
-            .device_pid = USB_VID_PID_AUTO_DETECT,
-            .connection_timeout_ms = 1000,
-            .out_buffer_size = 4096,
-            .device_disconnected_callback = device_disconnected_callback,
-        };
+    esp32_usb_cdc_acm_port_t port = {
+        .port.ops                     = &esp32_usb_cdc_acm_ops,
+        .device_vid                   = USB_VID_PID_AUTO_DETECT,
+        .device_pid                   = USB_VID_PID_AUTO_DETECT,
+        .connection_timeout_ms        = 1000,
+        .out_buffer_size              = 4096,
+        .device_disconnected_callback = device_disconnected_callback,
+    };
 
-        ESP_LOGI(TAG, "Opening CDC ACM device 0x%04X:0x%04X...", config.device_vid, config.device_pid);
-        if (loader_port_esp32_usb_cdc_acm_init(&config) != ESP_LOADER_SUCCESS) {
-            continue;
-        }
-        if (esp_loader_init_usb(&loader, &esp32_usb_cdc_acm_port) != ESP_LOADER_SUCCESS) {
+    while (true) {
+        ESP_LOGI(TAG, "Opening CDC ACM device 0x%04X:0x%04X...", port.device_vid, port.device_pid);
+        if (esp_loader_init_usb(&loader, &port.port) != ESP_LOADER_SUCCESS) {
             continue;
         }
 

@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "esp_loader_io.h"
 #include "esp_loader.h"
 #include "usb/usb_host.h"
 #include "usb/cdc_acm_host.h"
@@ -40,32 +41,53 @@ extern "C" {
 #define CH340_PID_1                 (0x7523)
 #define CH341_PID                   (0x5523)
 
+typedef void (*loader_port_esp32_usb_cdc_acm_callback_t)(void);
 
-typedef void (*loader_port_esp32_usb_cdc_acm_callback_t) (void);
-
+/**
+ * @brief Concrete ESP32 USB CDC-ACM port instance.
+ *
+ * Declare one of these (with static or longer lifetime than the loader),
+ * fill the config fields, then pass &port.port to esp_loader_init_usb().
+ * USB device open is called automatically inside esp_loader_init_usb() —
+ * no separate init step is needed.
+ *
+ * The port can be reused after a device disconnect: call
+ * esp_loader_init_usb() again to reopen the device.
+ *
+ * @code
+ *   esp32_usb_cdc_acm_port_t port = {
+ *       .port.ops                    = &esp32_usb_cdc_acm_ops,
+ *       .device_vid                  = USB_VID_PID_AUTO_DETECT,
+ *       .device_pid                  = USB_VID_PID_AUTO_DETECT,
+ *       .connection_timeout_ms       = 1000,
+ *       .out_buffer_size             = 4096,
+ *       .device_disconnected_callback = my_disconnect_cb,
+ *   };
+ *   esp_loader_t loader;
+ *   esp_loader_init_usb(&loader, &port.port);
+ * @endcode
+ */
 typedef struct {
+    esp_loader_port_t port;          /*!< Embedded port base */
+
+    /* Configuration — fill before calling esp_loader_init_usb() */
     uint16_t device_vid;
     uint16_t device_pid;
     uint32_t connection_timeout_ms;
-    uint32_t out_buffer_size; /* Must be larger than max packet size */
-    /* Only set needed callbacks, NULLed ones are ignored .The callbacks are called from
-       the usb library task, so ensure operations done within are thread-safe */
+    uint32_t out_buffer_size;        /*!< Must be larger than max USB packet size */
     loader_port_esp32_usb_cdc_acm_callback_t acm_host_error_callback;
     loader_port_esp32_usb_cdc_acm_callback_t device_disconnected_callback;
     loader_port_esp32_usb_cdc_acm_callback_t acm_host_serial_state_callback;
-} loader_esp32_usb_cdc_acm_config_t;
+
+    /* Private runtime state — do not access directly */
+    cdc_acm_dev_hdl_t    _acm_device;
+    StreamBufferHandle_t _rx_stream_buffer;
+    bool                 _is_usb_serial_jtag;
+    uint32_t             _time_end;
+} esp32_usb_cdc_acm_port_t;
 
 /** Port operations vtable for the ESP32 USB CDC-ACM port. */
-extern esp_loader_port_t esp32_usb_cdc_acm_port;
-
-/**
-  * @brief Initializes the USB CDC-ACM hardware.
-  *
-  * Call this before esp_loader_init() to open the CDC-ACM device.
-  */
-esp_loader_error_t loader_port_esp32_usb_cdc_acm_init(const loader_esp32_usb_cdc_acm_config_t *config);
-
-esp_loader_error_t loader_port_esp32_usb_cdc_acm_deinit(void);
+extern const esp_loader_port_ops_t esp32_usb_cdc_acm_ops;
 
 #ifdef __cplusplus
 }

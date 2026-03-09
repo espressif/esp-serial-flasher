@@ -4,22 +4,22 @@ This guide describes the breaking changes introduced in v2 and explains how to u
 
 ## Overview of Breaking Changes
 
-| Area                        | v1                                                            | v2                                                                                                     |
-| --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Library state               | Global / static variables                                     | Caller-owned `esp_loader_t` context                                                                    |
-| Initialization              | Not required                                                  | `esp_loader_init()` required                                                                           |
-| Function signatures         | No context parameter                                          | First parameter is `esp_loader_t *loader`                                                              |
-| Flash / mem operation state | Stored inside `esp_loader_t`                                  | Separate `esp_loader_flash_cfg_t` / `esp_loader_flash_deflate_cfg_t` / `esp_loader_mem_cfg_t` contexts |
-| Port layer                  | Free functions (`loader_port_write`, etc.)                    | `esp_esp_loader_port_ops_t` vtable                                                                     |
-| Protocol selection          | Compile-time `SERIAL_FLASHER_INTERFACE_*`                     | Runtime `esp_loader_protocol_t` in `esp_loader_init()`                                                 |
-| Kconfig options             | `SERIAL_FLASHER_INTERFACE_*` choice                           | `SERIAL_FLASHER_PORT_*` booleans (multiple can be enabled)                                             |
-| Error type header           | Defined in `esp_loader.h`                                     | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                        |
-| Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*` | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable           |
-| `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues     | `reboot` parameter removed; **must now be called** — performs MD5 verification                         |
+| Area                        | v1                                                            | v2                                                                                                           |
+| --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Library state               | Global / static variables                                     | Caller-owned `esp_loader_t` context                                                                          |
+| Initialization              | Not required                                                  | `esp_loader_init_uart()` / `esp_loader_init_spi()` / etc. required                                           |
+| Function signatures         | No context parameter                                          | First parameter is `esp_loader_t *loader`                                                                    |
+| Flash / mem operation state | Stored inside `esp_loader_t`                                  | Separate `esp_loader_flash_cfg_t` / `esp_loader_flash_deflate_cfg_t` / `esp_loader_mem_cfg_t` contexts       |
+| Port layer                  | Free functions (`loader_port_write`, etc.)                    | `esp_loader_port_ops_t` vtable                                                                               |
+| Protocol selection          | Compile-time `SERIAL_FLASHER_INTERFACE_*`                     | Call `esp_loader_init_uart()` / `esp_loader_init_spi()` / `esp_loader_init_sdio()` / `esp_loader_init_usb()` |
+| Kconfig options             | `SERIAL_FLASHER_INTERFACE_*` choice                           | `SERIAL_FLASHER_PORT_*` booleans (multiple can be enabled)                                                   |
+| Error type header           | Defined in `esp_loader.h`                                     | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                              |
+| Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*` | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable                 |
+| `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues     | `reboot` parameter removed; **must now be called** — performs MD5 verification                               |
 
 ---
 
-## 1. Add `esp_loader_t` Context and `esp_loader_init()`
+## 1. Add `esp_loader_t` Context and Call a Per-Protocol Init Function
 
 The library no longer uses global state. All state is stored in an `esp_loader_t` struct that you allocate and own.
 
@@ -35,10 +35,18 @@ esp_loader_connect(&args);
 **v2:**
 
 ```c
-loader_port_esp32_init(&config);
+esp32_port_t port = {
+    .port.ops          = &esp32_uart_ops,
+    .baud_rate         = 115200,
+    .uart_port         = UART_NUM_1,
+    .uart_rx_pin       = GPIO_NUM_5,
+    .uart_tx_pin       = GPIO_NUM_4,
+    .reset_trigger_pin = GPIO_NUM_25,
+    .gpio0_trigger_pin = GPIO_NUM_26,
+};
 
 esp_loader_t loader;
-esp_loader_init_uart(&loader, &esp32_uart_port_ops);
+esp_loader_init_uart(&loader, &port.port);
 
 esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
 esp_loader_connect(&loader, &args);
@@ -46,8 +54,8 @@ esp_loader_connect(&loader, &args);
 
 The per-protocol init functions (`esp_loader_init_uart`, `esp_loader_init_usb`,
 `esp_loader_init_spi`, `esp_loader_init_sdio`) bind the protocol and port vtable
-to the context. Call the appropriate one after the platform-specific hardware
-init but before any other `esp_loader_*` call.
+to the context and call the port's `init` function automatically. Pass `&port.port`
+(the embedded `esp_loader_port_t` base) as the second argument.
 
 ---
 
@@ -189,7 +197,7 @@ esp_loader_reset_target(&loader);               // reset explicitly if needed
 
 ## 5. Update Port Implementations
 
-The port layer contract changed from individual free functions to a single `esp_esp_loader_port_ops_t` vtable.
+The port layer contract changed from individual free functions to a single `esp_loader_port_ops_t` vtable embedded in a port struct that you own.
 
 **v1** — port implementations provided a set of required free functions:
 
@@ -205,46 +213,48 @@ esp_loader_error_t loader_port_change_transmission_rate(uint32_t rate);
 void               loader_port_debug_print(const char *str);
 ```
 
-**v2** — port implementations provide a `const esp_esp_loader_port_ops_t` struct:
+**v2** — port implementations embed `esp_loader_port_t` inside a platform struct and use `container_of` to access per-instance state:
 
 ```c
 #include "esp_loader_io.h"
 
-static esp_loader_error_t my_write(const uint8_t *data, uint16_t size, uint32_t timeout) { ... }
-static esp_loader_error_t my_read(uint8_t *data, uint16_t size, uint32_t timeout)         { ... }
-static void               my_enter_bootloader(void)              { ... }
-static void               my_reset_target(void)                  { ... }
-static void               my_delay_ms(uint32_t ms)               { ... }
-static void               my_start_timer(uint32_t ms)            { ... }
-static uint32_t           my_remaining_time(void)                { ... }
-static esp_loader_error_t my_change_rate(uint32_t rate)          { ... }
-static void               my_debug_print(const char *str)        { ... }
+typedef struct {
+    esp_loader_port_t port;
+    /* ... hardware handles and per-instance state ... */
+} my_port_t;
 
-const esp_loader_uart_port_ops_t my_platform_port_ops = {
-    .common = {
-        .enter_bootloader         = my_enter_bootloader,
-        .reset_target             = my_reset_target,
-        .start_timer              = my_start_timer,
-        .remaining_time           = my_remaining_time,
-        .delay_ms                 = my_delay_ms,
-        .debug_print              = my_debug_print,
-        .change_transmission_rate = my_change_rate,
-    },
-    .write = my_write,
-    .read  = my_read,
+static esp_loader_error_t my_port_init(esp_loader_port_t *port)
+{
+    my_port_t *p = container_of(port, my_port_t, port);
+    /* open UART, configure GPIOs, etc. */
+    return ESP_LOADER_SUCCESS;
+}
+
+static esp_loader_error_t my_write(esp_loader_port_t *port, const uint8_t *data,
+                                   uint16_t size, uint32_t timeout)
+{
+    my_port_t *p = container_of(port, my_port_t, port);
+    /* transmit using p->uart_handle, etc. */
+}
+
+/* ... more callbacks ... */
+
+const esp_loader_port_ops_t my_platform_ops = {
+    .init                     = my_port_init,
+    .deinit                   = NULL,  /* optional */
+    .enter_bootloader         = my_enter_bootloader,
+    .reset_target             = my_reset_target,
+    .start_timer              = my_start_timer,
+    .remaining_time           = my_remaining_time,
+    .delay_ms                 = my_delay_ms,
+    .debug_print              = my_debug_print,      /* or NULL */
+    .change_transmission_rate = my_change_rate,      /* or NULL */
+    .write                    = my_write,
+    .read                     = my_read,
 };
 ```
 
-Use the per-protocol struct type that matches the interface:
-
-| Interface   | Struct type                  | Init function            |
-| ----------- | ---------------------------- | ------------------------ |
-| UART        | `esp_loader_uart_port_ops_t` | `esp_loader_init_uart()` |
-| USB CDC-ACM | `esp_loader_usb_port_ops_t`  | `esp_loader_init_usb()`  |
-| SPI         | `esp_loader_spi_port_ops_t`  | `esp_loader_init_spi()`  |
-| SDIO        | `esp_loader_sdio_port_ops_t` | `esp_loader_init_sdio()` |
-
-See `port/esp32_sdio_port.c` for a reference SDIO implementation.
+See `docs/supporting-new-platform.md` for a complete guide to writing a new port.
 
 ---
 
@@ -269,7 +279,8 @@ cmake ..   # no interface flag needed
 In code, call the per-protocol init:
 
 ```c
-esp_loader_init_spi(&loader, &my_spi_port_ops);
+my_spi_port_t port = { .port.ops = &my_spi_port_ops, /* ... */ };
+esp_loader_init_spi(&loader, &port.port);
 ```
 
 ### ESP-IDF (Kconfig) Builds
@@ -292,7 +303,7 @@ CONFIG_SERIAL_FLASHER_PORT_UART=y
 # CONFIG_SERIAL_FLASHER_PORT_USB_CDC_ACM=y
 ```
 
-Each enabled port compiles its `*_port.c` file and exposes a `*_port_ops` vtable (e.g. `esp32_uart_port_ops`, `esp32_spi_port_ops`).
+Each enabled port compiles its `*_port.c` file and exposes a `const esp_loader_port_ops_t` vtable (e.g. `esp32_uart_ops`, `esp32_spi_ops`).
 
 ---
 
@@ -310,9 +321,43 @@ This means you no longer need `#ifdef SERIAL_FLASHER_INTERFACE_UART` guards arou
 
 ---
 
-## 9. Multiple Instances
+## 9. Multiple Simultaneous Instances
 
-Because all state is in `esp_loader_t`, you can now run multiple independent loader instances in the same program for example, only not simultaneously. Each instance needs its own `esp_loader_t` and its own `loader_port_*_init()` call.
+Because all state is in caller-owned structs, you can run multiple fully independent loader instances concurrently — each targeting a different device over its own hardware peripheral.
+
+Each instance needs:
+
+- Its own `esp_loader_t` context.
+- Its own port struct (e.g. `esp32_port_t`, `raspi_port_t`) with unique hardware resources (different UART port numbers, GPIO pins, etc.).
+- A call to the matching `esp_loader_init_*()` function.
+
+```c
+esp32_port_t port_a = {
+    .port.ops          = &esp32_uart_ops,
+    .uart_port         = UART_NUM_1,
+    .baud_rate         = 115200,
+    .uart_rx_pin       = GPIO_NUM_5,
+    .uart_tx_pin       = GPIO_NUM_4,
+    .reset_trigger_pin = GPIO_NUM_25,
+    .gpio0_trigger_pin = GPIO_NUM_26,
+};
+
+esp32_port_t port_b = {
+    .port.ops          = &esp32_uart_ops,
+    .uart_port         = UART_NUM_2,
+    .baud_rate         = 115200,
+    .uart_rx_pin       = GPIO_NUM_16,
+    .uart_tx_pin       = GPIO_NUM_17,
+    .reset_trigger_pin = GPIO_NUM_27,
+    .gpio0_trigger_pin = GPIO_NUM_14,
+};
+
+esp_loader_t loader_a, loader_b;
+esp_loader_init_uart(&loader_a, &port_a.port);
+esp_loader_init_uart(&loader_b, &port_b.port);
+
+// Both loaders can now be used independently (e.g. from separate RTOS tasks).
+```
 
 ---
 
@@ -347,11 +392,18 @@ void app_main(void)
 
 void app_main(void)
 {
-    const loader_esp32_config_t config = { .baud_rate = 115200, /* ... */ };
-    loader_port_esp32_init(&config);
+    esp32_port_t port = {
+        .port.ops          = &esp32_uart_ops,
+        .baud_rate         = 115200,
+        .uart_port         = UART_NUM_1,
+        .uart_rx_pin       = GPIO_NUM_5,
+        .uart_tx_pin       = GPIO_NUM_4,
+        .reset_trigger_pin = GPIO_NUM_25,
+        .gpio0_trigger_pin = GPIO_NUM_26,
+    };
 
     esp_loader_t loader;
-    esp_loader_init_uart(&loader, &esp32_uart_port_ops);
+    esp_loader_init_uart(&loader, &port.port);
 
     esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
     if (esp_loader_connect(&loader, &args) != ESP_LOADER_SUCCESS) return;

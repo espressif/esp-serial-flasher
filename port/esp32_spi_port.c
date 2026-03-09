@@ -17,7 +17,6 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
-#include "esp_log.h"
 #include "esp_idf_version.h"
 #include <unistd.h>
 
@@ -59,94 +58,69 @@ static void serial_debug_print(const uint8_t *data, uint16_t size, bool write)
 }
 #endif
 
-static spi_host_device_t s_spi_bus;
-static spi_bus_config_t s_spi_config;
-static spi_device_handle_t s_device_h;
-static spi_device_interface_config_t s_device_config;
-static int64_t s_time_end;
-static uint32_t s_reset_trigger_pin;
-static uint32_t s_strap_bit0_pin;
-static uint32_t s_strap_bit1_pin;
-static uint32_t s_strap_bit2_pin;
-static uint32_t s_strap_bit3_pin;
-static uint32_t s_spi_cs_pin;
-static bool s_bus_needs_deinit;
-
-esp_loader_error_t loader_port_esp32_spi_init(const loader_esp32_spi_config_t *config)
+static esp_loader_error_t esp32_spi_port_init(esp_loader_port_t *port)
 {
-    /* Initialize the global static variables*/
-    s_spi_bus = config->spi_bus;
-    s_reset_trigger_pin = config->reset_trigger_pin;
-    s_strap_bit0_pin = config->strap_bit0_pin;
-    s_strap_bit1_pin = config->strap_bit1_pin;
-    s_strap_bit2_pin = config->strap_bit2_pin;
-    s_strap_bit3_pin = config->strap_bit3_pin;
-    s_spi_cs_pin = config->spi_cs_pin;
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
 
-    /* Configure and initialize the SPI bus*/
-    if (!config->dont_initialize_bus) {
-        s_spi_config.mosi_io_num = config->spi_mosi_pin;
-        s_spi_config.miso_io_num = config->spi_miso_pin;
-        s_spi_config.sclk_io_num = config->spi_clk_pin;
-        s_spi_config.quadwp_io_num = config->spi_quadwp_pin;
-        s_spi_config.quadhd_io_num = config->spi_quadhd_pin;
-        s_spi_config.max_transfer_sz = 4096 * 4;
+    if (!p->dont_initialize_bus) {
+        p->_spi_config.mosi_io_num   = p->spi_mosi_pin;
+        p->_spi_config.miso_io_num   = p->spi_miso_pin;
+        p->_spi_config.sclk_io_num   = p->spi_clk_pin;
+        p->_spi_config.quadwp_io_num = p->spi_quadwp_pin;
+        p->_spi_config.quadhd_io_num = p->spi_quadhd_pin;
+        p->_spi_config.max_transfer_sz = 4096 * 4;
 
-        if (spi_bus_initialize(s_spi_bus, &s_spi_config, DMA_CHAN) != ESP_OK) {
+        if (spi_bus_initialize(p->spi_bus, &p->_spi_config, DMA_CHAN) != ESP_OK) {
             return ESP_LOADER_ERROR_FAIL;
         }
 
-        s_bus_needs_deinit = true;
+        p->_bus_needs_deinit = true;
     }
 
-    /* Configure and add the device */
-    s_device_config.clock_speed_hz = config->frequency;
-    s_device_config.spics_io_num = -1; /* We're using the chip select pin as GPIO as we need to
-                                          chain multiple transactions with CS pulled down */
-    s_device_config.flags = SPI_DEVICE_HALFDUPLEX;
-    s_device_config.queue_size = 16;
+    p->_device_config.clock_speed_hz = p->frequency;
+    p->_device_config.spics_io_num   = -1; /* CS managed manually as GPIO */
+    p->_device_config.flags          = SPI_DEVICE_HALFDUPLEX;
+    p->_device_config.queue_size     = 16;
 
-    if (spi_bus_add_device(s_spi_bus, &s_device_config, &s_device_h) != ESP_OK) {
+    if (spi_bus_add_device(p->spi_bus, &p->_device_config, &p->_device_h) != ESP_OK) {
         return ESP_LOADER_ERROR_FAIL;
     }
 
-    /* Initialize the pins except for the strapping ones */
-    gpio_reset_pin(s_reset_trigger_pin);
-    gpio_set_pull_mode(s_reset_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_reset_trigger_pin, GPIO_MODE_OUTPUT);
-    gpio_set_level(s_reset_trigger_pin, 1);
+    gpio_reset_pin(p->reset_trigger_pin);
+    gpio_set_pull_mode(p->reset_trigger_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->reset_trigger_pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(p->reset_trigger_pin, 1);
 
-    gpio_reset_pin(s_spi_cs_pin);
-    gpio_set_pull_mode(s_spi_cs_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_spi_cs_pin, GPIO_MODE_OUTPUT);
-    gpio_set_level(s_spi_cs_pin, 1);
+    gpio_reset_pin(p->spi_cs_pin);
+    gpio_set_pull_mode(p->spi_cs_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->spi_cs_pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(p->spi_cs_pin, 1);
 
     return ESP_LOADER_SUCCESS;
 }
 
-
-void loader_port_esp32_spi_deinit(void)
+static void esp32_spi_port_deinit(esp_loader_port_t *port)
 {
-    gpio_reset_pin(s_reset_trigger_pin);
-    gpio_reset_pin(s_spi_cs_pin);
-    spi_bus_remove_device(s_device_h);
-    if (s_bus_needs_deinit) {
-        spi_bus_free(s_spi_bus);
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+    gpio_reset_pin(p->reset_trigger_pin);
+    gpio_reset_pin(p->spi_cs_pin);
+    spi_bus_remove_device(p->_device_h);
+    if (p->_bus_needs_deinit) {
+        spi_bus_free(p->spi_bus);
+        p->_bus_needs_deinit = false;
     }
 }
 
-
 static void esp32_spi_set_cs(esp_loader_port_t *port, uint32_t level)
 {
-    (void)port;
-    gpio_set_level(s_spi_cs_pin, level);
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+    gpio_set_level(p->spi_cs_pin, level);
 }
-
 
 static esp_loader_error_t esp32_spi_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
-    (void)port;
-    (void) timeout;
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+    (void)timeout;
 
     if (data == NULL) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
@@ -155,11 +129,11 @@ static esp_loader_error_t esp32_spi_write(esp_loader_port_t *port, const uint8_t
     spi_transaction_t transaction = {
         .tx_buffer = data,
         .rx_buffer = NULL,
-        .length = size * 8U,
-        .rxlength = 0,
+        .length    = size * 8U,
+        .rxlength  = 0,
     };
 
-    esp_err_t err = spi_device_transmit(s_device_h, &transaction);
+    esp_err_t err = spi_device_transmit(p->_device_h, &transaction);
 
     if (err == ESP_OK) {
 #if SERIAL_FLASHER_DEBUG_TRACE
@@ -173,13 +147,11 @@ static esp_loader_error_t esp32_spi_write(esp_loader_port_t *port, const uint8_t
     }
 }
 
-
 static esp_loader_error_t esp32_spi_read(esp_loader_port_t *port, uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
-    (void)port;
-    (void) timeout;
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+    (void)timeout;
 
-    /* The rx data buffer must be aligned to 32 bits due to DMA requirements */
     if (data == NULL || !WORD_ALIGNED(data)) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
@@ -187,10 +159,10 @@ static esp_loader_error_t esp32_spi_read(esp_loader_port_t *port, uint8_t *data,
     spi_transaction_t transaction = {
         .tx_buffer = NULL,
         .rx_buffer = data,
-        .rxlength = size * 8,
+        .rxlength  = size * 8,
     };
 
-    esp_err_t err = spi_device_transmit(s_device_h, &transaction);
+    esp_err_t err = spi_device_transmit(p->_device_h, &transaction);
 
     if (err == ESP_OK) {
 #if SERIAL_FLASHER_DEBUG_TRACE
@@ -204,86 +176,78 @@ static esp_loader_error_t esp32_spi_read(esp_loader_port_t *port, uint8_t *data,
     }
 }
 
-
 static void esp32_spi_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
     (void)port;
     usleep(ms * 1000);
 }
 
-
 static void esp32_spi_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
-    (void)port;
-    s_time_end = esp_timer_get_time() + ms * 1000;
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+    p->_time_end = esp_timer_get_time() + ms * 1000;
 }
-
 
 static uint32_t esp32_spi_remaining_time(esp_loader_port_t *port)
 {
-    (void)port;
-    int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+    int64_t remaining = (p->_time_end - esp_timer_get_time()) / 1000;
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
-
 static void esp32_spi_reset_target(esp_loader_port_t *port)
 {
-    (void)port;
-    gpio_set_level(s_reset_trigger_pin, 0);
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+    gpio_set_level(p->reset_trigger_pin, 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_reset_trigger_pin, 1);
+    gpio_set_level(p->reset_trigger_pin, 1);
 }
-
 
 static void esp32_spi_enter_bootloader(esp_loader_port_t *port)
 {
-    (void)port;
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+
     /*
-        We have to initialize the GPIO pins for the target strapping pins here,
-        as they may overlap with target SPI pins.
-        For instance in the case of ESP32C3 MISO and strapping bit 0 pins overlap.
-    */
-    spi_bus_remove_device(s_device_h);
-    spi_bus_free(s_spi_bus);
+     * Strapping pins may overlap with target SPI pins (e.g. ESP32-C3 MISO
+     * and strap_bit0).  Tear down the SPI bus, configure strapping pins as
+     * GPIOs, perform the reset sequence, then restore the SPI bus.
+     */
+    spi_bus_remove_device(p->_device_h);
+    spi_bus_free(p->spi_bus);
 
-    gpio_reset_pin(s_strap_bit0_pin);
-    gpio_set_pull_mode(s_strap_bit0_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_strap_bit0_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->strap_bit0_pin);
+    gpio_set_pull_mode(p->strap_bit0_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->strap_bit0_pin, GPIO_MODE_OUTPUT);
 
-    gpio_reset_pin(s_strap_bit1_pin);
-    gpio_set_pull_mode(s_strap_bit1_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_strap_bit1_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->strap_bit1_pin);
+    gpio_set_pull_mode(p->strap_bit1_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->strap_bit1_pin, GPIO_MODE_OUTPUT);
 
-    gpio_reset_pin(s_strap_bit2_pin);
-    gpio_set_pull_mode(s_strap_bit2_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_strap_bit2_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->strap_bit2_pin);
+    gpio_set_pull_mode(p->strap_bit2_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->strap_bit2_pin, GPIO_MODE_OUTPUT);
 
-    gpio_reset_pin(s_strap_bit3_pin);
-    gpio_set_pull_mode(s_strap_bit3_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_strap_bit3_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->strap_bit3_pin);
+    gpio_set_pull_mode(p->strap_bit3_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->strap_bit3_pin, GPIO_MODE_OUTPUT);
 
-    /* Set the strapping pins and perform the reset sequence */
-    gpio_set_level(s_strap_bit0_pin, 1);
-    gpio_set_level(s_strap_bit1_pin, 0);
-    gpio_set_level(s_strap_bit2_pin, 0);
-    gpio_set_level(s_strap_bit3_pin, 0);
-    esp32_spi_reset_target(NULL);
+    gpio_set_level(p->strap_bit0_pin, 1);
+    gpio_set_level(p->strap_bit1_pin, 0);
+    gpio_set_level(p->strap_bit2_pin, 0);
+    gpio_set_level(p->strap_bit3_pin, 0);
+    esp32_spi_reset_target(port);
     usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_strap_bit3_pin, 1);
-    gpio_set_level(s_strap_bit0_pin, 0);
+    gpio_set_level(p->strap_bit3_pin, 1);
+    gpio_set_level(p->strap_bit0_pin, 0);
 
-    /* Disable the strapping pins so they can be used by the slave later */
-    gpio_reset_pin(s_strap_bit0_pin);
-    gpio_reset_pin(s_strap_bit1_pin);
-    gpio_reset_pin(s_strap_bit2_pin);
-    gpio_reset_pin(s_strap_bit3_pin);
+    gpio_reset_pin(p->strap_bit0_pin);
+    gpio_reset_pin(p->strap_bit1_pin);
+    gpio_reset_pin(p->strap_bit2_pin);
+    gpio_reset_pin(p->strap_bit3_pin);
 
-    /* Restore the SPI bus pins */
-    spi_bus_initialize(s_spi_bus, &s_spi_config, DMA_CHAN);
-    spi_bus_add_device(s_spi_bus, &s_device_config, &s_device_h);
+    spi_bus_initialize(p->spi_bus, &p->_spi_config, DMA_CHAN);
+    spi_bus_add_device(p->spi_bus, &p->_device_config, &p->_device_h);
 }
-
 
 static void esp32_spi_debug_print(esp_loader_port_t *port, const char *str)
 {
@@ -291,26 +255,28 @@ static void esp32_spi_debug_print(esp_loader_port_t *port, const char *str)
     printf("DEBUG: %s\n", str);
 }
 
-
 static esp_loader_error_t esp32_spi_change_rate(esp_loader_port_t *port, uint32_t frequency)
 {
-    (void)port;
-    if (spi_bus_remove_device(s_device_h) != ESP_OK) {
+    esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
+
+    if (spi_bus_remove_device(p->_device_h) != ESP_OK) {
         return ESP_LOADER_ERROR_FAIL;
     }
 
-    uint32_t old_frequency = s_device_config.clock_speed_hz;
-    s_device_config.clock_speed_hz = frequency;
+    uint32_t old_frequency = p->_device_config.clock_speed_hz;
+    p->_device_config.clock_speed_hz = frequency;
 
-    if (spi_bus_add_device(s_spi_bus, &s_device_config, &s_device_h) != ESP_OK) {
-        s_device_config.clock_speed_hz = old_frequency;
+    if (spi_bus_add_device(p->spi_bus, &p->_device_config, &p->_device_h) != ESP_OK) {
+        p->_device_config.clock_speed_hz = old_frequency;
         return ESP_LOADER_ERROR_FAIL;
     }
 
     return ESP_LOADER_SUCCESS;
 }
 
-static const esp_loader_port_ops_t esp32_spi_ops = {
+const esp_loader_port_ops_t esp32_spi_ops = {
+    .init                     = esp32_spi_port_init,
+    .deinit                   = esp32_spi_port_deinit,
     .enter_bootloader         = esp32_spi_enter_bootloader,
     .reset_target             = esp32_spi_reset_target,
     .start_timer              = esp32_spi_start_timer,
@@ -322,5 +288,3 @@ static const esp_loader_port_ops_t esp32_spi_ops = {
     .read                     = esp32_spi_read,
     .spi_set_cs               = esp32_spi_set_cs,
 };
-
-esp_loader_port_t esp32_spi_port = { .ops = &esp32_spi_ops };

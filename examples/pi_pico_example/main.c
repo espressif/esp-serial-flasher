@@ -36,21 +36,21 @@ extern const uint8_t app_bin_md5[];
 int main(void)
 {
 
-    const loader_pi_pico_config_t config = {
-        .uart_inst = uart1,
-        .baudrate = 115200,
-        .uart_rx_pin_num = 21,
-        .uart_tx_pin_num = 20,
-        .reset_trigger_pin_num = 19,
-        .boot_pin_num = 18,
-    };
-
     stdio_init_all();
 
     esp_loader_t loader;
 
-    loader_port_pi_pico_init(&config);
-    esp_loader_init_uart(&loader, &pi_pico_uart_port);
+    pi_pico_port_t port = {
+        .port.ops              = &pi_pico_uart_ops,
+        .uart_inst             = uart1,
+        .baudrate              = 115200,
+        .uart_rx_pin_num       = 21,
+        .uart_tx_pin_num       = 20,
+        .reset_trigger_pin_num = 19,
+        .boot_pin_num          = 18,
+    };
+
+    esp_loader_init_uart(&loader, &port.port);
 
     // delay for the test to have time to connect to the device
     sleep_ms(500);

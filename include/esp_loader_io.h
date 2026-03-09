@@ -65,12 +65,26 @@ typedef struct esp_loader_port_s esp_loader_port_t;
  * per-instance state.
  *
  * Set unused function pointers to NULL:
+ *  - @c init / @c deinit         — NULL if no hardware setup is needed
  *  - @c change_transmission_rate — NULL for SDIO (host driver manages speed)
  *  - @c write / @c read          — NULL for SDIO ports
  *  - @c spi_set_cs               — NULL for non-SPI ports
  *  - @c sdio_write / @c sdio_read / @c sdio_card_init — NULL for non-SDIO ports
  */
 typedef struct {
+    /**
+     * Initializes the hardware peripheral (UART driver, GPIO pins, etc.).
+     * Called automatically by esp_loader_init_*(). NULL if not needed.
+     */
+    esp_loader_error_t (*init)(esp_loader_port_t *port);
+
+    /**
+     * Deinitializes the hardware peripheral.
+     * The caller is responsible for invoking this when the port is no longer needed.
+     * NULL if not needed.
+     */
+    void (*deinit)(esp_loader_port_t *port);
+
     /** Asserts bootstrap pins to enter boot mode and toggles reset. */
     void (*enter_bootloader)(esp_loader_port_t *port);
 
