@@ -1,6 +1,7 @@
 import pytest
 from pytest_embedded import Dut
 from esptool.cmds import detect_chip
+import time
 
 FLASH_ADDRESS = 0x1000
 BIN_FILE = "/zephyr/zephyr.bin"
@@ -34,8 +35,19 @@ def flash_zephyr(app_path: str, build_dir: str, port: str) -> None:
             esp.hard_reset()
 
 
+def reset_target(dut: Dut) -> None:
+    dut.serial.proc.setDTR(False)
+    dut.serial.proc.setRTS(True)
+    time.sleep(0.1)
+    dut.serial.proc.setRTS(False)
+
+
 @pytest.mark.zephyr
 def test_zephyr_example(dut: Dut) -> None:
+    # When esptool reset is done, dut sometimes does not catch the input after boot,
+    # so we need to reset the target manually.
+    reset_target(dut)
+
     # Check initial connection
     dut.expect("Connected to target")
     dut.expect("Transmission rate changed")
