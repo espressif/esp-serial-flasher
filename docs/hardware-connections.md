@@ -160,7 +160,7 @@ USB CDC ACM (Communication Device Class Abstract Control Model) uses the target 
 
 When using ESP-IDF as host platform:
 
-- **ESP-IDF Version**: v4.4 or newer required
+- **ESP-IDF Version**: v5.5 or newer required
 - **USB Host Driver**: Must be initialized and configured
 - **Task Management**: FreeRTOS task required for USB event handling
 - **Device Management**: Proper connection/disconnection handling needed

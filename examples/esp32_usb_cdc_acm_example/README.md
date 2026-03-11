@@ -4,9 +4,6 @@
 
 This example demonstrates how to flash an ESP32-S3 (target) from another ESP32-S3 or an ESP32-S2 MCU (host) using the `esp_serial_flasher`. Binaries to be flashed from the host MCU to the Espressif SoC can be found in [binaries](../binaries/) folder and are converted into C-array during build process.
 
-> [!NOTE]
-> The `esp32_usb_cdc_acm` port requires ESP-IDF v4.4 or newer to build.
-
 The following steps are performed in order to re-program memory:
 
 1. The system is started.

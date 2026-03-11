@@ -119,13 +119,8 @@ if (DEFINED ESP_PLATFORM)
     set(priv_requires "esp_timer")
 
 
-    # Starting from esp-idf v5.3, the GPIO, UART, SDMMC and SPI drivers are moved to separate components
-    if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
-        list(APPEND priv_requires "esp_driver_gpio" "esp_driver_uart")
-        set(public_requires "esp_driver_sdmmc" "esp_driver_spi")
-    else()
-        set(public_requires "driver" "sdmmc")
-    endif()
+    list(APPEND priv_requires "esp_driver_gpio" "esp_driver_uart")
+    set(public_requires "esp_driver_sdmmc" "esp_driver_spi")
 
     # Register component to esp-idf build system
     idf_component_register(SRCS ${srcs}
