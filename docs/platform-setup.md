@@ -178,34 +178,56 @@ See [examples/zephyr_example](../examples/zephyr_example) for a complete impleme
 
 See [examples/pi_pico_example](../examples/pi_pico_example) for a complete implementation with build instructions.
 
-## Raspberry Pi Setup
+## Linux Setup
 
-**Testing Status**: Regularly tested with the latest Raspberry Pi OS.
+**Testing Status**: Regularly tested on Debian/Ubuntu. Also runs on SBCs such as Raspberry Pi 4/5 running Raspberry Pi OS or any other Linux distribution.
 
 ### Prerequisites
 
-- **[Git](https://git-scm.com/)** - For cloning repositories
-- **[Raspberry Pi OS](https://www.raspberrypi.org/software/)** - Latest version recommended
-- **[pigpio library](https://abyz.me.uk/rpi/pigpio/)** - For GPIO control and hardware interfacing
+- **CMake ≥ 3.22** and a C compiler (gcc / clang)
+- **libgpiod ≥ 2.0** — only required when using GPIO character-device mode for reset/boot control on SBCs (not needed for USB connections)
 
-### Setup
+Install libgpiod on Debian/Ubuntu:
 
-1. **Clone the repository**:
+```bash
+# Debian 13 (Trixie) / Ubuntu 24.04 or later — libgpiod 2.x is in the main repos:
+sudo apt-get install libgpiod-dev
+# Older distros: build from source (https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git)
+```
 
-   ```bash
-   git clone https://github.com/espressif/esp-serial-flasher.git
-   ```
+Ensure your user is in the `dialout` (and optionally `gpio`) groups:
 
-2. **Install pigpio library** (if not already installed):
+```bash
+sudo usermod -aG dialout $USER   # for serial port access
+sudo usermod -aG gpio $USER      # for GPIO character-device access (SBCs)
+# logout and back in for group changes to take effect
+```
 
-   ```bash
-   sudo apt update
-   sudo apt install pigpio
-   ```
+### Build
+
+```bash
+cd examples/linux_example
+mkdir -p build && cd build
+
+# USB connection (DTR/RTS auto-reset — no GPIO library needed):
+cmake ..
+
+# GPIO connection (SBC with libgpiod reset/boot control):
+cmake -DLINUX_PORT_GPIO=ON ..
+
+make
+```
+
+### CMake Variables
+
+| Variable          | Default | Description                                                    |
+| ----------------- | ------- | -------------------------------------------------------------- |
+| `PORT`            | —       | Must be `LINUX`                                                |
+| `LINUX_PORT_GPIO` | `OFF`   | Enable GPIO character-device support (requires libgpiod ≥ 2.0) |
 
 ### Example Code
 
-See [examples/raspberry_example](../examples/raspberry_example) for a complete implementation with build instructions.
+See [examples/linux_example](../examples/linux_example) for a complete implementation including run-time options, wiring diagrams, and Raspberry Pi-specific setup steps.
 
 ## Next Steps
 
