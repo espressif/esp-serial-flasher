@@ -280,7 +280,7 @@ examples/
 
 ### Integration Validation
 
-- **ESP-IDF compatibility**: Test with multiple ESP-IDF versions (v4.3+)
+- **ESP-IDF compatibility**: Test with multiple ESP-IDF versions (v5.5+)
 - **Cross-platform builds**: Verify STM32, Zephyr, Pi Pico builds don't break
 - **Hardware testing**: Use pytest framework for hardware validation when possible
 
@@ -294,7 +294,7 @@ examples/
 
 ### Platform-Specific Dependencies
 
-- **ESP-IDF**: v4.3 or later for ESP32 builds
+- **ESP-IDF**: v5.5 or later for ESP32 builds
 - **STM32**: ARM GCC toolchain 13.2+, STM32Cube H7 v1.11.1+
 - **Zephyr**: Zephyr SDK v0.17.0+, west build tool
 - **Pi Pico**: Pico SDK v1.5.1+, ARM GCC toolchain

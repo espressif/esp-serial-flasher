@@ -15,11 +15,11 @@ Before setting up any platform, ensure you have the following:
 
 ## ESP-IDF Support
 
-**Testing Status**: Regularly tested with all major and minor versions of ESP-IDF from v4.3 to v5.5
+**Testing Status**: Regularly tested with all major and minor versions of ESP-IDF from v5.5 onwards
 
 ### Prerequisites
 
-- **[ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v4.3+** - ESP-IDF development framework
+- **[ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v5.5+** - ESP-IDF development framework
 
 ### Setup
 

@@ -77,7 +77,7 @@ To use ESP Serial Flasher, you need:
 
 Different host platforms require specific setup procedures:
 
-- **[ESP32 series](docs/platform-setup.md#esp-idf-support)**: Works with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v4.3 or later
+- **[ESP32 series](docs/platform-setup.md#esp-idf-support)**: Works with [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) v5.5 or later
 - **[STM32](docs/platform-setup.md#stm32-setup)**: Requires [STM32 HAL libraries](https://www.st.com/en/embedded-software/stm32cube-mcu-mpu-packages.html) and [ARM toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)
 - **[Zephyr](docs/platform-setup.md#zephyr-setup)**: Integrates as [Zephyr](https://zephyrproject.org/) module with specific Kconfig options
 - **[Raspberry Pi Pico](docs/platform-setup.md#raspberry-pi-pico-setup)**: Uses [Pico SDK](https://github.com/raspberrypi/pico-sdk)
