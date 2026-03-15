@@ -54,7 +54,7 @@ Before building the example, you need to set up the Zephyr development environme
 
 Place the required target firmware binaries in the `target-firmware/` directory. You can use your own binaries, build them from the esp-idf examples, or build them from the source in the `test/target-example-src` directory.
 
-**Required binaries:**
+**Example binaries:**
 
 - `bootloader.bin` - ESP bootloader binary
 - `partition-table.bin` - Partition table configuration
@@ -72,6 +72,16 @@ idf.py -D SDKCONFIG_DEFAULTS=sdkconfig.defaults.flash reconfigure build
 cp build/bootloader/bootloader.bin ../../zephyr_example/target-firmware/
 cp build/partition_table/partition-table.bin ../../zephyr_example/target-firmware/
 cp build/hello_world.bin ../../zephyr_example/target-firmware/app.bin
+```
+
+To set the binary images flash offset create or copy the `images.csv` file from below.
+Put the binary image names and their offset: one line per image as `file;offset` (semicolon, offset in hex without `0x`).
+
+```
+# image_file;offset (hex, no 0x prefix)
+bootloader.bin;0
+partition-table.bin;8000
+app.bin;10000
 ```
 
 ## Build and Flash
