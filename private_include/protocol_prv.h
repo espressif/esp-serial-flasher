@@ -21,7 +21,7 @@
 #include "esp_loader.h"
 #include "protocol.h"
 
-typedef struct {
+typedef struct send_cmd_config {
     const void *cmd;
     size_t cmd_size;
     const void *data; // Set to NULL if the command has no data
@@ -35,6 +35,4 @@ typedef struct {
     uint32_t *reg_value; // Out parameter for the READ_REG command, will return zero otherwise
 } send_cmd_config;
 
-void log_loader_internal_error(error_code_t error);
-
-esp_loader_error_t send_cmd(const send_cmd_config *config);
+void log_loader_internal_error(esp_loader_t *loader, error_code_t error);

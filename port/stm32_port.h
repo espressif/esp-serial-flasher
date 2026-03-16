@@ -54,6 +54,14 @@ typedef struct {
     uint16_t pin_num_rst;
 } loader_stm32_config_t;
 
+/** Port operations vtable for the STM32 UART port. */
+extern esp_loader_port_t stm32_uart_port;
+
+/**
+  * @brief Initializes the STM32 UART hardware.
+  *
+  * Call this before esp_loader_init() to configure the UART peripheral.
+  */
 void loader_port_stm32_init(loader_stm32_config_t *config);
 
 #ifdef __cplusplus

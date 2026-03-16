@@ -1,4 +1,4 @@
-/* Copyright 2020-2023 Espressif Systems (Shanghai) CO LTD
+/* Copyright 2020-2026 Espressif Systems (Shanghai) CO LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,112 +16,128 @@
 #pragma once
 
 #include <stdint.h>
-#include "esp_loader.h"
+#include <stddef.h>
+#include "esp_loader_error.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#ifndef SERIAL_FLASHER_INTERFACE_SDIO
 /**
-  * @brief Changes the transmission rate of the used peripheral.
-  */
-esp_loader_error_t loader_port_change_transmission_rate(uint32_t transmission_rate);
+ * @brief Recovers a pointer to the outer struct from a pointer to one of its members.
+ *
+ * This is the standard "inheritance by embedding" pattern used throughout the
+ * Linux kernel.  Given a pointer @p ptr to member @p member inside a struct of
+ * type @p type, this macro returns a pointer to the enclosing struct.
+ *
+ * Example:
+ * @code
+ *   typedef struct {
+ *       // ... config / state fields ...
+ *       esp_loader_port_t base;   // embedded handle
+ *   } my_port_t;
+ *
+ *   static void my_start_timer(esp_loader_port_t *port, uint32_t ms)
+ *   {
+ *       my_port_t *p = container_of(port, my_port_t, base);
+ *       p->time_end = get_time_ms() + ms;
+ *   }
+ * @endcode
+ */
+#ifndef container_of
+#define container_of(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
 #endif
 
 /**
-  * @brief Writes data over the io interface.
-  *
-  * @param data[in]     Buffer with data to be written.
-  * @param size[in]     Size of data in bytes.
-  * @param timeout[in]  Timeout in milliseconds.
-  *
-  * @return
-  *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_TIMEOUT Timeout elapsed
-  */
-#ifndef SERIAL_FLASHER_INTERFACE_SDIO
-esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_t timeout);
-#else
-esp_loader_error_t loader_port_write(uint32_t function, uint32_t addr, const uint8_t *data,
-                                     uint16_t size, uint32_t timeout);
-#endif
+ * @brief Forward declaration of the port base handle type.
+ *
+ * Full definition follows below.  The forward declaration is needed because
+ * @c esp_loader_port_ops_t references @c esp_loader_port_t in its callback signatures.
+ */
+typedef struct esp_loader_port_s esp_loader_port_t;
 
 /**
-  * @brief Reads data from the io interface.
-  *
-  * @param data[out]    Buffer into which received data will be written.
-  * @param size[in]     Number of bytes to read.
-  * @param timeout[in]  Timeout in milliseconds.
-  *
-  * @return
-  *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_TIMEOUT Timeout elapsed
-  */
-#ifndef SERIAL_FLASHER_INTERFACE_SDIO
-esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeout);
-#else
-esp_loader_error_t loader_port_read(uint32_t function, uint32_t addr, uint8_t *data,
-                                    uint16_t size, uint32_t timeout);
-#endif
+ * @brief Unified port operations vtable.
+ *
+ * Every callback receives an @c esp_loader_port_t * (self-pointer).
+ * Use @c container_of to recover the full concrete port struct and access
+ * per-instance state.
+ *
+ * Set unused function pointers to NULL:
+ *  - @c change_transmission_rate — NULL for SDIO (host driver manages speed)
+ *  - @c write / @c read          — NULL for SDIO ports
+ *  - @c spi_set_cs               — NULL for non-SPI ports
+ *  - @c sdio_write / @c sdio_read / @c sdio_card_init — NULL for non-SDIO ports
+ */
+typedef struct {
+    /** Asserts bootstrap pins to enter boot mode and toggles reset. */
+    void (*enter_bootloader)(esp_loader_port_t *port);
+
+    /** Toggles the reset pin. */
+    void (*reset_target)(esp_loader_port_t *port);
+
+    /** Starts a one-shot timeout timer. */
+    void (*start_timer)(esp_loader_port_t *port, uint32_t ms);
+
+    /**
+     * Returns remaining milliseconds since the last start_timer call.
+     * Returns 0 if the timer has elapsed.
+     */
+    uint32_t (*remaining_time)(esp_loader_port_t *port);
+
+    /** Delays execution for the given number of milliseconds. */
+    void (*delay_ms)(esp_loader_port_t *port, uint32_t ms);
+
+    /**
+     * Prints a debug message string.
+     * Set to NULL to suppress debug output.
+     */
+    void (*debug_print)(esp_loader_port_t *port, const char *str);
+
+    /**
+     * Changes the peripheral clock/baud rate.
+     * Set to NULL when not supported (e.g. SDIO).
+     */
+    esp_loader_error_t (*change_transmission_rate)(esp_loader_port_t *port, uint32_t rate);
+
+    /** Writes bytes to the peripheral (UART/USB/SPI). NULL for SDIO. */
+    esp_loader_error_t (*write)(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout);
+
+    /** Reads bytes from the peripheral (UART/USB/SPI). NULL for SDIO. */
+    esp_loader_error_t (*read)(esp_loader_port_t *port, uint8_t *data, uint16_t size, uint32_t timeout);
+
+    /** Controls the SPI chip-select pin. NULL for non-SPI ports. */
+    void (*spi_set_cs)(esp_loader_port_t *port, uint32_t level);
+
+    /** Writes data over SDIO. NULL for non-SDIO ports. */
+    esp_loader_error_t (*sdio_write)(esp_loader_port_t *port, uint32_t function, uint32_t addr,
+                                     const uint8_t *data, uint16_t size, uint32_t timeout);
+
+    /** Reads data over SDIO. NULL for non-SDIO ports. */
+    esp_loader_error_t (*sdio_read)(esp_loader_port_t *port, uint32_t function, uint32_t addr,
+                                    uint8_t *data, uint16_t size, uint32_t timeout);
+
+    /** Initializes the SDIO card. NULL for non-SDIO ports. */
+    esp_loader_error_t (*sdio_card_init)(esp_loader_port_t *port);
+} esp_loader_port_ops_t;
 
 /**
-  * @brief Delay in milliseconds.
-  *
-  * @param ms[in]   Number of milliseconds.
-  *
-  */
-void loader_port_delay_ms(uint32_t ms);
-
-/**
-  * @brief Starts timeout timer.
-  *
-  * @param ms[in]   Number of milliseconds.
-  *
-  */
-void loader_port_start_timer(uint32_t ms);
-
-/**
-  * @brief Returns remaining time since timer was started by calling esp_loader_start_timer.
-  *        0 if timer has elapsed.
-  *
-  * @return   Number of milliseconds.
-  *
-  */
-uint32_t loader_port_remaining_time(void);
-
-/**
-  * @brief Asserts bootstrap pins to enter boot mode and toggles reset pin.
-  *
-  * @note  Reset pin should stay asserted for at least 20 milliseconds.
-  */
-void loader_port_enter_bootloader(void);
-
-/**
-  * @brief Toggles reset pin.
-  *
-  * @note  Reset pin should stay asserted for at least 20 milliseconds.
-  */
-void loader_port_reset_target(void);
-
-/**
-  * @brief Function can be defined by user to print debug message.
-  *
-  * @note  Empty weak function is used, otherwise.
-  *
-  */
-void loader_port_debug_print(const char *str);
-
-#ifdef SERIAL_FLASHER_INTERFACE_SPI
-/**
-  * @brief Sets the chip select to a defined level
-  */
-void loader_port_spi_set_cs(uint32_t level);
-#endif /* SERIAL_FLASHER_INTERFACE_SPI */
-
-#ifdef SERIAL_FLASHER_INTERFACE_SDIO
-esp_loader_error_t loader_port_sdio_card_init(void);
-#endif /* SERIAL_FLASHER_INTERFACE_SDIO */
+ * @brief Port handle.
+ *
+ * For Phase 1, declare a plain @c esp_loader_port_t with @c ops pointing at
+ * your static ops table and pass its address to @c esp_loader_init_*().
+ *
+ * In Phase 2 (after static variable migration) embed this struct inside a
+ * larger per-instance struct and use @c container_of inside callbacks to
+ * recover the full struct.
+ *
+ * The library stores @c esp_loader_port_t * internally and dispatches all
+ * operations through @c port->ops->fn(port, ...).
+ */
+struct esp_loader_port_s {
+    const esp_loader_port_ops_t *ops;
+};
 
 #ifdef __cplusplus
 }

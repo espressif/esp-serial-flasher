@@ -52,7 +52,6 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-
     const loader_esp32_config_t config = {
         .baud_rate = 115200,
         .uart_port = UART_NUM_1,
@@ -62,40 +61,46 @@ void app_main(void)
         .gpio0_trigger_pin = GPIO_NUM_26,
     };
 
+    esp_loader_t loader;
+
     if (loader_port_esp32_init(&config) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "serial initialization failed.");
         return;
     }
+    if (esp_loader_init_uart(&loader, &esp32_uart_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, "serial initialization failed.");
+        return;
+    }
 
-    if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
-        target_chip_t chip = esp_loader_get_target();
+        target_chip_t chip = esp_loader_get_target(&loader);
         uint32_t bootloader_addr = get_bootloader_address(chip);
         uint32_t partition_addr = PARTITION_TABLE_ADDRESS;
         uint32_t app_addr = APPLICATION_ADDRESS;
 
-        if (esp_loader_flash_verify_known_md5(bootloader_addr, bootloader_bin_size, bootloader_bin_md5) != ESP_LOADER_SUCCESS) {
+        if (esp_loader_flash_verify_known_md5(&loader, bootloader_addr, bootloader_bin_size, bootloader_bin_md5) != ESP_LOADER_SUCCESS) {
             ESP_LOGI(TAG, "Bootloader MD5 mismatch, flashing...");
-            flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
+            flash_binary(&loader, bootloader_bin, bootloader_bin_size, bootloader_addr);
         } else {
             ESP_LOGI(TAG, "Bootloader MD5 match, skipping...");
         }
 
-        if (esp_loader_flash_verify_known_md5(partition_addr, partition_table_bin_size, partition_table_bin_md5) != ESP_LOADER_SUCCESS) {
+        if (esp_loader_flash_verify_known_md5(&loader, partition_addr, partition_table_bin_size, partition_table_bin_md5) != ESP_LOADER_SUCCESS) {
             ESP_LOGI(TAG, "Partition table MD5 mismatch, flashing...");
-            flash_binary(partition_table_bin, partition_table_bin_size, partition_addr);
+            flash_binary(&loader, partition_table_bin, partition_table_bin_size, partition_addr);
         } else {
             ESP_LOGI(TAG, "Partition table MD5 match, skipping...");
         }
 
-        if (esp_loader_flash_verify_known_md5(app_addr, app_bin_size, app_bin_md5) != ESP_LOADER_SUCCESS) {
+        if (esp_loader_flash_verify_known_md5(&loader, app_addr, app_bin_size, app_bin_md5) != ESP_LOADER_SUCCESS) {
             ESP_LOGI(TAG, "Application MD5 mismatch, flashing...");
-            flash_binary(app_bin, app_bin_size, app_addr);
+            flash_binary(&loader, app_bin, app_bin_size, app_addr);
         } else {
             ESP_LOGI(TAG, "Application MD5 match, skipping...");
         }
         ESP_LOGI(TAG, "Done!");
-        esp_loader_reset_target();
+        esp_loader_reset_target(&loader);
 
         // Delay for skipping the boot message of the targets
         vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -107,5 +112,6 @@ void app_main(void)
         xTaskCreate(slave_monitor, "slave_monitor", 2048, NULL, configMAX_PRIORITIES - 1, NULL);
 
     }
+
     vTaskDelete(NULL);
 }

@@ -23,5 +23,5 @@ typedef struct {
     uint32_t dummy;
 } loader_serial_config_t;
 
-esp_loader_error_t loader_port_test_init(const loader_serial_config_t *config);
-void loader_port_test_deinit();
+esp_loader_error_t esp_loader_port_test_init(const loader_serial_config_t *config);
+void esp_loader_port_test_deinit();

@@ -53,8 +53,13 @@ typedef struct {
     sdio_bus_width_t bus_width;
 } loader_esp32_sdio_config_t;
 
+/** Port operations vtable for the ESP32 SDIO port. */
+extern esp_loader_port_t esp32_sdio_port;
+
 /**
-  * @brief Initializes the SDIO interface.
+  * @brief Initializes the SDIO hardware.
+  *
+  * Call this before esp_loader_init() to configure the SDMMC peripheral.
   *
   * @param config[in] Configuration structure
   *

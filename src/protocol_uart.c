@@ -15,27 +15,32 @@
 
 #include "protocol.h"
 #include "protocol_prv.h"
-#include "esp_loader_io.h"
+#include "esp_loader.h"
+#include "esp_loader_protocol.h"
 #include "esp_stubs.h"
+#include "esp_targets.h"
+#include "md5_hash.h"
 #include "slip.h"
 #include <stddef.h>
 #include <string.h>
 
-static esp_loader_error_t check_response(const send_cmd_config *config);
+#define UART_DEFAULT_TIMEOUT 1000
 
-esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args)
+static esp_loader_error_t uart_check_response(esp_loader_t *loader, const send_cmd_config *config);
+
+static esp_loader_error_t uart_initialize_conn(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
 {
     esp_loader_error_t err;
     int32_t trials = connect_args->trials;
 
     do {
-        loader_port_start_timer(connect_args->sync_timeout);
-        err = loader_sync_cmd();
+        loader->_port->ops->start_timer(loader->_port, connect_args->sync_timeout);
+        err = loader_sync_cmd(loader);
         if (err == ESP_LOADER_ERROR_TIMEOUT) {
             if (--trials == 0) {
                 return ESP_LOADER_ERROR_TIMEOUT;
             }
-            loader_port_delay_ms(100);
+            loader->_port->ops->delay_ms(loader->_port, 100);
         } else if (err != ESP_LOADER_SUCCESS) {
             return err;
         }
@@ -44,74 +49,34 @@ esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_arg
     return err;
 }
 
-esp_loader_error_t loader_run_stub(target_chip_t target)
+static esp_loader_error_t uart_spi_attach(esp_loader_t *loader, uint32_t config)
 {
-    esp_loader_error_t err;
-    const esp_stub_t *stub = &esp_stub[target];
-
-    // Download segments
-    for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
-        err = esp_loader_mem_start(stub->segments[seg].addr, stub->segments[seg].size, ESP_RAM_BLOCK);
-        if (err != ESP_LOADER_SUCCESS) {
-            return err;
-        }
-
-        size_t remain_size = stub->segments[seg].size;
-        const uint8_t *data_pos = stub->segments[seg].data;
-        while (remain_size > 0) {
-            size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
-            err = esp_loader_mem_write(data_pos, data_size);
-            if (err != ESP_LOADER_SUCCESS) {
-                return err;
-            }
-            data_pos += data_size;
-            remain_size -= data_size;
-        }
-    }
-
-    err = esp_loader_mem_finish(stub->header.entrypoint);
-    if (err != ESP_LOADER_SUCCESS) {
-        return err;
-    }
-
-    // stub loader sends a custom SLIP packet of the sequence OHAI
-    uint8_t buff[4];
-    size_t recv_size = 0;
-    err = SLIP_receive_packet(buff, sizeof(buff) / sizeof(buff[0]), &recv_size);
-    if (err != ESP_LOADER_SUCCESS) {
-        return err;
-    } else if (recv_size != sizeof(buff) || memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
-        return ESP_LOADER_ERROR_INVALID_RESPONSE;
-    }
-
-    esp_stub_set_running(true);
-
-    return ESP_LOADER_SUCCESS;
+    return loader_spi_attach_cmd(loader, config);
 }
 
-esp_loader_error_t send_cmd(const send_cmd_config *config)
+static esp_loader_error_t uart_send_cmd(esp_loader_t *loader, const send_cmd_config *config)
 {
-    RETURN_ON_ERROR(SLIP_send_delimiter());
+    RETURN_ON_ERROR(SLIP_send_delimiter(loader));
 
-    RETURN_ON_ERROR(SLIP_send((const uint8_t *)config->cmd, config->cmd_size));
+    RETURN_ON_ERROR(SLIP_send(loader, (const uint8_t *)config->cmd, config->cmd_size));
 
     if (config->data != NULL && config->data_size != 0) {
-        RETURN_ON_ERROR(SLIP_send((const uint8_t *)config->data, config->data_size));
+        RETURN_ON_ERROR(SLIP_send(loader, (const uint8_t *)config->data, config->data_size));
     }
 
-    RETURN_ON_ERROR(SLIP_send_delimiter());
+    RETURN_ON_ERROR(SLIP_send_delimiter(loader));
 
     command_t command = ((const command_common_t *)config->cmd)->command;
     const uint8_t response_cnt = command == SYNC ? 8 : 1;
 
     for (uint8_t recv_cnt = 0; recv_cnt < response_cnt; recv_cnt++) {
-        RETURN_ON_ERROR(check_response(config));
+        RETURN_ON_ERROR(uart_check_response(loader, config));
     }
 
     return ESP_LOADER_SUCCESS;
 }
 
-static esp_loader_error_t check_response(const send_cmd_config *config)
+static esp_loader_error_t uart_check_response(esp_loader_t *loader, const send_cmd_config *config)
 {
     uint8_t buf[sizeof(common_response_t) + sizeof(response_status_t) + MAX_RESP_DATA_SIZE];
 
@@ -126,7 +91,7 @@ static esp_loader_error_t check_response(const send_cmd_config *config)
 
     size_t packet_recv = 0;
     do {
-        RETURN_ON_ERROR(SLIP_receive_packet(buf,
+        RETURN_ON_ERROR(SLIP_receive_packet(loader, buf,
                                             sizeof(common_response_t) + sizeof(response_status_t) + config->resp_data_size,
                                             &packet_recv));
     } while ((response->direction != READ_DIRECTION) || (response->command != command) ||
@@ -135,7 +100,7 @@ static esp_loader_error_t check_response(const send_cmd_config *config)
     response_status_t *status = (response_status_t *)&buf[packet_recv - sizeof(response_status_t)];
 
     if (status->failed) {
-        log_loader_internal_error(status->error);
+        log_loader_internal_error(loader, status->error);
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
@@ -154,4 +119,120 @@ static esp_loader_error_t check_response(const send_cmd_config *config)
     }
 
     return ESP_LOADER_SUCCESS;
+}
+
+static esp_loader_error_t uart_flash_read_stub(esp_loader_t *loader, uint8_t *dest, uint32_t address, uint32_t length)
+{
+    uint8_t buf[256];
+    size_t recv_size = 0;
+    struct MD5Context md5_context;
+    MD5Init(&md5_context);
+
+    const uint32_t seek_back_len = address % 4;
+    address -= seek_back_len;
+    length += seek_back_len;
+
+    const uint32_t overread_len = ROUNDUP(length, 4) - length;
+    length += overread_len;
+
+    loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
+    loader_flash_read_stub_cmd(loader, address, length, sizeof(buf));
+
+    uint32_t copy_dest_start = 0;
+    int32_t remaining = length;
+    while (remaining > 0) {
+        loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
+        const uint32_t to_receive = MIN(remaining, sizeof(buf));
+        RETURN_ON_ERROR(SLIP_receive_packet(loader, buf, to_receive, &recv_size));
+
+        if (recv_size != to_receive) {
+            return ESP_LOADER_ERROR_INVALID_RESPONSE;
+        }
+
+        MD5Update(&md5_context, buf, recv_size);
+
+        uint32_t copy_start = 0;
+        uint32_t copy_length = recv_size;
+
+        const bool first_read = remaining == (int32_t)length;
+        if (first_read) {
+            copy_start += seek_back_len;
+            copy_length -= seek_back_len;
+        }
+
+        const bool last_read = remaining - (int32_t)recv_size <= 0;
+        if (last_read) {
+            copy_length -= overread_len;
+        }
+
+        memcpy(&dest[copy_dest_start], &buf[copy_start], copy_length);
+        copy_dest_start += copy_length;
+
+        remaining -= recv_size;
+
+        const uint32_t bytes_recv = length - remaining;
+        loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
+        RETURN_ON_ERROR(SLIP_send_delimiter(loader));
+        RETURN_ON_ERROR(SLIP_send(loader, (const uint8_t *)&bytes_recv, sizeof(bytes_recv)));
+        RETURN_ON_ERROR(SLIP_send_delimiter(loader));
+    }
+
+    uint8_t md5_calc[16];
+    MD5Final(md5_calc, &md5_context);
+
+    loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
+    uint8_t md5_recv[16];
+    RETURN_ON_ERROR(SLIP_receive_packet(loader, md5_recv, sizeof(md5_recv), &recv_size));
+
+    if (recv_size != sizeof(md5_recv) || memcmp(md5_calc, md5_recv, sizeof(md5_calc))) {
+        return ESP_LOADER_ERROR_INVALID_MD5;
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
+
+// Temporary put here as stub is for now used only for UART and USB,
+// should be unified with the new esp-flasher-stub.
+static esp_loader_error_t uart_mem_begin_cmd(esp_loader_t *loader, uint32_t offset,
+        uint32_t size, uint32_t blocks_to_write,
+        uint32_t block_size)
+{
+    if (loader->_stub_running) {
+        const esp_stub_t *stub = &esp_stub[loader->_target];
+        const uint32_t load_end = offset + size;
+        for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+            const uint32_t stub_start = stub->segments[seg].addr;
+            const uint32_t stub_end   = stub->segments[seg].addr + stub->segments[seg].size;
+            if (offset < stub_end && load_end > stub_start) {
+                if (loader->_port->ops->debug_print != NULL) {
+                    loader->_port->ops->debug_print(loader->_port, "Software loader is resident at the requested address, can't load binary at overlapping address range");
+                }
+                return ESP_LOADER_ERROR_INVALID_PARAM;
+            }
+        }
+    }
+
+    uint32_t seq = 0;
+    return loader_mem_begin_cmd(loader, &seq, offset, size, blocks_to_write, block_size);
+}
+
+const esp_loader_protocol_ops_t uart_protocol_ops = {
+    .initialize_conn = uart_initialize_conn,
+    .send_cmd        = uart_send_cmd,
+    .spi_attach      = uart_spi_attach,
+    .flash_read_stub = uart_flash_read_stub,
+    .mem_begin_cmd   = uart_mem_begin_cmd,
+    .mem_data_cmd    = NULL,
+    .mem_end_cmd     = NULL,
+};
+
+const esp_loader_protocol_ops_t *esp_loader_get_uart_ops(void)
+{
+    return &uart_protocol_ops;
+}
+
+const esp_loader_protocol_ops_t *esp_loader_get_usb_ops(void)
+{
+    return &uart_protocol_ops;
 }

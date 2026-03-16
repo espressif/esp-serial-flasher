@@ -52,6 +52,8 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
+    esp_loader_t loader;
+
     const loader_esp32_config_t config = {
         .baud_rate = 115200,
         .uart_port = UART_NUM_1,
@@ -65,31 +67,35 @@ void app_main(void)
         ESP_LOGE(TAG, "serial initialization failed.");
         return;
     }
+    if (esp_loader_init_uart(&loader, &esp32_uart_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, "serial initialization failed.");
+        return;
+    }
 
-    if (connect_to_target(HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
         // Not necessary, just to demonstrate the erase functions
         esp_loader_error_t err;
-        err = esp_loader_flash_erase();
+        err = esp_loader_flash_erase(&loader);
         if (err != ESP_LOADER_SUCCESS) {
             ESP_LOGE(TAG, "Failed to erase flash");
             return;
         }
-        err = esp_loader_flash_erase_region(0, 0x1000);
+        err = esp_loader_flash_erase_region(&loader, 0, 0x1000);
         if (err != ESP_LOADER_SUCCESS) {
             ESP_LOGE(TAG, "Failed to erase flash region");
             return;
         }
 
         ESP_LOGI(TAG, "Loading bootloader...");
-        target_chip_t chip = esp_loader_get_target();
+        target_chip_t chip = esp_loader_get_target(&loader);
         uint32_t bootloader_addr = get_bootloader_address(chip);
-        flash_binary(bootloader_bin, bootloader_bin_size, bootloader_addr);
+        flash_binary(&loader, bootloader_bin, bootloader_bin_size, bootloader_addr);
         ESP_LOGI(TAG, "Loading partition table...");
-        flash_binary(partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
+        flash_binary(&loader, partition_table_bin, partition_table_bin_size, PARTITION_TABLE_ADDRESS);
         ESP_LOGI(TAG, "Loading app...");
-        flash_binary(app_bin, app_bin_size, APPLICATION_ADDRESS);
+        flash_binary(&loader, app_bin, app_bin_size, APPLICATION_ADDRESS);
         ESP_LOGI(TAG, "Done!");
-        esp_loader_reset_target();
+        esp_loader_reset_target(&loader);
 
         // Delay for skipping the boot message of the targets
         vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -101,5 +107,6 @@ void app_main(void)
         xTaskCreate(slave_monitor, "slave_monitor", 2048, NULL, configMAX_PRIORITIES - 1, NULL);
 
     }
+
     vTaskDelete(NULL);
 }

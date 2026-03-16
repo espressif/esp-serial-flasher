@@ -136,14 +136,16 @@ void loader_port_esp32_spi_deinit(void)
 }
 
 
-void loader_port_spi_set_cs(const uint32_t level)
+static void esp32_spi_set_cs(esp_loader_port_t *port, uint32_t level)
 {
+    (void)port;
     gpio_set_level(s_spi_cs_pin, level);
 }
 
 
-esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t esp32_spi_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
+    (void)port;
     (void) timeout;
 
     if (data == NULL) {
@@ -172,8 +174,9 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size, c
 }
 
 
-esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t esp32_spi_read(esp_loader_port_t *port, uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
+    (void)port;
     (void) timeout;
 
     /* The rx data buffer must be aligned to 32 bits due to DMA requirements */
@@ -202,8 +205,40 @@ esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const ui
 }
 
 
-void loader_port_enter_bootloader(void)
+static void esp32_spi_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
+    usleep(ms * 1000);
+}
+
+
+static void esp32_spi_start_timer(esp_loader_port_t *port, uint32_t ms)
+{
+    (void)port;
+    s_time_end = esp_timer_get_time() + ms * 1000;
+}
+
+
+static uint32_t esp32_spi_remaining_time(esp_loader_port_t *port)
+{
+    (void)port;
+    int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
+    return (remaining > 0) ? (uint32_t)remaining : 0;
+}
+
+
+static void esp32_spi_reset_target(esp_loader_port_t *port)
+{
+    (void)port;
+    gpio_set_level(s_reset_trigger_pin, 0);
+    usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
+    gpio_set_level(s_reset_trigger_pin, 1);
+}
+
+
+static void esp32_spi_enter_bootloader(esp_loader_port_t *port)
+{
+    (void)port;
     /*
         We have to initialize the GPIO pins for the target strapping pins here,
         as they may overlap with target SPI pins.
@@ -233,8 +268,8 @@ void loader_port_enter_bootloader(void)
     gpio_set_level(s_strap_bit1_pin, 0);
     gpio_set_level(s_strap_bit2_pin, 0);
     gpio_set_level(s_strap_bit3_pin, 0);
-    loader_port_reset_target();
-    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
+    esp32_spi_reset_target(NULL);
+    usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
     gpio_set_level(s_strap_bit3_pin, 1);
     gpio_set_level(s_strap_bit0_pin, 0);
 
@@ -250,41 +285,16 @@ void loader_port_enter_bootloader(void)
 }
 
 
-void loader_port_reset_target(void)
+static void esp32_spi_debug_print(esp_loader_port_t *port, const char *str)
 {
-    gpio_set_level(s_reset_trigger_pin, 0);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_set_level(s_reset_trigger_pin, 1);
-}
-
-
-void loader_port_delay_ms(const uint32_t ms)
-{
-    usleep(ms * 1000);
-}
-
-
-void loader_port_start_timer(const uint32_t ms)
-{
-    s_time_end = esp_timer_get_time() + ms * 1000;
-}
-
-
-uint32_t loader_port_remaining_time(void)
-{
-    int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
-    return (remaining > 0) ? (uint32_t)remaining : 0;
-}
-
-
-void loader_port_debug_print(const char *str)
-{
+    (void)port;
     printf("DEBUG: %s\n", str);
 }
 
 
-esp_loader_error_t loader_port_change_transmission_rate(const uint32_t frequency)
+static esp_loader_error_t esp32_spi_change_rate(esp_loader_port_t *port, uint32_t frequency)
 {
+    (void)port;
     if (spi_bus_remove_device(s_device_h) != ESP_OK) {
         return ESP_LOADER_ERROR_FAIL;
     }
@@ -299,3 +309,18 @@ esp_loader_error_t loader_port_change_transmission_rate(const uint32_t frequency
 
     return ESP_LOADER_SUCCESS;
 }
+
+static const esp_loader_port_ops_t esp32_spi_ops = {
+    .enter_bootloader         = esp32_spi_enter_bootloader,
+    .reset_target             = esp32_spi_reset_target,
+    .start_timer              = esp32_spi_start_timer,
+    .remaining_time           = esp32_spi_remaining_time,
+    .delay_ms                 = esp32_spi_delay_ms,
+    .debug_print              = esp32_spi_debug_print,
+    .change_transmission_rate = esp32_spi_change_rate,
+    .write                    = esp32_spi_write,
+    .read                     = esp32_spi_read,
+    .spi_set_cs               = esp32_spi_set_cs,
+};
+
+esp_loader_port_t esp32_spi_port = { .ops = &esp32_spi_ops };

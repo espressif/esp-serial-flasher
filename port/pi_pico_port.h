@@ -34,8 +34,13 @@ typedef struct {
                                         purposes (e.g. monitoring) */
 } loader_pi_pico_config_t;
 
+/** Port operations vtable for the Raspberry Pi Pico UART port. */
+extern esp_loader_port_t pi_pico_uart_port;
+
 /**
-  * @brief Initializes the serial interface.
+  * @brief Initializes the Pi Pico UART hardware.
+  *
+  * Call this before esp_loader_init() to configure the UART peripheral.
   *
   * @param config[in] Port configuration data
   *

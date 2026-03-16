@@ -27,7 +27,7 @@ int main( int argc, char *argv[] )
     const loader_serial_config_t dummy_config = { 0 };
 
     // global setup...
-    if ( loader_port_test_init(&dummy_config) != ESP_LOADER_SUCCESS ) {
+    if ( esp_loader_port_test_init(&dummy_config) != ESP_LOADER_SUCCESS ) {
         std::cout << "Serial initialization failed";
         return 0;
     }
@@ -35,7 +35,7 @@ int main( int argc, char *argv[] )
     int result = Catch::Session().run( argc, argv );
 
     // global clean-up...
-    loader_port_test_deinit();
+    esp_loader_port_test_deinit();
 
     return result;
 }

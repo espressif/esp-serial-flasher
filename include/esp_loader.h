@@ -17,13 +17,15 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "esp_loader_error.h"
+#include "esp_loader_io.h"
+#if MD5_ENABLED
+#include "md5_ctx.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Used for backwards compatibility with the previous API */
-#define esp_loader_change_baudrate esp_loader_change_transmission_rate
 
 /**
  * Macro which can be used to check the error code,
@@ -35,22 +37,6 @@ extern "C" {
         return _err_;                   \
     }                                   \
 } while(0)
-
-/**
- * @brief Error codes
- */
-typedef enum {
-    ESP_LOADER_SUCCESS,                /*!< Success */
-    ESP_LOADER_ERROR_FAIL,             /*!< Unspecified error */
-    ESP_LOADER_ERROR_TIMEOUT,          /*!< Timeout elapsed */
-    ESP_LOADER_ERROR_IMAGE_SIZE,       /*!< Image size to flash is larger than flash size */
-    ESP_LOADER_ERROR_INVALID_MD5,      /*!< Computed and received MD5 does not match */
-    ESP_LOADER_ERROR_INVALID_PARAM,    /*!< Invalid parameter passed to function */
-    ESP_LOADER_ERROR_INVALID_TARGET,   /*!< Connected target is invalid */
-    ESP_LOADER_ERROR_UNSUPPORTED_CHIP, /*!< Attached chip is not supported */
-    ESP_LOADER_ERROR_UNSUPPORTED_FUNC, /*!< Function is not supported on attached target */
-    ESP_LOADER_ERROR_INVALID_RESPONSE  /*!< Internal error */
-} esp_loader_error_t;
 
 /**
  * @brief Supported targets
@@ -71,7 +57,14 @@ typedef enum {
 } target_chip_t;
 
 /**
- * @brief Application binary header
+ * @brief Forward declarations for internal types used only as pointers inside
+ * struct esp_loader.  Full definitions live in private headers.
+ */
+struct esp_loader_protocol_ops_s;
+struct target_registers_t;
+
+/**
+ * @brief Application binary image header (8-byte common header).
  */
 typedef struct {
     uint8_t magic;
@@ -82,7 +75,7 @@ typedef struct {
 } esp_loader_bin_header_t;
 
 /**
- * @brief Segment binary header
+ * @brief Segment descriptor within an application binary.
  */
 typedef struct {
     uint32_t addr;
@@ -120,8 +113,145 @@ typedef struct {
 }
 
 /**
+ * @brief Flash operation context.
+ *
+ * Allocate on the stack, fill the public fields, then pass to
+ * esp_loader_flash_start() / esp_loader_flash_write() / esp_loader_flash_finish().
+ * Fields inside _state are managed by the library; do not access them directly.
+ */
+typedef struct {
+    uint32_t offset;      /*!< Flash address to write to. Must be 4-byte aligned. */
+    uint32_t image_size;  /*!< Total size of the image. Must be 4-byte aligned. */
+    uint32_t block_size;  /*!< Size of each block passed to esp_loader_flash_write(). */
+    struct {
+        uint32_t          _sequence_number;
+#if MD5_ENABLED
+        struct MD5Context _md5_context;
+#endif
+    } _state;
+} esp_loader_flash_cfg_t;
+
+/**
+ * @brief Compressed flash operation context (DEFLATE/zlib stream).
+ *
+ * Allocate on the stack, fill the public fields, then pass to
+ * esp_loader_flash_deflate_start() / esp_loader_flash_deflate_write() / esp_loader_flash_deflate_finish().
+ * Fields inside _state are managed by the library; do not access them directly.
+ */
+typedef struct {
+    uint32_t offset;           /*!< Flash address to write to. Must be 4-byte aligned. */
+    uint32_t image_size;       /*!< Size of the uncompressed image in bytes. */
+    uint32_t compressed_size;  /*!< Size of the compressed data in bytes. */
+    uint32_t block_size;       /*!< Size of each compressed block. */
+    struct {
+        uint32_t _sequence_number;
+    } _state;
+} esp_loader_flash_deflate_cfg_t;
+
+/**
+ * @brief RAM load operation context.
+ *
+ * Allocate on the stack, fill the public fields, then pass to
+ * esp_loader_mem_start() / esp_loader_mem_write() / esp_loader_mem_finish().
+ * Fields inside _state are managed by the library; do not access them directly.
+ */
+typedef struct {
+    uint32_t offset;      /*!< RAM address to load to. */
+    uint32_t size;        /*!< Total size of the data to load. */
+    uint32_t block_size;  /*!< Size of each block passed to esp_loader_mem_write(). */
+    struct {
+        uint32_t _sequence_number;
+    } _state;
+} esp_loader_mem_cfg_t;
+
+/**
+ * @brief Protocol type stored in the loader context.
+ *
+ * Used internally to gate protocol-specific behaviour (e.g. baud-rate changes
+ * are not available on SDIO; SPI does not support flash operations).
+ */
+typedef enum {
+    ESP_LOADER_PROTOCOL_UART, /*!< UART */
+    ESP_LOADER_PROTOCOL_USB,  /*!< USB CDC-ACM */
+    ESP_LOADER_PROTOCOL_SPI,  /*!< SPI */
+    ESP_LOADER_PROTOCOL_SDIO, /*!< SDIO */
+} esp_loader_protocol_t;
+
+/**
+ * @brief Loader context.
+ *
+ * Declare on the stack or as a static and pass its address to every
+ * esp_loader_*() call.  All fields are prefixed with _ and must not be
+ * accessed directly — they are private implementation details.
+ */
+typedef struct esp_loader {
+    const struct esp_loader_protocol_ops_s *_protocol;
+    esp_loader_port_t                      *_port;
+    esp_loader_protocol_t                   _protocol_type;
+    target_chip_t                           _target;
+    const struct target_registers_t        *_reg;
+    uint32_t  _target_flash_size;
+    bool      _stub_running;
+} esp_loader_t;
+
+/**
+  * @brief Initialize the loader context for UART protocol.
+  *
+  * Call the port-specific hardware init function (e.g. @c loader_port_esp32_init)
+  * before calling this function.
+  *
+  * @code
+  *   loader_port_esp32_init(&config);
+  *   esp_loader_t loader;
+  *   esp_loader_init_uart(&loader, &esp32_uart_port);
+  *   esp_loader_connect(&loader, &connect_args);
+  *
+  *   // Two UART devices in parallel
+  *   esp_loader_init_uart(&loader_a, &esp32_uart_port_a);
+  *   esp_loader_init_uart(&loader_b, &esp32_uart_port_b);
+  * @endcode
+  *
+  * @param loader[in]  Pointer to a caller-allocated esp_loader_t instance.
+  * @param port[in]    Pointer to the port handle (its @c ops must be populated).
+  *
+  * @return ESP_LOADER_SUCCESS on success.
+  */
+esp_loader_error_t esp_loader_init_uart(esp_loader_t *loader, esp_loader_port_t *port);
+
+/**
+  * @brief Initialize the loader context for USB CDC-ACM protocol.
+  *
+  * @param loader[in]  Pointer to a caller-allocated esp_loader_t instance.
+  * @param port[in]    Pointer to the port handle.
+  *
+  * @return ESP_LOADER_SUCCESS on success.
+  */
+esp_loader_error_t esp_loader_init_usb(esp_loader_t *loader, esp_loader_port_t *port);
+
+/**
+  * @brief Initialize the loader context for SPI protocol.
+  *
+  * @param loader[in]  Pointer to a caller-allocated esp_loader_t instance.
+  * @param port[in]    Pointer to the port handle.
+  *
+  * @return ESP_LOADER_SUCCESS on success.
+  */
+esp_loader_error_t esp_loader_init_spi(esp_loader_t *loader, esp_loader_port_t *port);
+
+/**
+  * @brief Initialize the loader context for SDIO protocol.
+  *
+  * @param loader[in]  Pointer to a caller-allocated esp_loader_t instance.
+  * @param port[in]    Pointer to the port handle.
+  *
+  * @return ESP_LOADER_SUCCESS on success.
+  */
+esp_loader_error_t esp_loader_init_sdio(esp_loader_t *loader, esp_loader_port_t *port);
+
+/**
   * @brief Connects to the target
   *
+  * @param loader[in]       Pointer to initialized loader context.
   * @param connect_args[in] Timing parameters to be used for connecting to target.
   *
   * @return
@@ -129,7 +259,7 @@ typedef struct {
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args);
+esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args);
 
 /**
   * @brief   Returns attached target chip.
@@ -137,33 +267,34 @@ esp_loader_error_t esp_loader_connect(esp_loader_connect_args_t *connect_args);
   * @warning This function can only be called after connection with target
   *          has been successfully established by calling esp_loader_connect().
   *
+  * @param loader[in] Pointer to initialized loader context.
+  *
   * @return  One of target_chip_t
   */
-target_chip_t esp_loader_get_target(void);
+target_chip_t esp_loader_get_target(esp_loader_t *loader);
 
-
-#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 /**
   * @brief Connects to the target while using the flasher stub
   *
+  * @note  Only supported on UART and USB interfaces.
+  *
+  * @param loader[in]       Pointer to initialized loader context.
   * @param connect_args[in] Timing parameters to be used for connecting to target.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
-esp_loader_error_t esp_loader_connect_with_stub(esp_loader_connect_args_t *connect_args);
+esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args);
 
-#ifdef SERIAL_FLASHER_INTERFACE_UART
 /**
   * @brief Connects to the target running in secure download mode
   *
-  * Secure download mode is a special mode in which the commands accepted by the boot ROM
-  * are limited to a safe subset. It is enabled by burning an efuse on the target.
-  * Read more about it here:
-  * https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/kconfig.html#config-secure-uart-rom-dl-mode
+  * @note  Only supported on UART interface.
   *
+  * @param loader[in]       Pointer to initialized loader context.
   * @param connect_args[in] Timing parameters to be used for connecting to target.
   * @param flash_size Flash size of the target chip.
   * @param target_chip Target chip. Used for the ESP32 and ESP8266, which do not support the
@@ -174,285 +305,257 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_connect_args_t *conne
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
-esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_connect_args_t *connect_args,
+esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
+        esp_loader_connect_args_t *connect_args,
         uint32_t flash_size, target_chip_t target_chip);
-#endif /* SERIAL_FLASHER_INTERFACE_UART */
-#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
 
-#ifndef SERIAL_FLASHER_INTERFACE_SPI
 /**
   * @brief Initiates flash operation
   *
-  * @param offset[in] Address from which flash operation will be performed. Must be 4 byte aligned.
-  * @param image_size[in] Size of the whole binary to be loaded into flash. Must be 4 byte aligned.
-  * @param block_size[in] Size of buffer used in subsequent calls to esp_loader_flash_write.
-  *
-  * @note  image_size is size of the whole image, whereas, block_size is chunk of data sent
-  *        to the target, each time esp_loader_flash_write function is called.
+  * @param loader[in]  Pointer to initialized loader context.
+  * @param cfg[in,out] Flash operation context. Caller fills offset, image_size and block_size
+  *                    before calling. The _state sub-struct is initialized by this function
+  *                    and must not be modified by the caller.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_start(uint32_t offset, uint32_t image_size, uint32_t block_size);
+esp_loader_error_t esp_loader_flash_start(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg);
 
 /**
   * @brief Writes supplied data to target's flash memory.
   *
-  * @param payload[in]      Data to be flashed into target's memory.
-  * @param size[in]         Size of payload in bytes.
-  *
-  * @note  size must not be greater that block_size supplied to previously called
-  *        esp_loader_flash_start function. If size is less than block_size,
-  *        remaining bytes of payload buffer will be padded with 0xff.
-  *        Therefore, size of payload buffer has to be equal or greater than block_size.
+  * @param loader[in,out]  Pointer to initialized loader context.
+  * @param cfg[in,out]     Flash operation context initialized by esp_loader_flash_start().
+  * @param payload[in]     Data to be flashed into target's memory.
+  * @param size[in]        Size of payload in bytes.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_write(void *payload, uint32_t size);
+esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, void *payload, uint32_t size);
 
 /**
   * @brief Ends flash operation.
   *
-  * @param reboot[in]       reboot the target if true.
+  * @param loader[in]  Pointer to initialized loader context.
+  * @param cfg[in]     Flash operation context initialized by esp_loader_flash_start().
+  * @param reboot[in]  Reboot the target if true. Has no effect when MD5 verification fails.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_finish(bool reboot);
-
-/* Compressed flash download is not yet supported by SDIO interface */
-#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
+esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, bool reboot);
 
 /**
   * @brief Initiates compressed flash operation (DEFLATE/zlib stream).
   *
-  * @param offset[in]          Address from which flash operation will be
-  *                            performed. Must be 4 byte aligned.
-  * @param image_size[in]      Size of the uncompressed data in bytes.
-  *                            Must be 4 byte aligned.
-  * @param compressed_size[in] Size of the compressed data in bytes.
-  * @param block_size[in]      Size of each compressed block sent in
-  *                            esp_loader_flash_deflate_write().
+  * @note  Only supported on UART and USB interfaces.
   *
-  * @note The compressed stream must use zlib headers (zlib.compress()).
+  * @note  The deflate path does not accumulate an MD5 digest internally (the compressed
+  *        data stream cannot be hashed to match the plaintext MD5). Use
+  *        esp_loader_flash_verify_known_md5() after flashing to verify the uncompressed
+  *        content.
+  *
+  * @param loader[in]  Pointer to initialized loader context.
+  * @param cfg[in,out] Compressed flash operation context. Caller fills offset, image_size,
+  *                    compressed_size and block_size before calling. The _state sub-struct
+  *                    is initialized by this function and must not be modified by the caller.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
-  *     - ESP_LOADER_ERROR_IMAGE_SIZE Image exceeds flash size
-  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid parameter
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
-esp_loader_error_t esp_loader_flash_deflate_start(uint32_t offset,
-        uint32_t image_size,
-        uint32_t compressed_size,
-        uint32_t block_size);
+esp_loader_error_t esp_loader_flash_deflate_start(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg);
 
 /**
   * @brief Writes a compressed data block to target flash memory.
   *
-  * @param payload[in] Data buffer containing a zlib-compressed block.
-  * @param size[in]    Size of payload in bytes (must not exceed block_size).
-  *
-  * @note  size must not be greater than block_size supplied to previously called
-  *        esp_loader_flash_deflate_start function.
+  * @param loader[in,out]  Pointer to initialized loader context.
+  * @param cfg[in,out]     Compressed flash context initialized by esp_loader_flash_deflate_start().
+  * @param payload[in]     Data buffer containing a zlib-compressed block.
+  * @param size[in]        Size of payload in bytes.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
-  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid parameter
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_deflate_write(void *payload, uint32_t size);
+esp_loader_error_t esp_loader_flash_deflate_write(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg, void *payload, uint32_t size);
 
 /**
   * @brief Ends compressed flash operation.
   *
-  * @param reboot[in] reboot the target if true.
+  * @param loader[in]  Pointer to initialized loader context.
+  * @param cfg[in]     Compressed flash context initialized by esp_loader_flash_deflate_start().
+  * @param reboot[in]  Reboot the target if true.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_deflate_finish(bool reboot);
-
-#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
+esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg, bool reboot);
 
 /**
   * @brief Detects the size of the flash chip used by target
   *
+  * @param loader[in]       Pointer to initialized loader context.
   * @param flash_size[out] Flash size detected in bytes
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP The target flash chip is not known
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target chip is running in secure download mode
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
-esp_loader_error_t esp_loader_flash_detect_size(uint32_t *flash_size);
-#endif /* SERIAL_FLASHER_INTERFACE_SPI */
+esp_loader_error_t esp_loader_flash_detect_size(esp_loader_t *loader, uint32_t *flash_size);
 
-#if (defined SERIAL_FLASHER_INTERFACE_UART) || (defined SERIAL_FLASHER_INTERFACE_USB)
 /**
   * @brief Reads from the target flash.
   *
+  * @note  Only supported on UART and USB interfaces.
+  *
+  * @param loader[in]  Pointer to initialized loader context.
   * @param buf[out] Buffer to read into
   * @param address[in] Flash address to read from.
   * @param length[in] Read length in bytes.
   *
-  * @note Higher read speeds can be achieved by using the flasher stub.
-  *
   * @return
   *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP The target flash chip is not known
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target chip is running in secure download mode
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
-esp_loader_error_t esp_loader_flash_read(uint8_t *buf, uint32_t address, uint32_t length);
+esp_loader_error_t esp_loader_flash_read(esp_loader_t *loader, uint8_t *buf, uint32_t address, uint32_t length);
 
 /**
   * @brief Erase the whole flash chip
   *
-  * @note When using ROM-based approach (without stub), this function is experimental
-  *       and not fully tested in all scenarios. Use with caution. When using the stub,
-  *       this function is fully supported.
+  * @param loader[in] Pointer to initialized loader context.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_erase(void);
+esp_loader_error_t esp_loader_flash_erase(esp_loader_t *loader);
 
 /**
   * @brief Erase a region of the flash
   *
-  * @note When using ROM-based approach (without stub), this function is experimental
-  *       and not fully tested in all scenarios. Use with caution. When using the stub,
-  *       this function is fully supported.
-  *
-  * @param offset[in] The offset of the region to erase (must be 4096 byte aligned)
-  * @param size[in] The size of the region to erase (must be 4096 byte aligned)
+  * @param loader[in]  Pointer to initialized loader context.
+  * @param offset[in]  The offset of the region to erase (must be 4096 byte aligned)
+  * @param size[in]    The size of the region to erase (must be 4096 byte aligned)
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid parameter
   */
-esp_loader_error_t esp_loader_flash_erase_region(uint32_t offset, uint32_t size);
+esp_loader_error_t esp_loader_flash_erase_region(esp_loader_t *loader, uint32_t offset, uint32_t size);
 
 /**
   * @brief Change baud rate of the stub running on the target
   *
-  * @note  Baud rate has to be also adjusted accordingly on host MCU, as
-  *        target's baud rate is changed upon return from this function.
+  * @note  Only supported on UART and USB interfaces with stub running.
   *
+  * @param loader[in]                Pointer to initialized loader context.
   * @param old_transmission_rate[in] The baudrate to be changed
   * @param new_transmission_rate[in] The new baud rate to be set.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
-  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The stub is not running
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol or stub not running
   */
-esp_loader_error_t esp_loader_change_transmission_rate_stub(uint32_t old_transmission_rate,
+esp_loader_error_t esp_loader_change_transmission_rate_stub(esp_loader_t *loader,
+        uint32_t old_transmission_rate,
         uint32_t new_transmission_rate);
 
 /**
   * @brief Get the security info of the target chip
   *
-  * @note  The ESP32 and ESP8266 do not support this command.
+  * @note  Only supported on UART and USB interfaces.
   *
+  * @param loader[in]        Pointer to initialized loader context.
   * @param security_info[out] The security info structure
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_TIMEOUT Either a timeout event or the target chip responded with
-  *                                a different command code, due to not supporting the command.
-  *     - ESP_LOADER_ERROR_INVALID_RESPONSE The target reply is malformed.
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target chip does not support this command.
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
-esp_loader_error_t esp_loader_get_security_info(esp_loader_target_security_info_t *security_info);
-#endif /* SERIAL_FLASHER_INTERFACE_UART || SERIAL_FLASHER_INTERFACE_USB */
-
+esp_loader_error_t esp_loader_get_security_info(esp_loader_t *loader,
+        esp_loader_target_security_info_t *security_info);
 
 /**
-  * @brief Initiates mem operation, initiates loading for program into target RAM
+  * @brief Initiates RAM load operation.
   *
-  * @param offset[in]       Address from which mem operation will be performed.
-  * @param size[in]         Size of the whole binary to be loaded into mem.
-  * @param block_size[in]   Size of buffer used in subsequent calls to esp_loader_mem_write.
-  *
-  * @note  image_size is size of the whole image, whereas, block_size is chunk of data sent
-  *        to the target, each time esp_mem_flash_write function is called.
+  * @param loader[in]  Pointer to initialized loader context.
+  * @param cfg[in,out] RAM load context. Caller fills offset, size and block_size before
+  *                    calling. The _state sub-struct is initialized by this function and
+  *                    must not be modified by the caller.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
-esp_loader_error_t esp_loader_mem_start(uint32_t offset, uint32_t size, uint32_t block_size);
-
+esp_loader_error_t esp_loader_mem_start(esp_loader_t *loader, esp_loader_mem_cfg_t *cfg);
 
 /**
-  * @brief Writes supplied data to target's mem memory.
+  * @brief Writes supplied data to target's RAM.
   *
-  * @param payload[in]      Data to be loaded into target's memory.
-  * @param size[in]         Size of data in bytes.
-  *
-  * @note  size must not be greater that block_size supplied to previously called
-  *        esp_loader_mem_start function.
-  *        Therefore, size of data buffer has to be equal or greater than block_size.
+  * @param loader[in,out]  Pointer to initialized loader context.
+  * @param cfg[in,out]     RAM load context initialized by esp_loader_mem_start().
+  * @param payload[in]     Data to be loaded into target's memory.
+  * @param size[in]        Size of data in bytes.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
-esp_loader_error_t esp_loader_mem_write(const void *payload, uint32_t size);
-
+esp_loader_error_t esp_loader_mem_write(esp_loader_t *loader, esp_loader_mem_cfg_t *cfg, const void *payload, uint32_t size);
 
 /**
-  * @brief Ends mem operation, finish loading for program into target RAM
-  *        and send the entrypoint of ram_loadable app
+  * @brief Finishes RAM load operation and transfers control to the loaded program.
   *
-  * @param entrypoint[in]       entrypoint of ram program.
+  * @param loader[in]       Pointer to initialized loader context.
+  * @param cfg[in]          RAM load context initialized by esp_loader_mem_start().
+  * @param entrypoint[in]   Entry point address of the loaded program.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
-esp_loader_error_t esp_loader_mem_finish(uint32_t entrypoint);
+esp_loader_error_t esp_loader_mem_finish(esp_loader_t *loader, esp_loader_mem_cfg_t *cfg, uint32_t entrypoint);
 
 /**
   * @brief Reads the MAC address of the connected chip.
   *
+  * @param loader[in] Pointer to initialized loader context.
   * @param mac[out] 6 byte MAC address of the chip
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
-esp_loader_error_t esp_loader_read_mac(uint8_t *mac);
+esp_loader_error_t esp_loader_read_mac(esp_loader_t *loader, uint8_t *mac);
 
 /**
   * @brief Writes register.
   *
+  * @param loader[in]       Pointer to initialized loader context.
   * @param address[in]      Address of register.
   * @param reg_value[in]    New register value.
   *
@@ -460,13 +563,13 @@ esp_loader_error_t esp_loader_read_mac(uint8_t *mac);
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
-esp_loader_error_t esp_loader_write_register(uint32_t address, uint32_t reg_value);
+esp_loader_error_t esp_loader_write_register(esp_loader_t *loader, uint32_t address, uint32_t reg_value);
 
 /**
   * @brief Reads register.
   *
+  * @param loader[in]       Pointer to initialized loader context.
   * @param address[in]      Address of register.
   * @param reg_value[out]   Register value.
   *
@@ -474,34 +577,31 @@ esp_loader_error_t esp_loader_write_register(uint32_t address, uint32_t reg_valu
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC The target is running in secure download mode
   */
-esp_loader_error_t esp_loader_read_register(uint32_t address, uint32_t *reg_value);
+esp_loader_error_t esp_loader_read_register(esp_loader_t *loader, uint32_t address, uint32_t *reg_value);
 
-#ifndef SERIAL_FLASHER_INTERFACE_SDIO
 /**
   * @brief Change baud rate.
   *
-  * @note  Baud rate has to be also adjusted accordingly on host MCU, as
-  *        target's baud rate is changed upon return from this function.
+  * @note  Not supported on SDIO interface.
   *
-  * @param transmission_rate[in]     new baud rate to be set.
+  * @param loader[in]              Pointer to initialized loader context.
+  * @param transmission_rate[in]   new baud rate to be set.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
-  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Either the target is running in secure download
-  *       mode or the stub is running on the target.
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
-esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rate);
-#endif /* SERIAL_FLASHER_INTERFACE_SDIO */
+esp_loader_error_t esp_loader_change_transmission_rate(esp_loader_t *loader, uint32_t transmission_rate);
 
 #if MD5_ENABLED
 /**
   * @brief Verify target's flash integrity by checking with a known MD5 checksum
   * for a specified offset and length.
   *
+  * @param loader[in] Pointer to initialized loader context.
+  *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_INVALID_MD5 MD5 does not match
@@ -510,18 +610,18 @@ esp_loader_error_t esp_loader_change_transmission_rate(uint32_t transmission_rat
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
   *     - ESP_LOADER_ERROR_IMAGE_SIZE Flash region specified is beyond the flash end
   */
-esp_loader_error_t esp_loader_flash_verify_known_md5(uint32_t address,
+esp_loader_error_t esp_loader_flash_verify_known_md5(esp_loader_t *loader,
+        uint32_t address,
         uint32_t size,
         const uint8_t *expected_md5);
 
 /**
   * @brief Verify target's flash integrity by checking MD5.
-  *        MD5 checksum is computed from data pushed to target's memory by calling
-  *        esp_loader_flash_write() function and compared against target's MD5.
-  *        Target computes checksum based on offset and image_size passed to
-  *        esp_loader_flash_start() function.
   *
-  * @note  This function is only available if MD5_ENABLED is set.
+  * @param loader[in] Pointer to initialized loader context.
+  * @param cfg[in]    Flash operation context previously used with esp_loader_flash_start()
+  *                   and esp_loader_flash_write(). The accumulated MD5 context stored in
+  *                   cfg->_state is used to compute the expected digest.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
@@ -531,15 +631,15 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(uint32_t address,
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
   *     - ESP_LOADER_ERROR_IMAGE_SIZE Flash region specified is beyond the flash end
   */
-esp_loader_error_t esp_loader_flash_verify(void);
+esp_loader_error_t esp_loader_flash_verify(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg);
 #endif /* MD5_ENABLED */
 
 /**
   * @brief Toggles reset pin.
+  *
+  * @param loader[in] Pointer to initialized loader context.
   */
-void esp_loader_reset_target(void);
-
-
+void esp_loader_reset_target(esp_loader_t *loader);
 
 #ifdef __cplusplus
 }

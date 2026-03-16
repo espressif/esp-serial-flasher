@@ -20,7 +20,6 @@
 #include "usb/cdc_acm_host.h"
 #include "usb/vcp_cp210x.h"
 #include "usb/vcp_ch34x.h"
-#include "esp_loader_io.h"
 #include "esp32_usb_cdc_acm_port.h"
 
 static const char *TAG = "usb_cdc_acm_port";
@@ -50,11 +49,13 @@ static void transfer_debug_print(const uint8_t *data, const uint16_t size, const
 
 static bool handle_usb_data(const uint8_t *data, size_t data_len, void *arg)
 {
+    (void)arg;
     return xStreamBufferSend(s_rx_stream_buffer, data, data_len, 0) == data_len;
 }
 
 static void handle_usb_event(const cdc_acm_host_dev_event_data_t *event, void *user_ctx)
 {
+    (void)user_ctx;
     switch (event->type) {
     case CDC_ACM_HOST_ERROR:
         ESP_LOGE(TAG, "CDC-ACM error has occurred, err_no = %i", event->data.error);
@@ -85,11 +86,24 @@ static void handle_usb_event(const cdc_acm_host_dev_event_data_t *event, void *u
     }
 }
 
+static uint32_t s_time_end;
+
+static void usb_delay_ms(uint32_t ms)
+{
+    usleep(ms * 1000);
+}
+
+static void esp32_usb_delay_ms(esp_loader_port_t *port, uint32_t ms)
+{
+    (void)port;
+    usb_delay_ms(ms);
+}
+
 static void usb_serial_jtag_reset_target(void)
 {
     xStreamBufferReset(s_rx_stream_buffer);
     cdc_acm_host_set_control_line_state(s_acm_device, false, true);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    usb_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
     cdc_acm_host_set_control_line_state(s_acm_device, false, false);
 }
 
@@ -97,7 +111,7 @@ static void usb_serial_jtag_enter_booloader(void)
 {
     cdc_acm_host_set_control_line_state(s_acm_device, true, false);
 
-    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
+    usb_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
 
     cdc_acm_host_set_control_line_state(s_acm_device, true, true);
     usb_serial_jtag_reset_target();
@@ -107,7 +121,7 @@ static void usb_serial_converter_reset_target(void)
 {
     xStreamBufferReset(s_rx_stream_buffer);
     cdc_acm_host_set_control_line_state(s_acm_device, false, true);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    usb_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
     cdc_acm_host_set_control_line_state(s_acm_device, false, false);
 }
 
@@ -115,17 +129,17 @@ static void usb_serial_converter_enter_bootloader(void)
 {
     xStreamBufferReset(s_rx_stream_buffer);
     cdc_acm_host_set_control_line_state(s_acm_device, false, true);
-    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
+    usb_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
     cdc_acm_host_set_control_line_state(s_acm_device, true, false);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
+    usb_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
     cdc_acm_host_set_control_line_state(s_acm_device, false, false);
 }
 
-static uint32_t s_time_end;
 
-esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size,
-                                     const uint32_t timeout)
+static esp_loader_error_t esp32_usb_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size,
+        const uint32_t timeout)
 {
+    (void)port;
     assert(data != NULL);
     assert(s_acm_device != NULL && s_rx_stream_buffer != NULL);
 
@@ -147,8 +161,9 @@ esp_loader_error_t loader_port_write(const uint8_t *data, const uint16_t size,
 }
 
 
-esp_loader_error_t loader_port_read(uint8_t *data, const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t esp32_usb_read(esp_loader_port_t *port, uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
+    (void)port;
     assert(data != NULL);
     assert(s_acm_device != NULL && s_rx_stream_buffer != NULL);
 
@@ -249,8 +264,9 @@ esp_loader_error_t loader_port_esp32_usb_cdc_acm_deinit(void)
 }
 
 
-void loader_port_enter_bootloader(void)
+static void esp32_usb_enter_bootloader(esp_loader_port_t *port)
 {
+    (void)port;
     assert(s_acm_device != NULL && s_rx_stream_buffer != NULL);
 
     if (s_is_usb_serial_jtag) {
@@ -261,8 +277,9 @@ void loader_port_enter_bootloader(void)
 }
 
 
-void loader_port_reset_target(void)
+static void esp32_usb_reset_target(esp_loader_port_t *port)
 {
+    (void)port;
     assert(s_acm_device != NULL && s_rx_stream_buffer != NULL);
 
     if (s_is_usb_serial_jtag) {
@@ -273,32 +290,30 @@ void loader_port_reset_target(void)
 }
 
 
-void loader_port_delay_ms(const uint32_t ms)
+static void esp32_usb_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
-    usleep(ms * 1000);
-}
-
-
-void loader_port_start_timer(const uint32_t ms)
-{
+    (void)port;
     s_time_end = esp_timer_get_time() + ms * 1000;
 }
 
 
-uint32_t loader_port_remaining_time(void)
+static uint32_t esp32_usb_remaining_time(esp_loader_port_t *port)
 {
+    (void)port;
     int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
 
-void loader_port_debug_print(const char *str)
+static void esp32_usb_debug_print(esp_loader_port_t *port, const char *str)
 {
+    (void)port;
     printf("DEBUG: %s\n", str);
 }
 
-esp_loader_error_t loader_port_change_transmission_rate(const uint32_t baudrate)
+static esp_loader_error_t esp32_usb_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
+    (void)port;
     assert(s_acm_device != NULL && s_rx_stream_buffer != NULL);
 
     cdc_acm_line_coding_t line_coding;
@@ -314,3 +329,17 @@ esp_loader_error_t loader_port_change_transmission_rate(const uint32_t baudrate)
 
     return ESP_LOADER_SUCCESS;
 }
+
+static const esp_loader_port_ops_t esp32_usb_cdc_acm_ops = {
+    .enter_bootloader         = esp32_usb_enter_bootloader,
+    .reset_target             = esp32_usb_reset_target,
+    .start_timer              = esp32_usb_start_timer,
+    .remaining_time           = esp32_usb_remaining_time,
+    .delay_ms                 = esp32_usb_delay_ms,
+    .debug_print              = esp32_usb_debug_print,
+    .change_transmission_rate = esp32_usb_change_rate,
+    .write                    = esp32_usb_write,
+    .read                     = esp32_usb_read,
+};
+
+esp_loader_port_t esp32_usb_cdc_acm_port = { .ops = &esp32_usb_cdc_acm_ops };

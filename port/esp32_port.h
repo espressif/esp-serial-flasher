@@ -40,10 +40,15 @@ typedef struct {
                                         purposes (e.g. monitoring) */
 } loader_esp32_config_t;
 
+/** Port operations vtable for the ESP32 UART port. */
+extern esp_loader_port_t esp32_uart_port;
+
 /**
-  * @brief Initializes serial interface.
+  * @brief Initializes the UART hardware.
   *
-  * @param baud_rate[in]       Communication speed.
+  * Call this before esp_loader_init() to configure the UART peripheral.
+  *
+  * @param config[in] Port configuration.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success

@@ -114,10 +114,10 @@ void loader_port_esp32_sdio_deinit(void)
 }
 
 
-esp_loader_error_t loader_port_write(const uint32_t function, const uint32_t addr,
-                                     const uint8_t *data, const uint16_t size,
-                                     const uint32_t timeout)
+static esp_loader_error_t esp32_sdio_write(esp_loader_port_t *port, uint32_t function, uint32_t addr,
+        const uint8_t *data, uint16_t size, uint32_t timeout)
 {
+    (void)port;
     (void) timeout; // Unused, there is a global timeout in the ESP-IDF driver
 
     if (data == NULL || !WORD_ALIGNED(data)) {
@@ -139,9 +139,10 @@ esp_loader_error_t loader_port_write(const uint32_t function, const uint32_t add
 }
 
 
-esp_loader_error_t loader_port_read(const uint32_t function, const uint32_t addr, uint8_t *data,
-                                    const uint16_t size, const uint32_t timeout)
+static esp_loader_error_t esp32_sdio_read(esp_loader_port_t *port, uint32_t function, uint32_t addr,
+        uint8_t *data, uint16_t size, uint32_t timeout)
 {
+    (void)port;
     (void) timeout; // Unused, there is a global timeout in the ESP-IDF driver
 
     if (data == NULL || !WORD_ALIGNED(data)) {
@@ -162,17 +163,10 @@ esp_loader_error_t loader_port_read(const uint32_t function, const uint32_t addr
     }
 }
 
-void loader_port_enter_bootloader(void)
-{
-    gpio_set_level(s_boot_pin, 0);
-    loader_port_reset_target();
-    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    gpio_set_level(s_boot_pin, 1);
-}
 
-
-esp_loader_error_t loader_port_sdio_card_init(void)
+static esp_loader_error_t esp32_sdio_card_init(esp_loader_port_t *port)
 {
+    (void)port;
     const esp_loader_error_t err = sdmmc_card_init(&s_card_config, &s_card);
 
     if (err == ESP_OK) {
@@ -184,37 +178,56 @@ esp_loader_error_t loader_port_sdio_card_init(void)
     }
 }
 
-void loader_port_reset_target(void)
-{
-    gpio_set_level(s_reset_trigger_pin, 0);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_set_level(s_reset_trigger_pin, 1);
-}
 
-
-void loader_port_delay_ms(const uint32_t ms)
+static void esp32_sdio_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     usleep(ms * 1000);
 }
 
 
-void loader_port_start_timer(const uint32_t ms)
+static void esp32_sdio_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     s_time_end = esp_timer_get_time() + ms * 1000;
 }
 
 
-uint32_t loader_port_remaining_time(void)
+static uint32_t esp32_sdio_remaining_time(esp_loader_port_t *port)
 {
+    (void)port;
     int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
 
-void loader_port_debug_print(const char *str)
+static void esp32_sdio_reset_target(esp_loader_port_t *port)
 {
+    (void)port;
+    gpio_set_level(s_reset_trigger_pin, 0);
+    usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
+    gpio_set_level(s_reset_trigger_pin, 1);
+}
+
+
+static void esp32_sdio_enter_bootloader(esp_loader_port_t *port)
+{
+    (void)port;
+    gpio_set_level(s_boot_pin, 0);
+    gpio_set_level(s_reset_trigger_pin, 0);
+    usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
+    gpio_set_level(s_reset_trigger_pin, 1);
+    usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
+    gpio_set_level(s_boot_pin, 1);
+}
+
+
+static void esp32_sdio_debug_print(esp_loader_port_t *port, const char *str)
+{
+    (void)port;
     printf("DEBUG: %s\n", str);
 }
+
 
 esp_loader_error_t loader_port_wait_int(uint32_t timeout)
 {
@@ -224,3 +237,18 @@ esp_loader_error_t loader_port_wait_int(uint32_t timeout)
         return ESP_LOADER_ERROR_TIMEOUT;
     }
 }
+
+static const esp_loader_port_ops_t esp32_sdio_ops = {
+    .enter_bootloader         = esp32_sdio_enter_bootloader,
+    .reset_target             = esp32_sdio_reset_target,
+    .start_timer              = esp32_sdio_start_timer,
+    .remaining_time           = esp32_sdio_remaining_time,
+    .delay_ms                 = esp32_sdio_delay_ms,
+    .debug_print              = esp32_sdio_debug_print,
+    .change_transmission_rate = NULL,
+    .sdio_write               = esp32_sdio_write,
+    .sdio_read                = esp32_sdio_read,
+    .sdio_card_init           = esp32_sdio_card_init,
+};
+
+esp_loader_port_t esp32_sdio_port = { .ops = &esp32_sdio_ops };

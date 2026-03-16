@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-#include "esp_loader_io.h"
 #include "protocol.h"
 #include <pigpio.h>
 #include "raspberry_port.h"
@@ -92,21 +91,21 @@ static speed_t convert_baudrate(int baud)
     }
 }
 
-static int serialOpen (const char *device, uint32_t baudrate)
+static int serialOpen(const char *device, uint32_t baudrate)
 {
     struct termios options;
     int status, fd;
 
-    if ((fd = open (device, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK)) == -1) {
+    if ((fd = open(device, O_RDWR | O_NOCTTY | O_NDELAY | O_NONBLOCK)) == -1) {
         printf("Error occurred while opening serial port !\n");
-        return -1 ;
+        return -1;
     }
 
-    fcntl (fd, F_SETFL, O_RDWR) ;
+    fcntl(fd, F_SETFL, O_RDWR);
 
     // Get and modify current options:
 
-    tcgetattr (fd, &options);
+    tcgetattr(fd, &options);
     speed_t baud = convert_baudrate(baudrate);
 
     if (baud < 0) {
@@ -114,33 +113,33 @@ static int serialOpen (const char *device, uint32_t baudrate)
         return -1;
     }
 
-    cfmakeraw   (&options) ;
-    cfsetispeed (&options, baud) ;
-    cfsetospeed (&options, baud) ;
+    cfmakeraw(&options);
+    cfsetispeed(&options, baud);
+    cfsetospeed(&options, baud);
 
-    options.c_cflag |= (CLOCAL | CREAD) ;
-    options.c_cflag &= ~(PARENB | CSTOPB | CSIZE) ;
-    options.c_cflag |= CS8 ;
-    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG) ;
-    options.c_oflag &= ~OPOST ;
+    options.c_cflag |= (CLOCAL | CREAD);
+    options.c_cflag &= ~(PARENB | CSTOPB | CSIZE);
+    options.c_cflag |= CS8;
+    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    options.c_oflag &= ~OPOST;
     options.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
     options.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL); // Disable any special handling of received bytes
 
-    options.c_cc [VMIN]  = 0 ;
-    options.c_cc [VTIME] = 10 ; // 1 Second
+    options.c_cc[VMIN]  = 0;
+    options.c_cc[VTIME] = 10; // 1 Second
 
-    tcsetattr (fd, TCSANOW, &options) ;
+    tcsetattr(fd, TCSANOW, &options);
 
-    ioctl (fd, TIOCMGET, &status);
+    ioctl(fd, TIOCMGET, &status);
 
-    status |= TIOCM_DTR ;
-    status |= TIOCM_RTS ;
+    status |= TIOCM_DTR;
+    status |= TIOCM_RTS;
 
-    ioctl (fd, TIOCMSET, &status);
+    ioctl(fd, TIOCMSET, &status);
 
-    usleep (10000) ;  // 10mS
+    usleep(10000);  // 10mS
 
-    return fd ;
+    return fd;
 }
 
 static esp_loader_error_t change_baudrate(int file_desc, int baudrate)
@@ -152,13 +151,13 @@ static esp_loader_error_t change_baudrate(int file_desc, int baudrate)
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-    tcgetattr (file_desc, &options);
+    tcgetattr(file_desc, &options);
 
-    cfmakeraw   (&options) ;
-    cfsetispeed (&options, baud);
-    cfsetospeed (&options, baud);
+    cfmakeraw(&options);
+    cfsetispeed(&options, baud);
+    cfsetospeed(&options, baud);
 
-    tcsetattr (file_desc, TCSANOW, &options);
+    tcsetattr(file_desc, TCSANOW, &options);
 
     return ESP_LOADER_SUCCESS;
 }
@@ -189,11 +188,17 @@ static esp_loader_error_t read_char(char *c, uint32_t timeout)
     }
 }
 
+static uint32_t raspi_remaining_time_ms(void)
+{
+    int64_t remaining = (s_time_end - clock()) / 1000;
+    return (remaining > 0) ? (uint32_t)remaining : 0;
+}
+
 static esp_loader_error_t read_data(char *buffer, uint32_t size)
 {
     for (int i = 0; i < size; i++) {
-        uint32_t remaining_time = loader_port_remaining_time();
-        RETURN_ON_ERROR( read_char(&buffer[i], remaining_time) );
+        uint32_t remaining_time = raspi_remaining_time_ms();
+        RETURN_ON_ERROR(read_char(&buffer[i], remaining_time));
     }
 
     return ESP_LOADER_SUCCESS;
@@ -227,8 +232,9 @@ void loader_port_deinit(void)
     gpioTerminate();
 }
 
-esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_t timeout)
+static esp_loader_error_t raspi_uart_write(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout)
 {
+    (void)port;
     int written = write(serial, data, size);
 
     if (written < 0) {
@@ -247,9 +253,10 @@ esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_
 }
 
 
-esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeout)
+static esp_loader_error_t raspi_uart_read(esp_loader_port_t *port, uint8_t *data, uint16_t size, uint32_t timeout)
 {
-    RETURN_ON_ERROR( read_data(data, size) );
+    (void)port;
+    RETURN_ON_ERROR(read_data(data, size));
 
 #if SERIAL_FLASHER_DEBUG_TRACE
     transfer_debug_print(data, size, false);
@@ -259,49 +266,68 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
 }
 
 
-// Set GPIO0 LOW, then assert reset pin for 50 milliseconds.
-void loader_port_enter_bootloader(void)
+static void raspi_uart_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
-    gpioWrite(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
-    loader_port_reset_target();
-    loader_port_delay_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    gpioWrite(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
-}
-
-
-void loader_port_reset_target(void)
-{
-    gpioWrite(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
-    loader_port_delay_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpioWrite(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
-}
-
-
-void loader_port_delay_ms(uint32_t ms)
-{
+    (void)port;
     usleep(ms * 1000);
 }
 
 
-void loader_port_start_timer(uint32_t ms)
+static void raspi_uart_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     s_time_end = clock() + (ms * (CLOCKS_PER_SEC / 1000));
 }
 
-
-uint32_t loader_port_remaining_time(void)
+static uint32_t raspi_uart_remaining_time(esp_loader_port_t *port)
 {
-    int64_t remaining = (s_time_end - clock()) / 1000;
-    return (remaining > 0) ? (uint32_t)remaining : 0;
+    (void)port;
+    return raspi_remaining_time_ms();
+}
+
+static void raspi_uart_reset_target(esp_loader_port_t *port)
+{
+    (void)port;
+    gpioWrite(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
+    gpioWrite(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
 }
 
 
-void loader_port_debug_print(const char *str)
+static void raspi_uart_enter_bootloader(esp_loader_port_t *port)
 {
+    (void)port;
+    gpioWrite(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
+    gpioWrite(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
+    gpioWrite(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
+    gpioWrite(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
+}
+
+
+static void raspi_uart_debug_print(esp_loader_port_t *port, const char *str)
+{
+    (void)port;
     printf("DEBUG: %s\n", str);
 }
 
-esp_loader_error_t loader_port_change_transmission_rate(uint32_t baudrate)
+static esp_loader_error_t raspi_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
+    (void)port;
     return change_baudrate(serial, baudrate);
 }
+
+static const esp_loader_port_ops_t raspi_uart_ops = {
+    .enter_bootloader         = raspi_uart_enter_bootloader,
+    .reset_target             = raspi_uart_reset_target,
+    .start_timer              = raspi_uart_start_timer,
+    .remaining_time           = raspi_uart_remaining_time,
+    .delay_ms                 = raspi_uart_delay_ms,
+    .debug_print              = raspi_uart_debug_print,
+    .change_transmission_rate = raspi_uart_change_rate,
+    .write                    = raspi_uart_write,
+    .read                     = raspi_uart_read,
+};
+
+esp_loader_port_t raspi_uart_port = { .ops = &raspi_uart_ops };

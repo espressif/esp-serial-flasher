@@ -61,7 +61,6 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-
     const loader_esp32_spi_config_t config = {
         .spi_bus = SPI2_HOST,
         .frequency = 20 * 1000000,
@@ -78,15 +77,21 @@ void app_main(void)
         .strap_bit3_pin = GPIO_NUM_4,
     };
 
+    esp_loader_t loader;
+
     if (loader_port_esp32_spi_init(&config) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "SPI initialization failed.");
         abort();
     }
+    if (esp_loader_init_spi(&loader, &esp32_spi_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, "SPI initialization failed.");
+        abort();
+    }
 
-    if (connect_to_target(0) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target(&loader, 0) == ESP_LOADER_SUCCESS) {
 
         ESP_LOGI(TAG, "Loading app to RAM ...");
-        esp_loader_error_t err = load_ram_binary(app_bin);
+        esp_loader_error_t err = load_ram_binary(&loader, app_bin);
         if (err == ESP_LOADER_SUCCESS) {
             // Forward slave's serial output
             ESP_LOGI(TAG, "********************************************");

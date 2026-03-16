@@ -6,6 +6,7 @@
 | [Hardware Connections](hardware-connections.md)        | Wiring diagrams and pin assignments for UART, SPI, SDIO, and USB interfaces |
 | [Configuration](configuration.md)                      | Build options, CMake variables, and feature configuration                   |
 | [Supporting New Platforms](supporting-new-platform.md) | Guide for adding support for new host platforms                             |
+| [Migration Guide v1 → v2](migration-v1-to-v2.md)       | Breaking changes and step-by-step upgrade instructions                      |
 
 ## 🔗 Related Resources
 

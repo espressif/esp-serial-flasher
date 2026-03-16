@@ -64,7 +64,8 @@ void slave_monitor(void *arg)
 }
 
 
-static esp_loader_error_t flash_deflated_binary(const uint8_t *compressed_data,
+static esp_loader_error_t flash_deflated_binary(esp_loader_t loader,
+        const uint8_t *compressed_data,
         uint32_t compressed_size,
         uint32_t uncompressed_size,
         uint32_t address)
@@ -72,7 +73,14 @@ static esp_loader_error_t flash_deflated_binary(const uint8_t *compressed_data,
     esp_loader_error_t err;
     static uint8_t payload[DEFLATE_BLOCK_SIZE];
 
-    err = esp_loader_flash_deflate_start(address, uncompressed_size, compressed_size, DEFLATE_BLOCK_SIZE);
+    esp_loader_flash_deflate_cfg_t cfg = {
+        .offset          = address,
+        .image_size      = uncompressed_size,
+        .compressed_size = compressed_size,
+        .block_size      = DEFLATE_BLOCK_SIZE,
+    };
+
+    err = esp_loader_flash_deflate_start(&loader, &cfg);
     if (err != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "Failed to start deflate flash (%d)", err);
         return err;
@@ -84,11 +92,11 @@ static esp_loader_error_t flash_deflated_binary(const uint8_t *compressed_data,
         const uint32_t to_write = MIN(compressed_size - offset, DEFLATE_BLOCK_SIZE);
         memcpy(payload, compressed_data + offset, to_write);
 
-        err = esp_loader_flash_deflate_write(payload, to_write);
+        err = esp_loader_flash_deflate_write(&loader, &cfg, payload, to_write);
         if (err != ESP_LOADER_SUCCESS) {
             ESP_LOGE(TAG, "Failed to write deflate block at offset %u (%d)",
                      (unsigned int)offset, err);
-            esp_loader_flash_deflate_finish(false);
+            esp_loader_flash_deflate_finish(&loader, &cfg, false);
             return err;
         }
         offset += to_write;
@@ -99,7 +107,7 @@ static esp_loader_error_t flash_deflated_binary(const uint8_t *compressed_data,
     }
     printf("\n");
 
-    err = esp_loader_flash_deflate_finish(false);
+    err = esp_loader_flash_deflate_finish(&loader, &cfg, false);
     if (err != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "Failed to finish deflate flash (%d)", err);
     }
@@ -107,7 +115,8 @@ static esp_loader_error_t flash_deflated_binary(const uint8_t *compressed_data,
     return err;
 }
 
-static esp_loader_error_t flash_deflated_and_verify(const char *label,
+static esp_loader_error_t flash_deflated_and_verify(esp_loader_t loader,
+        const char *label,
         const uint8_t *compressed_data,
         uint32_t compressed_size,
         const uint8_t *raw_md5,
@@ -119,15 +128,14 @@ static esp_loader_error_t flash_deflated_and_verify(const char *label,
     ESP_LOGI(TAG, "Flashing %s via DEFLATE (compressed size: %u, uncompressed: %u)...",
              label, (unsigned int)compressed_size, (unsigned int)raw_size);
 
-    err = flash_deflated_binary(compressed_data, compressed_size, raw_size,
-                                address);
+    err = flash_deflated_binary(loader, compressed_data, compressed_size, raw_size, address);
     if (err != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "Compressed flash failed for %s (%d)", label, err);
         return err;
     }
 
     ESP_LOGI(TAG, "Verifying %s via MD5...", label);
-    err = esp_loader_flash_verify_known_md5(address, raw_size, raw_md5);
+    err = esp_loader_flash_verify_known_md5(&loader, address, raw_size, raw_md5);
     if (err != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "%s MD5 verification failed (%d)", label, err);
         return err;
@@ -139,6 +147,8 @@ static esp_loader_error_t flash_deflated_and_verify(const char *label,
 
 void app_main(void)
 {
+    esp_loader_t loader;
+
     const loader_esp32_config_t config = {
         .baud_rate = 115200,
         .uart_port = UART_NUM_1,
@@ -152,15 +162,19 @@ void app_main(void)
         ESP_LOGE(TAG, "serial initialization failed.");
         return;
     }
+    if (esp_loader_init_uart(&loader, &esp32_uart_port) != ESP_LOADER_SUCCESS) {
+        ESP_LOGE(TAG, "serial initialization failed.");
+        return;
+    }
 
-    if (connect_to_target_with_stub(115200, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
-        target_chip_t chip = esp_loader_get_target();
+    if (connect_to_target_with_stub(&loader, 115200, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+        target_chip_t chip = esp_loader_get_target(&loader);
         uint32_t bootloader_addr = get_bootloader_address(chip);
         uint32_t partition_addr = PARTITION_TABLE_ADDRESS;
         uint32_t app_addr = APPLICATION_ADDRESS;
 
         bool all_ok = true;
-        esp_loader_error_t err = flash_deflated_and_verify("bootloader",
+        esp_loader_error_t err = flash_deflated_and_verify(loader, "bootloader",
                                  bootloader_deflated_bin, bootloader_deflated_bin_size,
                                  bootloader_bin_md5, bootloader_bin_size, bootloader_addr);
         if (err != ESP_LOADER_SUCCESS) {
@@ -168,7 +182,7 @@ void app_main(void)
             ESP_LOGW(TAG, "Continuing despite bootloader failure...");
         }
 
-        err = flash_deflated_and_verify("partition table",
+        err = flash_deflated_and_verify(loader, "partition table",
                                         partition_table_deflated_bin, partition_table_deflated_bin_size,
                                         partition_table_bin_md5, partition_table_bin_size, partition_addr);
         if (err != ESP_LOADER_SUCCESS) {
@@ -176,7 +190,7 @@ void app_main(void)
             ESP_LOGW(TAG, "Continuing despite partition table failure...");
         }
 
-        err = flash_deflated_and_verify("application",
+        err = flash_deflated_and_verify(loader, "application",
                                         app_deflated_bin, app_deflated_bin_size,
                                         app_bin_md5, app_bin_size, app_addr);
         if (err != ESP_LOADER_SUCCESS) {
@@ -186,7 +200,7 @@ void app_main(void)
 
         if (all_ok) {
             ESP_LOGI(TAG, "All flashes verified. Success!");
-            esp_loader_reset_target();
+            esp_loader_reset_target(&loader);
 
             // Delay for skipping the boot message of the targets
             vTaskDelay(500 / portTICK_PERIOD_MS);
