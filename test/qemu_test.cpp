@@ -28,13 +28,17 @@ using namespace std;
 
 const uint32_t APP_START_ADDRESS = 0x10000;
 
+static esp_loader_t g_loader;
+
 
 TEST_CASE( "Can connect " )
 {
+    esp_loader_init_uart(&g_loader, &test_tcp_port);
+
     esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
 
-    ESP_ERR_CHECK( esp_loader_connect(&connect_config) );
-    REQUIRE( esp_loader_get_target() == ESP32_CHIP );
+    ESP_ERR_CHECK( esp_loader_connect(&g_loader, &connect_config) );
+    REQUIRE( esp_loader_get_target(&g_loader) == ESP32_CHIP );
 }
 
 
@@ -49,29 +53,35 @@ inline auto file_size_is(ifstream &file)
     return file_size;
 }
 
-void flash_application(ifstream &image)
+void flash_application(esp_loader_t *loader, ifstream &image)
 {
     uint8_t payload[1024];
     int32_t count = 0;
     size_t image_size = file_size_is(image);
 
-    ESP_ERR_CHECK( esp_loader_flash_start(APP_START_ADDRESS, image_size, sizeof(payload), true) );
+    esp_loader_flash_cfg_t flash_cfg = {
+        .offset     = APP_START_ADDRESS,
+        .image_size = (uint32_t)image_size,
+        .block_size = sizeof(payload),
+        .skip_verify = false,
+    };
+
+    ESP_ERR_CHECK( esp_loader_flash_start(loader, &flash_cfg) );
 
     while (image_size > 0) {
         size_t to_read = min(image_size, sizeof(payload));
 
         image.read((char *)payload, to_read);
 
-        ESP_ERR_CHECK( esp_loader_flash_write(payload, to_read) );
+        ESP_ERR_CHECK( esp_loader_flash_write(loader, &flash_cfg, payload, (uint32_t)to_read) );
 
         cout << endl << "--- FLASH DATA PACKET: " << count++
-             <<  " DATA WRITTEN: " << to_read << " ---" << endl;
+             << " DATA WRITTEN: " << to_read << " ---" << endl;
 
         image_size -= to_read;
-    };
+    }
 
-    // Omit restart
-    // loader_flash_finish(false);
+    ESP_ERR_CHECK( esp_loader_flash_finish(loader, &flash_cfg) );
 }
 
 bool file_compare(ifstream &file_1, ifstream &file_2, size_t file_size)
@@ -97,17 +107,13 @@ TEST_CASE( "Can write application to flash" )
     REQUIRE ( new_image.is_open() );
     REQUIRE ( qemu_image.is_open() );
 
-    flash_application(new_image);
+    flash_application(&g_loader, new_image);
 
     auto new_image_size = file_size_is(new_image);
     qemu_image.seekg(APP_START_ADDRESS);
     new_image.seekg(0);
 
     REQUIRE ( file_compare(new_image, qemu_image, new_image_size) );
-
-    ESP_ERR_CHECK ( esp_loader_flash_finish(false) );
-
-    // NOTE: loader_flash_finish() is not called to prevent reset of target
 }
 
 TEST_CASE( "Can write and read register" )
@@ -115,7 +121,7 @@ TEST_CASE( "Can write and read register" )
     uint32_t reg_value = 0;
     uint32_t SPI_MOSI_DLEN_REG = 0x60002000 + 0x28;
 
-    ESP_ERR_CHECK( esp_loader_write_register(SPI_MOSI_DLEN_REG, 55) );
-    ESP_ERR_CHECK( esp_loader_read_register(SPI_MOSI_DLEN_REG, &reg_value) );
+    ESP_ERR_CHECK( esp_loader_write_register(&g_loader, SPI_MOSI_DLEN_REG, 55) );
+    ESP_ERR_CHECK( esp_loader_read_register(&g_loader, SPI_MOSI_DLEN_REG, &reg_value) );
     REQUIRE ( reg_value == 55 );
 }
