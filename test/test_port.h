@@ -25,3 +25,5 @@ typedef struct {
 
 esp_loader_error_t esp_loader_port_test_init(const loader_serial_config_t *config);
 void esp_loader_port_test_deinit();
+
+extern esp_loader_port_t test_tcp_port;

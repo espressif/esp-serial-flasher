@@ -68,17 +68,6 @@ For ESP-IDF builds, you choose which port implementations to compile into the li
 - **Depends on**: `SOC_USB_OTG_SUPPORTED`
 - **Description**: Compile the ESP32 USB CDC-ACM port (`esp32_usb_cdc_acm_port.c`). Exposes `esp32_usb_cdc_acm_port_ops`. Requires the `espressif/usb_host_cdc_acm` managed component.
 
-### Flash Verification
-
-#### `MD5_ENABLED`
-
-- **Type**: CMake cache variable / Kconfig (see mapping below)
-- **Default**:
-  - Plain CMake: Disabled (only enabled if you pass `-DMD5_ENABLED=1`)
-  - ESP-IDF/Zephyr (Kconfig): Enabled by default (`CONFIG_SERIAL_FLASHER_MD5_ENABLED=y`)
-- **Description**: Enable MD5 checksum verification of flash content after writing.
-- **Warning**: Must be disabled for ESP8266 targets as the ROM bootloader does not support MD5 verification.
-
 ### Retry and Timing Configuration
 
 #### `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`
@@ -122,14 +111,13 @@ For ESP-IDF builds, you choose which port implementations to compile into the li
 Configuration options can be set when running CMake using the `-D` flag:
 
 ```bash
-cmake -DMD5_ENABLED=1 -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 .. && cmake --build .
+cmake -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 .. && cmake --build .
 ```
 
 ### Multiple Options Example
 
 ```bash
 cmake \
-  -DMD5_ENABLED=0 \
   -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 \
   -DSERIAL_FLASHER_RESET_HOLD_TIME_MS=200 \
   .. && cmake --build .
@@ -140,7 +128,6 @@ cmake \
 When using ESP-IDF or Zephyr, configuration options can be set using **Kconfig** instead of CMake flags. Many options have corresponding Kconfig names with the `CONFIG_` prefix:
 
 - `SERIAL_FLASHER_DEBUG_TRACE` → `CONFIG_SERIAL_FLASHER_DEBUG_TRACE`
-- `MD5_ENABLED` → `CONFIG_SERIAL_FLASHER_MD5_ENABLED`
 - Port compilation → `CONFIG_SERIAL_FLASHER_PORT_UART`, `CONFIG_SERIAL_FLASHER_PORT_SPI`, etc.
 
 You can configure these options using:
@@ -162,7 +149,6 @@ Alternatively, you can set them directly in your `sdkconfig` (ESP-IDF) or `prj.c
 ```ini
 # ESP-IDF sdkconfig or Zephyr prj.conf
 CONFIG_SERIAL_FLASHER_DEBUG_TRACE=y
-CONFIG_SERIAL_FLASHER_MD5_ENABLED=n
 CONFIG_SERIAL_FLASHER_PORT_UART=y
 CONFIG_SERIAL_FLASHER_PORT_SPI=y
 ```

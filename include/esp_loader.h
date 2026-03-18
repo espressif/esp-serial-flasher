@@ -19,9 +19,7 @@
 #include <stdbool.h>
 #include "esp_loader_error.h"
 #include "esp_loader_io.h"
-#if MD5_ENABLED
 #include "md5_ctx.h"
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,11 +121,11 @@ typedef struct {
     uint32_t offset;      /*!< Flash address to write to. Must be 4-byte aligned. */
     uint32_t image_size;  /*!< Total size of the image. Must be 4-byte aligned. */
     uint32_t block_size;  /*!< Size of each block passed to esp_loader_flash_write(). */
+    bool     skip_verify; /*!< When true, MD5 accumulation and verification in esp_loader_flash_finish() are skipped.
+                               *   Defaults to false (i.e. verification is enabled by default). */
     struct {
         uint32_t          _sequence_number;
-#if MD5_ENABLED
         struct MD5Context _md5_context;
-#endif
     } _state;
 } esp_loader_flash_cfg_t;
 
@@ -314,6 +312,11 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
 /**
   * @brief Initiates flash operation
   *
+  * @note  Must be followed by esp_loader_flash_finish() after all esp_loader_flash_write()
+  *        calls, even when @p cfg->skip_verify is @c true. Skipping esp_loader_flash_finish()
+  *        causes the flash-end command to never be sent and, when @p cfg->skip_verify is @c false,
+  *        silently skips MD5 verification.
+  *
   * @param loader[in]  Pointer to initialized loader context.
   * @param cfg[in,out] Flash operation context. Caller fills offset, image_size and block_size
   *                    before calling. The _state sub-struct is initialized by this function
@@ -344,16 +347,23 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
 /**
   * @brief Ends flash operation.
   *
+  * When @p cfg->skip_verify is @c false, this function verifies flash integrity by comparing the
+  * MD5 digest accumulated during esp_loader_flash_write() calls against the digest computed
+  * by the target over the same flash region. Verification runs before the flash-end command
+  * is issued; if it fails, @c ESP_LOADER_ERROR_INVALID_MD5 is returned immediately and the
+  * flash-end command is not sent (the target stays in the loader).
+  *
   * @param loader[in]  Pointer to initialized loader context.
   * @param cfg[in]     Flash operation context initialized by esp_loader_flash_start().
-  * @param reboot[in]  Reboot the target if true. Has no effect when MD5 verification fails.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_INVALID_MD5 MD5 mismatch (only when skip_verify was false)
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC MD5 verify unsupported on this target/protocol
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, bool reboot);
+esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg);
 
 /**
   * @brief Initiates compressed flash operation (DEFLATE/zlib stream).
@@ -397,14 +407,13 @@ esp_loader_error_t esp_loader_flash_deflate_write(esp_loader_t *loader, esp_load
   *
   * @param loader[in]  Pointer to initialized loader context.
   * @param cfg[in]     Compressed flash context initialized by esp_loader_flash_deflate_start().
-  * @param reboot[in]  Reboot the target if true.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg, bool reboot);
+esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg);
 
 /**
   * @brief Detects the size of the flash chip used by target
@@ -595,7 +604,6 @@ esp_loader_error_t esp_loader_read_register(esp_loader_t *loader, uint32_t addre
   */
 esp_loader_error_t esp_loader_change_transmission_rate(esp_loader_t *loader, uint32_t transmission_rate);
 
-#if MD5_ENABLED
 /**
   * @brief Verify target's flash integrity by checking with a known MD5 checksum
   * for a specified offset and length.
@@ -614,25 +622,6 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(esp_loader_t *loader,
         uint32_t address,
         uint32_t size,
         const uint8_t *expected_md5);
-
-/**
-  * @brief Verify target's flash integrity by checking MD5.
-  *
-  * @param loader[in] Pointer to initialized loader context.
-  * @param cfg[in]    Flash operation context previously used with esp_loader_flash_start()
-  *                   and esp_loader_flash_write(). The accumulated MD5 context stored in
-  *                   cfg->_state is used to compute the expected digest.
-  *
-  * @return
-  *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_INVALID_MD5 MD5 does not match
-  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
-  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Unsupported on the target
-  *     - ESP_LOADER_ERROR_IMAGE_SIZE Flash region specified is beyond the flash end
-  */
-esp_loader_error_t esp_loader_flash_verify(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg);
-#endif /* MD5_ENABLED */
 
 /**
   * @brief Toggles reset pin.

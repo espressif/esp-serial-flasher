@@ -52,7 +52,6 @@ idf.py build
 
 **Time required**: 2-5 minutes depending on configuration
 **Configuration options**: Set via `idf.py menuconfig` or `-D` flags
-**Common build flags**: `-DMD5_ENABLED=1`
 
 ### STM32 Build
 
@@ -71,7 +70,6 @@ cmake -DSTM32_TOOLCHAIN_PATH="path_to_toolchain" \
       -DSTM32_CHIP="STM32H743VI" \
       -DCORE_USED=M7 \
       -DPORT="STM32" \
-      -DMD5_ENABLED=1 \
       ..
 cmake --build .
 ```
@@ -89,8 +87,7 @@ export ZEPHYR_TOOLCHAIN_VARIANT="zephyr"
 cd zephyr_workspace/zephyr
 west build -p -b esp32_devkitc_wroom/esp32/procpu \
     path/to/examples/zephyr_example \
-    -DZEPHYR_EXTRA_MODULES=path/to/esp-serial-flasher \
-    -DMD5_ENABLED=1
+    -DZEPHYR_EXTRA_MODULES=path/to/esp-serial-flasher
 ```
 
 **Time required**: 5-15 minutes
@@ -104,7 +101,7 @@ west build -p -b esp32_devkitc_wroom/esp32/procpu \
 export PICO_SDK_PATH=/path/to/pico-sdk
 cd examples/pi_pico_example
 mkdir build && cd build
-cmake -DMD5_ENABLED=1 ..
+cmake ..
 cmake --build .
 ```
 
@@ -120,7 +117,7 @@ cmake --build .
 apt-get update && apt-get install -y cmake gcc g++ make pigpio
 cd examples/raspberry_example
 mkdir build && cd build
-cmake -DMD5_ENABLED=1 .. && cmake --build .
+cmake .. && cmake --build .
 ```
 
 ## Testing Instructions
@@ -254,7 +251,6 @@ Each enabled option compiles the matching `*_port.c` and exposes an `esp_loader_
 
 **Common Options:**
 
-- `MD5_ENABLED`: Enable flash verification (default: enabled, disable for ESP8266)
 - `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`: Number of write retries (default: 3)
 - `SERIAL_FLASHER_RESET_HOLD_TIME_MS`: Reset assertion time (default: 100ms)
 - `SERIAL_FLASHER_BOOT_HOLD_TIME_MS`: Boot pin assertion time (default: 50ms)

@@ -27,10 +27,6 @@ if (CONFIG_ESP_SERIAL_FLASHER)
 
     zephyr_library_link_libraries(esp_flasher)
 
-    if(DEFINED MD5_ENABLED OR CONFIG_SERIAL_FLASHER_MD5_ENABLED)
-        target_compile_definitions(esp_flasher INTERFACE -DMD5_ENABLED=1)
-    endif()
-
     if(DEFINED SERIAL_FLASHER_DEBUG_TRACE OR CONFIG_SERIAL_FLASHER_DEBUG_TRACE)
         target_compile_definitions(esp_flasher INTERFACE SERIAL_FLASHER_DEBUG_TRACE=1)
     endif()

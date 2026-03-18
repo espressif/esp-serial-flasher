@@ -96,7 +96,7 @@ static esp_loader_error_t flash_deflated_binary(esp_loader_t loader,
         if (err != ESP_LOADER_SUCCESS) {
             ESP_LOGE(TAG, "Failed to write deflate block at offset %u (%d)",
                      (unsigned int)offset, err);
-            esp_loader_flash_deflate_finish(&loader, &cfg, false);
+            esp_loader_flash_deflate_finish(&loader, &cfg);
             return err;
         }
         offset += to_write;
@@ -107,7 +107,7 @@ static esp_loader_error_t flash_deflated_binary(esp_loader_t loader,
     }
     printf("\n");
 
-    err = esp_loader_flash_deflate_finish(&loader, &cfg, false);
+    err = esp_loader_flash_deflate_finish(&loader, &cfg);
     if (err != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "Failed to finish deflate flash (%d)", err);
     }

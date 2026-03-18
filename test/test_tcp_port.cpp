@@ -96,8 +96,10 @@ void esp_loader_port_test_deinit()
 }
 
 
-esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_t timeout)
+static esp_loader_error_t test_port_write(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout)
 {
+    (void)port;
+    (void)timeout;
     uint32_t written = 0;
 
     do {
@@ -114,9 +116,9 @@ esp_loader_error_t loader_port_write(const uint8_t *data, uint16_t size, uint32_
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeout)
+static esp_loader_error_t test_port_read(esp_loader_port_t *port, uint8_t *data, uint16_t size, uint32_t timeout)
 {
-    // Timeout is specified in milliseconds, split to seconds and microsecond remainder
+    (void)port;
     const struct timeval timeout_values = {
         .tv_sec = timeout / 1000,
         .tv_usec = (timeout % 1000) * 1000
@@ -150,33 +152,52 @@ esp_loader_error_t loader_port_read(uint8_t *data, uint16_t size, uint32_t timeo
     return ESP_LOADER_SUCCESS;
 }
 
-void loader_port_enter_bootloader()
+static void test_port_enter_bootloader(esp_loader_port_t *port)
 {
-    // GPIO0 and GPIO2 must be LOW
-    // Then Reset
+    (void)port;
+    // GPIO0 and GPIO2 must be LOW, then Reset
 }
 
-void loader_port_reset_target()
+static void test_port_reset_target(esp_loader_port_t *port)
 {
+    (void)port;
     // Toggle reset pin
 }
 
-void loader_port_delay_ms(uint32_t ms)
+static void test_port_delay_ms(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     this_thread::sleep_for(chrono::milliseconds(ms));
 }
 
-void loader_port_start_timer(uint32_t ms)
+static void test_port_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
+    (void)port;
     s_time_end = chrono::steady_clock::now() + chrono::milliseconds(ms);
 }
 
-
-uint32_t loader_port_remaining_time(void)
+static uint32_t test_port_remaining_time(esp_loader_port_t *port)
 {
+    (void)port;
     const auto remaining = s_time_end - chrono::steady_clock::now();
-
     const auto remaining_ms = chrono::duration_cast<chrono::milliseconds>(remaining).count();
-
     return (remaining_ms > 0) ? (uint32_t)remaining_ms : 0;
 }
+
+static const esp_loader_port_ops_t test_port_ops = {
+    .enter_bootloader         = test_port_enter_bootloader,
+    .reset_target             = test_port_reset_target,
+    .start_timer              = test_port_start_timer,
+    .remaining_time           = test_port_remaining_time,
+    .delay_ms                 = test_port_delay_ms,
+    .debug_print              = nullptr,
+    .change_transmission_rate = nullptr,
+    .write                    = test_port_write,
+    .read                     = test_port_read,
+    .spi_set_cs               = nullptr,
+    .sdio_write               = nullptr,
+    .sdio_read                = nullptr,
+    .sdio_card_init           = nullptr,
+};
+
+esp_loader_port_t test_tcp_port = { .ops = &test_port_ops };
