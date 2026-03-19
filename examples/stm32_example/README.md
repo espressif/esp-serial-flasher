@@ -82,4 +82,4 @@ Binaries to be flashed are placed in the separate folder (binaries.c) for each p
 For more details regarding to esp_serial_flasher configuration and STM32 support, please refer to the top level [README.md](../../README.md).
 
 > [!NOTE]
-> CMake 3.16 or later is required.
+> CMake 3.22 or later is required.

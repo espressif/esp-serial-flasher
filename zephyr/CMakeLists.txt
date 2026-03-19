@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.22)
 
 if (CONFIG_ESP_SERIAL_FLASHER)
     zephyr_include_directories(

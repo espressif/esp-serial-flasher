@@ -10,7 +10,7 @@ Each port is a reference implementation tied to a specific platform SDK. The tes
 
 Before setting up any platform, ensure you have the following:
 
-- **[CMake](https://cmake.org/) 3.5 or later** - Build system generator
+- **[CMake](https://cmake.org/) 3.22 or later** - Build system generator
 - **Platform-specific toolchain** - See individual platform sections below
 
 ## ESP-IDF Support

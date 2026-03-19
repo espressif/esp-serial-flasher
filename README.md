@@ -93,7 +93,7 @@ Port implementations (under `port/`) are reference implementations that depend o
 
 To use ESP Serial Flasher, you need:
 
-- **[CMake](https://cmake.org/) 3.5 or later** - Build system
+- **[CMake](https://cmake.org/) 3.22 or later** - Build system
 - **[Git](https://git-scm.com/)** - For cloning the repository with submodules
 
 #### Platform Setup
