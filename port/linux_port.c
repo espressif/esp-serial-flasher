@@ -304,7 +304,7 @@ static esp_loader_error_t gpiod_init(linux_port_t *p)
     gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
     gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_ACTIVE); /* deasserted high */
 
-    unsigned int offsets[2] = { p->reset_trigger_pin, p->gpio0_trigger_pin };
+    unsigned int offsets[2] = { p->reset_pin, p->boot_pin };
     if (gpiod_line_config_add_line_settings(line_cfg, offsets, 2, settings) < 0) {
         fprintf(stderr, "linux_port: cannot add GPIO line settings: %s\n", strerror(errno));
         goto out;
@@ -520,18 +520,18 @@ static esp_loader_error_t linux_change_rate(esp_loader_port_t *port, uint32_t ba
  * DTR/RTS signal mapping on the standard esptool auto-reset circuit
  * (CP2102/CH340/FT232 boards):
  *
- *   DTR asserted (HIGH) → IO0 / BOOT pin LOW  (via inverting transistor)
- *   RTS asserted (HIGH) → EN  / RESET pin LOW (via inverting transistor)
+ *   DTR asserted (HIGH) → BOOT pin LOW  (via inverting transistor)
+ *   RTS asserted (HIGH) → RESET pin LOW (via inverting transistor)
  *
  * SERIAL_FLASHER_BOOT_INVERT / SERIAL_FLASHER_RESET_INVERT flip these
  * polarities for boards that use a non-inverting circuit.
  */
 
 /* Logical signal levels — independent of the hardware polarity setting */
-#define DTR_BOOT_ASSERT    (!SERIAL_FLASHER_BOOT_INVERT)   /* DTR value that drives IO0 LOW  */
-#define DTR_BOOT_DEASSERT  ( SERIAL_FLASHER_BOOT_INVERT)   /* DTR value that drives IO0 HIGH */
-#define RTS_RESET_ASSERT   (!SERIAL_FLASHER_RESET_INVERT)  /* RTS value that drives EN  LOW  */
-#define RTS_RESET_DEASSERT ( SERIAL_FLASHER_RESET_INVERT)  /* RTS value that drives EN  HIGH */
+#define DTR_BOOT_ASSERT    (!SERIAL_FLASHER_BOOT_INVERT)   /* DTR value that drives BOOT LOW  */
+#define DTR_BOOT_DEASSERT  ( SERIAL_FLASHER_BOOT_INVERT)   /* DTR value that drives BOOT HIGH */
+#define RTS_RESET_ASSERT   (!SERIAL_FLASHER_RESET_INVERT)  /* RTS value that drives RESET LOW  */
+#define RTS_RESET_DEASSERT ( SERIAL_FLASHER_RESET_INVERT)  /* RTS value that drives RESET HIGH */
 
 static void linux_reset_target(esp_loader_port_t *port)
 {
@@ -541,14 +541,14 @@ static void linux_reset_target(esp_loader_port_t *port)
 
 #if defined(LINUX_PORT_GPIO)
     case LINUX_GPIO_GPIOD:
-        set_gpio_line(p, p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT != 0); /* assert RESET */
+        set_gpio_line(p, p->reset_pin, SERIAL_FLASHER_RESET_INVERT != 0); /* assert RESET */
         linux_delay_ms_raw(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-        set_gpio_line(p, p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT == 0); /* deassert RESET */
+        set_gpio_line(p, p->reset_pin, SERIAL_FLASHER_RESET_INVERT == 0); /* deassert RESET */
         break;
 #endif
 
     case LINUX_GPIO_DTR_RTS:
-        /* esptool HardReset: pulse EN (RTS) low, leave IO0 (DTR) alone */
+        /* esptool HardReset: pulse RESET low, leave BOOT (DTR) alone */
         set_dtr_rts(p->_serial, false, RTS_RESET_ASSERT);
         linux_delay_ms_raw(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
         set_dtr_rts(p->_serial, false, RTS_RESET_DEASSERT);
@@ -570,13 +570,13 @@ static void linux_enter_bootloader(esp_loader_port_t *port)
 
 #if defined(LINUX_PORT_GPIO)
     case LINUX_GPIO_GPIOD:
-        set_gpio_line(p, p->gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT  != 0); /* assert BOOT */
+        set_gpio_line(p, p->boot_pin, SERIAL_FLASHER_BOOT_INVERT  != 0); /* assert BOOT */
         linux_delay_ms_raw(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-        set_gpio_line(p, p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT != 0); /* assert RESET */
+        set_gpio_line(p, p->reset_pin, SERIAL_FLASHER_RESET_INVERT != 0); /* assert RESET */
         linux_delay_ms_raw(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-        set_gpio_line(p, p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT == 0); /* deassert RESET */
+        set_gpio_line(p, p->reset_pin, SERIAL_FLASHER_RESET_INVERT == 0); /* deassert RESET */
         linux_delay_ms_raw(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-        set_gpio_line(p, p->gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT  == 0); /* deassert BOOT */
+        set_gpio_line(p, p->boot_pin, SERIAL_FLASHER_BOOT_INVERT  == 0); /* deassert BOOT */
         tcflush(p->_serial, TCIFLUSH); /* discard ROM boot noise before connect */
         break;
 #endif
@@ -587,25 +587,25 @@ static void linux_enter_bootloader(esp_loader_port_t *port)
              * esptool USBJTAGSerialReset — required for ESP32-C3/S3/C6/H2/P4
              * connected via their built-in USB JTAG Serial peripheral.
              *
-             * The firmware latches IO0 at the moment EN goes low, so IO0 must
+             * The firmware latches BOOT at the moment RESET goes low, so BOOT must
              * be asserted BEFORE the reset pulse. After the pulse the lines
-             * transition through (IO0_low, EN_low)=(1,1) → (IO0_high, EN_low)
-             * to avoid the (0,0) glitch, then EN is released.
+             * transition through (BOOT_low, RESET_low)=(1,1) → (BOOT_high, RESET_low)
+             * to avoid the (0,0) glitch, then RESET is released.
              *
              * Step 1: idle
-             * Step 2: assert IO0 (DTR)
-             * Step 3: assert EN (RTS) — chip enters reset with IO0 low
-             * Step 4: release IO0 through (1,1) state
-             * Step 5: release EN — chip boots into bootloader
+             * Step 2: assert BOOT (DTR)
+             * Step 3: assert RESET (RTS) — chip enters reset with BOOT low
+             * Step 4: release BOOT through (1,1) state
+             * Step 5: release RESET — chip boots into bootloader
              */
             set_dtr_rts(p->_serial, DTR_BOOT_DEASSERT, RTS_RESET_DEASSERT); /* idle */
             linux_delay_ms_raw(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-            set_dtr_rts(p->_serial, DTR_BOOT_ASSERT,   RTS_RESET_DEASSERT); /* assert IO0 */
+            set_dtr_rts(p->_serial, DTR_BOOT_ASSERT,   RTS_RESET_DEASSERT); /* assert BOOT */
             linux_delay_ms_raw(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-            set_dtr_rts(p->_serial, DTR_BOOT_ASSERT,   RTS_RESET_ASSERT);   /* assert EN */
-            set_dtr_rts(p->_serial, DTR_BOOT_DEASSERT, RTS_RESET_ASSERT);   /* release IO0 via (1,1) */
+            set_dtr_rts(p->_serial, DTR_BOOT_ASSERT,   RTS_RESET_ASSERT);   /* assert RESET */
+            set_dtr_rts(p->_serial, DTR_BOOT_DEASSERT, RTS_RESET_ASSERT);   /* release BOOT via (1,1) */
             linux_delay_ms_raw(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-            set_dtr_rts(p->_serial, DTR_BOOT_DEASSERT, RTS_RESET_DEASSERT); /* release EN */
+            set_dtr_rts(p->_serial, DTR_BOOT_DEASSERT, RTS_RESET_DEASSERT); /* release RESET */
             wait_for_port_reopen(p, 3000);
         } else {
             /*
@@ -615,11 +615,11 @@ static void linux_enter_bootloader(esp_loader_port_t *port)
              *
              * Step 1: idle state
              * Step 2: through (1,1) — avoids (0,0)→(0,1) edge that can mis-trigger
-             * Step 3: IO0=HIGH, EN=LOW  → chip held in reset, IO0 deasserted
+             * Step 3: BOOT=HIGH, RESET=LOW  → chip held in reset, BOOT deasserted
              *         (sleep RESET_HOLD_TIME_MS)
-             * Step 4: IO0=LOW,  EN=HIGH → EN released while IO0 is low → bootloader
+             * Step 4: BOOT=LOW,  RESET=HIGH → RESET released while BOOT is low → bootloader
              *         (sleep BOOT_HOLD_TIME_MS)
-             * Step 5: IO0=HIGH, EN=HIGH → release IO0, chip running in bootloader
+             * Step 5: BOOT=HIGH, RESET=HIGH → release BOOT, chip running in bootloader
              */
             set_dtr_rts(p->_serial, DTR_BOOT_DEASSERT, RTS_RESET_DEASSERT);
             set_dtr_rts(p->_serial, DTR_BOOT_ASSERT,   RTS_RESET_ASSERT);

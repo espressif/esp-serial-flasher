@@ -42,8 +42,8 @@ esp32_port_t port = {
     .uart_port         = UART_NUM_1,
     .uart_rx_pin       = GPIO_NUM_5,
     .uart_tx_pin       = GPIO_NUM_4,
-    .reset_trigger_pin = GPIO_NUM_25,
-    .gpio0_trigger_pin = GPIO_NUM_26,
+    .reset_pin         = GPIO_NUM_25,
+    .boot_pin          = GPIO_NUM_26,
 };
 
 esp_loader_t loader;
@@ -57,6 +57,11 @@ The per-protocol init functions (`esp_loader_init_uart`, `esp_loader_init_usb`,
 `esp_loader_init_spi`, `esp_loader_init_sdio`) bind the protocol and port vtable
 to the context and call the port's `init` function automatically. Pass `&port.port`
 (the embedded `esp_loader_port_t` base) as the second argument.
+
+> [!NOTE]
+> Pin fields in all port structs were renamed for clarity: `gpio0_pin` → `boot_pin`
+> (all platforms) and, on the Linux port, `gpio0_trigger_pin` / `reset_trigger_pin`
+> → `boot_pin` / `reset_pin`. Update any existing struct initialisers accordingly.
 
 ---
 
@@ -339,8 +344,8 @@ esp32_port_t port_a = {
     .baud_rate         = 115200,
     .uart_rx_pin       = GPIO_NUM_5,
     .uart_tx_pin       = GPIO_NUM_4,
-    .reset_trigger_pin = GPIO_NUM_25,
-    .gpio0_trigger_pin = GPIO_NUM_26,
+    .reset_pin         = GPIO_NUM_25,
+    .boot_pin          = GPIO_NUM_26,
 };
 
 esp32_port_t port_b = {
@@ -349,8 +354,8 @@ esp32_port_t port_b = {
     .baud_rate         = 115200,
     .uart_rx_pin       = GPIO_NUM_16,
     .uart_tx_pin       = GPIO_NUM_17,
-    .reset_trigger_pin = GPIO_NUM_27,
-    .gpio0_trigger_pin = GPIO_NUM_14,
+    .reset_pin         = GPIO_NUM_27,
+    .boot_pin          = GPIO_NUM_14,
 };
 
 esp_loader_t loader_a, loader_b;
@@ -399,8 +404,8 @@ void app_main(void)
         .uart_port         = UART_NUM_1,
         .uart_rx_pin       = GPIO_NUM_5,
         .uart_tx_pin       = GPIO_NUM_4,
-        .reset_trigger_pin = GPIO_NUM_25,
-        .gpio0_trigger_pin = GPIO_NUM_26,
+        .reset_pin         = GPIO_NUM_25,
+        .boot_pin          = GPIO_NUM_26,
     };
 
     esp_loader_t loader;

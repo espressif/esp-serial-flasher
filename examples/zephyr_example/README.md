@@ -11,8 +11,8 @@ and are converted into C-array during build process.
 
 The example performs the following steps to flash the target device:
 
-1. Initialization: Sets up the required peripherals (GPIO for BOOT and EN pins, and UART)
-2. Target Reset: Puts the target into bootloader mode using the BOOT and EN pins
+1. Initialization: Sets up the required peripherals (GPIO for BOOT and RESET pins, and UART)
+2. Target Reset: Puts the target into bootloader mode using the BOOT and RESET pins
 3. Connection: Establishes communication with the target bootloader using esp_loader_connect()
 4. Baud Rate Change: Increases the transmission speed for faster flashing (except for ESP8266)
 5. Flashing Process:

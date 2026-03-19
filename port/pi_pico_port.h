@@ -36,8 +36,8 @@ extern "C" {
  *       .baudrate             = 115200,
  *       .uart_rx_pin_num      = 21,
  *       .uart_tx_pin_num      = 20,
- *       .reset_trigger_pin_num = 19,
- *       .boot_pin_num          = 18,
+ *       .reset_pin_num        = 19,
+ *       .boot_pin_num         = 18,
  *   };
  *   esp_loader_t loader;
  *   esp_loader_init_uart(&loader, &port.port);
@@ -51,7 +51,7 @@ typedef struct {
     uint          baudrate;
     uint          uart_rx_pin_num;
     uint          uart_tx_pin_num;
-    uint          reset_trigger_pin_num;
+    uint          reset_pin_num;
     uint          boot_pin_num;
     bool          dont_initialize_peripheral; /*!< Set if UART already initialised externally */
 

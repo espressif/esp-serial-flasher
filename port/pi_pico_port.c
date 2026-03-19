@@ -59,8 +59,8 @@ static esp_loader_error_t pi_pico_port_init(esp_loader_port_t *port)
         p->_peripheral_needs_deinit = true;
     }
 
-    gpio_init(p->reset_trigger_pin_num);
-    gpio_set_dir(p->reset_trigger_pin_num, GPIO_OUT);
+    gpio_init(p->reset_pin_num);
+    gpio_set_dir(p->reset_pin_num, GPIO_OUT);
 
     gpio_init(p->boot_pin_num);
     gpio_set_dir(p->boot_pin_num, GPIO_OUT);
@@ -79,7 +79,7 @@ static void pi_pico_port_deinit(esp_loader_port_t *port)
         p->_peripheral_needs_deinit = false;
     }
 
-    gpio_deinit(p->reset_trigger_pin_num);
+    gpio_deinit(p->reset_pin_num);
     gpio_deinit(p->boot_pin_num);
 }
 
@@ -153,18 +153,18 @@ static uint32_t pi_pico_uart_remaining_time(esp_loader_port_t *port)
 static void pi_pico_uart_reset_target(esp_loader_port_t *port)
 {
     pi_pico_port_t *p = container_of(port, pi_pico_port_t, port);
-    gpio_put(p->reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    gpio_put(p->reset_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     sleep_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_put(p->reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_put(p->reset_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
 }
 
 static void pi_pico_uart_enter_bootloader(esp_loader_port_t *port)
 {
     pi_pico_port_t *p = container_of(port, pi_pico_port_t, port);
     gpio_put(p->boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
-    gpio_put(p->reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    gpio_put(p->reset_pin_num, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     sleep_ms(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_put(p->reset_trigger_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_put(p->reset_pin_num, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
     sleep_ms(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
     gpio_put(p->boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
 }

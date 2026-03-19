@@ -39,8 +39,8 @@ extern "C" {
  *       .uart_port         = UART_NUM_1,
  *       .uart_rx_pin       = GPIO_NUM_5,
  *       .uart_tx_pin       = GPIO_NUM_4,
- *       .reset_trigger_pin = GPIO_NUM_25,
- *       .gpio0_trigger_pin = GPIO_NUM_26,
+ *       .reset_pin         = GPIO_NUM_25,
+ *       .boot_pin          = GPIO_NUM_26,
  *   };
  *
  *   esp_loader_t loader;
@@ -55,8 +55,8 @@ typedef struct {
     uint32_t      uart_port;             /*!< UART peripheral number (e.g. UART_NUM_1) */
     uint32_t      uart_rx_pin;           /*!< GPIO number for UART RX */
     uint32_t      uart_tx_pin;           /*!< GPIO number for UART TX */
-    uint32_t      reset_trigger_pin;     /*!< GPIO used to reset the target */
-    uint32_t      gpio0_trigger_pin;     /*!< GPIO used to control target IO0/BOOT */
+    uint32_t      reset_pin;             /*!< GPIO used to reset the target */
+    uint32_t      boot_pin;              /*!< GPIO used to control target BOOT pin */
     uint32_t      rx_buffer_size;        /*!< UART RX buffer size; 0 = use default (400) */
     uint32_t      tx_buffer_size;        /*!< UART TX buffer size; 0 = use default (400) */
     uint32_t      queue_size;            /*!< UART event queue depth; 0 = no queue */

@@ -126,8 +126,8 @@ esp32_port_t port = {
     .uart_port         = UART_NUM_1,
     .uart_rx_pin       = GPIO_NUM_5,
     .uart_tx_pin       = GPIO_NUM_4,
-    .reset_trigger_pin = GPIO_NUM_25,
-    .gpio0_trigger_pin = GPIO_NUM_26,
+    .reset_pin = GPIO_NUM_25,
+    .boot_pin  = GPIO_NUM_26,
 };
 
 // 2. Initialize the loader context — binds the protocol and port vtable

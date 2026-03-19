@@ -34,7 +34,7 @@ extern "C" {
  *       .port.ops          = &esp32_spi_ops,
  *       .spi_bus           = SPI2_HOST,
  *       .frequency         = 20 * 1000000,
- *       .reset_trigger_pin = GPIO_NUM_5,
+ *       .reset_pin         = GPIO_NUM_5,
  *       .spi_clk_pin       = GPIO_NUM_12,
  *       .spi_cs_pin        = GPIO_NUM_10,
  *       // ...
@@ -55,7 +55,7 @@ typedef struct {
     uint32_t          spi_cs_pin;
     uint32_t          spi_quadwp_pin;
     uint32_t          spi_quadhd_pin;
-    uint32_t          reset_trigger_pin;
+    uint32_t          reset_pin;
     uint32_t          strap_bit0_pin;
     uint32_t          strap_bit1_pin;
     uint32_t          strap_bit2_pin;

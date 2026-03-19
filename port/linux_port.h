@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 /**
- * @brief Selects how the RESET and BOOT (GPIO0) signals are driven.
+ * @brief Selects how the RESET and BOOT signals are driven.
  *
  * LINUX_GPIO_NONE
  *   No automatic GPIO control. The user must put the target into boot mode
@@ -34,10 +34,10 @@ extern "C" {
  *   Use the Linux GPIO character-device API via libgpiod (works on any SBC:
  *   Raspberry Pi, BeagleBone, NanoPi, …).
  *   Requires: libgpiod >= 2.0  (Debian 13 / Ubuntu 24.04 or later).
- *   Populate gpio_chip_path, reset_trigger_pin and gpio0_trigger_pin.
+ *   Populate gpio_chip_path, reset_pin and boot_pin.
  *
  * LINUX_GPIO_DTR_RTS
- *   Drive RESET through the UART's RTS signal and BOOT (GPIO0) through DTR.
+ *   Drive RESET through the UART's RTS signal and BOOT through DTR.
  *   This is the standard esptool auto-reset circuit used on USB-to-UART
  *   adapter boards (CP2102, CH340, FT232, …).
  *   No extra config fields are needed beyond device and baudrate.
@@ -83,8 +83,8 @@ typedef struct {
      * Path to the GPIO chip (e.g. "/dev/gpiochip0") and line numbers.
      */
     const char       *gpio_chip_path;
-    uint32_t          reset_trigger_pin;
-    uint32_t          gpio0_trigger_pin;
+    uint32_t          reset_pin;
+    uint32_t          boot_pin;
 
     /* Private runtime state — do not access directly */
     int               _serial;
