@@ -93,7 +93,7 @@ Not present for SDIO — use `sdio_write` / `sdio_read` instead.
 void (*enter_bootloader)(esp_loader_port_t *port);
 ```
 
-Put the target into ROM bootloader mode (assert BOOT/GPIO0, toggle RESET).
+Put the target into ROM bootloader mode (assert BOOT, toggle RESET).
 
 > [!NOTE]
 > Respect `SERIAL_FLASHER_RESET_INVERT` and `SERIAL_FLASHER_BOOT_INVERT` when

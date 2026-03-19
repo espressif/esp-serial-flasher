@@ -109,12 +109,12 @@ static void stm32_uart_reset_target(esp_loader_port_t *port)
 static void stm32_uart_enter_bootloader(esp_loader_port_t *port)
 {
     stm32_port_t *p = container_of(port, stm32_port_t, port);
-    HAL_GPIO_WritePin(p->port_io0, p->pin_num_io0, SERIAL_FLASHER_BOOT_INVERT ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(p->port_boot, p->pin_num_boot, SERIAL_FLASHER_BOOT_INVERT ? GPIO_PIN_SET : GPIO_PIN_RESET);
     HAL_GPIO_WritePin(p->port_rst, p->pin_num_rst, SERIAL_FLASHER_RESET_INVERT ? GPIO_PIN_SET : GPIO_PIN_RESET);
     HAL_Delay(SERIAL_FLASHER_RESET_HOLD_TIME_MS);
     HAL_GPIO_WritePin(p->port_rst, p->pin_num_rst, SERIAL_FLASHER_RESET_INVERT ? GPIO_PIN_RESET : GPIO_PIN_SET);
     HAL_Delay(SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    HAL_GPIO_WritePin(p->port_io0, p->pin_num_io0, SERIAL_FLASHER_BOOT_INVERT ? GPIO_PIN_RESET : GPIO_PIN_SET);
+    HAL_GPIO_WritePin(p->port_boot, p->pin_num_boot, SERIAL_FLASHER_BOOT_INVERT ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
 static void stm32_uart_debug_print(esp_loader_port_t *port, const char *str)

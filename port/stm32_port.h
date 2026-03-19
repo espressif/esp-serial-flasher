@@ -57,8 +57,8 @@ extern "C" {
  *   stm32_port_t port = {
  *       .port.ops    = &stm32_uart_ops,
  *       .huart       = &huart2,
- *       .port_io0    = TARGET_IO0_GPIO_Port,
- *       .pin_num_io0 = TARGET_IO0_Pin,
+ *       .port_boot    = TARGET_BOOT_GPIO_Port,
+ *       .pin_num_boot = TARGET_BOOT_Pin,
  *       .port_rst    = TARGET_RESET_GPIO_Port,
  *       .pin_num_rst = TARGET_RESET_Pin,
  *   };
@@ -71,8 +71,8 @@ typedef struct {
 
     /* Configuration — fill before calling esp_loader_init_uart() */
     UART_HandleTypeDef *huart;
-    GPIO_TypeDef       *port_io0;
-    uint16_t            pin_num_io0;
+    GPIO_TypeDef       *port_boot;
+    uint16_t            pin_num_boot;
     GPIO_TypeDef       *port_rst;
     uint16_t            pin_num_rst;
 

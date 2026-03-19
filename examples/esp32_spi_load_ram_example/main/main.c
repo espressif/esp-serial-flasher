@@ -67,7 +67,7 @@ void app_main(void)
         .port.ops          = &esp32_spi_ops,
         .spi_bus           = SPI2_HOST,
         .frequency         = 20 * 1000000,
-        .reset_trigger_pin = GPIO_NUM_5,
+        .reset_pin         = GPIO_NUM_5,
         .spi_clk_pin       = GPIO_NUM_12,
         .spi_cs_pin        = GPIO_NUM_10,
         .spi_miso_pin      = GPIO_NUM_13,

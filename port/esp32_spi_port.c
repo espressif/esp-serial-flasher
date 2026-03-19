@@ -86,10 +86,10 @@ static esp_loader_error_t esp32_spi_port_init(esp_loader_port_t *port)
         return ESP_LOADER_ERROR_FAIL;
     }
 
-    gpio_reset_pin(p->reset_trigger_pin);
-    gpio_set_pull_mode(p->reset_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(p->reset_trigger_pin, GPIO_MODE_OUTPUT);
-    gpio_set_level(p->reset_trigger_pin, 1);
+    gpio_reset_pin(p->reset_pin);
+    gpio_set_pull_mode(p->reset_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->reset_pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(p->reset_pin, 1);
 
     gpio_reset_pin(p->spi_cs_pin);
     gpio_set_pull_mode(p->spi_cs_pin, GPIO_PULLUP_ONLY);
@@ -102,7 +102,7 @@ static esp_loader_error_t esp32_spi_port_init(esp_loader_port_t *port)
 static void esp32_spi_port_deinit(esp_loader_port_t *port)
 {
     esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
-    gpio_reset_pin(p->reset_trigger_pin);
+    gpio_reset_pin(p->reset_pin);
     gpio_reset_pin(p->spi_cs_pin);
     spi_bus_remove_device(p->_device_h);
     if (p->_bus_needs_deinit) {
@@ -198,9 +198,9 @@ static uint32_t esp32_spi_remaining_time(esp_loader_port_t *port)
 static void esp32_spi_reset_target(esp_loader_port_t *port)
 {
     esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
-    gpio_set_level(p->reset_trigger_pin, 0);
+    gpio_set_level(p->reset_pin, 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(p->reset_trigger_pin, 1);
+    gpio_set_level(p->reset_pin, 1);
 }
 
 static void esp32_spi_enter_bootloader(esp_loader_port_t *port)

@@ -104,8 +104,8 @@ error and exit.
 
 | Raspberry Pi (host) | Espressif SoC (target) |
 | :-----------------: | :--------------------: |
-|        GPIO2        |       RESET (EN)       |
-|        GPIO3        |       BOOT (IO0)       |
+|        GPIO2        |         RESET          |
+|        GPIO3        |          BOOT          |
 |    GPIO14 (TXD)     |          RX0           |
 |    GPIO15 (RXD)     |          TX0           |
 |         GND         |          GND           |

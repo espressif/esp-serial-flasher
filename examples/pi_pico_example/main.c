@@ -46,7 +46,7 @@ int main(void)
         .baudrate              = 115200,
         .uart_rx_pin_num       = 21,
         .uart_tx_pin_num       = 20,
-        .reset_trigger_pin_num = 19,
+        .reset_pin_num         = 19,
         .boot_pin_num          = 18,
     };
 

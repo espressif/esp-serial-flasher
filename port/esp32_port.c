@@ -80,13 +80,13 @@ static esp_loader_error_t esp32_port_init(esp_loader_port_t *port)
         p->_peripheral_needs_deinit = true;
     }
 
-    gpio_reset_pin((gpio_num_t)p->reset_trigger_pin);
-    gpio_set_pull_mode((gpio_num_t)p->reset_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction((gpio_num_t)p->reset_trigger_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin((gpio_num_t)p->reset_pin);
+    gpio_set_pull_mode((gpio_num_t)p->reset_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction((gpio_num_t)p->reset_pin, GPIO_MODE_OUTPUT);
 
-    gpio_reset_pin((gpio_num_t)p->gpio0_trigger_pin);
-    gpio_set_pull_mode((gpio_num_t)p->gpio0_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction((gpio_num_t)p->gpio0_trigger_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin((gpio_num_t)p->boot_pin);
+    gpio_set_pull_mode((gpio_num_t)p->boot_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction((gpio_num_t)p->boot_pin, GPIO_MODE_OUTPUT);
 
     return ESP_LOADER_SUCCESS;
 }
@@ -170,21 +170,21 @@ static uint32_t esp32_uart_remaining_time(esp_loader_port_t *port)
 static void esp32_uart_reset_target(esp_loader_port_t *port)
 {
     esp32_port_t *p = container_of(port, esp32_port_t, port);
-    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
 }
 
 
 static void esp32_uart_enter_bootloader(esp_loader_port_t *port)
 {
     esp32_port_t *p = container_of(port, esp32_port_t, port);
-    gpio_set_level((gpio_num_t)p->gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
-    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    gpio_set_level((gpio_num_t)p->boot_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
+    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
     usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
-    gpio_set_level((gpio_num_t)p->gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
+    gpio_set_level((gpio_num_t)p->boot_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
 }
 
 

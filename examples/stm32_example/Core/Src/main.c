@@ -117,8 +117,8 @@ int main(void)
   stm32_port_t port = {
       .port.ops    = &stm32_uart_ops,
       .huart       = &huart2,
-      .port_io0    = TARGET_IO0_GPIO_Port,
-      .pin_num_io0 = TARGET_IO0_Pin,
+      .port_boot    = TARGET_BOOT_GPIO_Port,
+      .pin_num_boot = TARGET_BOOT_Pin,
       .port_rst    = TARGET_RESET_GPIO_Port,
       .pin_num_rst = TARGET_RESET_Pin,
   };
@@ -344,10 +344,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, TARGET_IO0_Pin|TARGET_RESET_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, TARGET_BOOT_Pin|TARGET_RESET_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : TARGET_IO0_Pin TARGET_RESET_Pin */
-  GPIO_InitStruct.Pin = TARGET_IO0_Pin|TARGET_RESET_Pin;
+  /*Configure GPIO pins : TARGET_BOOT_Pin TARGET_RESET_Pin */
+  GPIO_InitStruct.Pin = TARGET_BOOT_Pin|TARGET_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

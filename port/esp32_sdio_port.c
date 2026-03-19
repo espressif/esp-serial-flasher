@@ -73,9 +73,9 @@ static esp_loader_error_t esp32_sdio_port_init(esp_loader_port_t *port)
         p->_host_driver_needs_deinit = true;
     }
 
-    gpio_reset_pin(p->reset_trigger_pin);
-    gpio_set_pull_mode(p->reset_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(p->reset_trigger_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->reset_pin);
+    gpio_set_pull_mode(p->reset_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->reset_pin, GPIO_MODE_OUTPUT);
 
     gpio_reset_pin(p->boot_pin);
     gpio_set_pull_mode(p->boot_pin, GPIO_PULLUP_ONLY);
@@ -95,7 +95,7 @@ static void esp32_sdio_port_deinit(esp_loader_port_t *port)
         sdmmc_host_deinit();
         p->_host_driver_needs_deinit = false;
     }
-    gpio_reset_pin(p->reset_trigger_pin);
+    gpio_reset_pin(p->reset_pin);
     gpio_reset_pin(p->boot_pin);
 }
 
@@ -183,18 +183,18 @@ static uint32_t esp32_sdio_remaining_time(esp_loader_port_t *port)
 static void esp32_sdio_reset_target(esp_loader_port_t *port)
 {
     esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
-    gpio_set_level(p->reset_trigger_pin, 0);
+    gpio_set_level(p->reset_pin, 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(p->reset_trigger_pin, 1);
+    gpio_set_level(p->reset_pin, 1);
 }
 
 static void esp32_sdio_enter_bootloader(esp_loader_port_t *port)
 {
     esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
     gpio_set_level(p->boot_pin, 0);
-    gpio_set_level(p->reset_trigger_pin, 0);
+    gpio_set_level(p->reset_pin, 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(p->reset_trigger_pin, 1);
+    gpio_set_level(p->reset_pin, 1);
     usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
     gpio_set_level(p->boot_pin, 1);
 }
