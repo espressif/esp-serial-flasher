@@ -51,22 +51,19 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-    const loader_esp32_config_t config = {
-        .baud_rate = 115200,
-        .uart_port = UART_NUM_1,
-        .uart_rx_pin = GPIO_NUM_5,
-        .uart_tx_pin = GPIO_NUM_4,
+    esp_loader_t loader;
+
+    esp32_port_t port = {
+        .port.ops          = &esp32_uart_ops,
+        .baud_rate         = 115200,
+        .uart_port         = UART_NUM_1,
+        .uart_rx_pin       = GPIO_NUM_5,
+        .uart_tx_pin       = GPIO_NUM_4,
         .reset_trigger_pin = GPIO_NUM_25,
         .gpio0_trigger_pin = GPIO_NUM_26,
     };
 
-    esp_loader_t loader;
-
-    if (loader_port_esp32_init(&config) != ESP_LOADER_SUCCESS) {
-        ESP_LOGE(TAG, "serial initialization failed.");
-        abort();
-    }
-    if (esp_loader_init_uart(&loader, &esp32_uart_port) != ESP_LOADER_SUCCESS) {
+    if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "serial initialization failed.");
         abort();
     }

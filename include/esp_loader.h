@@ -190,29 +190,51 @@ typedef struct esp_loader {
     const struct target_registers_t        *_reg;
     uint32_t  _target_flash_size;
     bool      _stub_running;
+    union {
+        struct {
+            uint32_t sip_seq_tx;
+            uint32_t got_bytes_latest;
+            uint32_t mem_offset;
+        } sdio;
+        struct {
+            uint8_t slave_seq_tx;
+            uint8_t slave_seq_rx;
+        } spi;
+    } _proto_ctx;
 } esp_loader_t;
 
 /**
   * @brief Initialize the loader context for UART protocol.
   *
-  * Call the port-specific hardware init function (e.g. @c loader_port_esp32_init)
-  * before calling this function.
+  * Hardware initialisation (UART driver install, GPIO setup) is performed
+  * automatically by calling @c port->ops->init(port) inside this function —
+  * no separate port init call is needed.
   *
   * @code
-  *   loader_port_esp32_init(&config);
+  *   esp32_port_t port = {
+  *       .port.ops          = &esp32_uart_ops,
+  *       .baud_rate         = 115200,
+  *       .uart_port         = UART_NUM_1,
+  *       .uart_rx_pin       = GPIO_NUM_5,
+  *       .uart_tx_pin       = GPIO_NUM_4,
+  *       .reset_trigger_pin = GPIO_NUM_25,
+  *       .gpio0_trigger_pin = GPIO_NUM_26,
+  *   };
   *   esp_loader_t loader;
-  *   esp_loader_init_uart(&loader, &esp32_uart_port);
+  *   esp_loader_init_uart(&loader, &port.port);
   *   esp_loader_connect(&loader, &connect_args);
   *
-  *   // Two UART devices in parallel
-  *   esp_loader_init_uart(&loader_a, &esp32_uart_port_a);
-  *   esp_loader_init_uart(&loader_b, &esp32_uart_port_b);
+  *   // Two UART devices in parallel — just declare two port instances
+  *   esp32_port_t port_a = { .port.ops = &esp32_uart_ops, ... };
+  *   esp32_port_t port_b = { .port.ops = &esp32_uart_ops, ... };
+  *   esp_loader_init_uart(&loader_a, &port_a.port);
+  *   esp_loader_init_uart(&loader_b, &port_b.port);
   * @endcode
   *
   * @param loader[in]  Pointer to a caller-allocated esp_loader_t instance.
-  * @param port[in]    Pointer to the port handle (its @c ops must be populated).
+  * @param port[in]    Pointer to the port base handle (@c ops must be populated).
   *
-  * @return ESP_LOADER_SUCCESS on success.
+  * @return ESP_LOADER_SUCCESS on success, or the error returned by @c ops->init.
   */
 esp_loader_error_t esp_loader_init_uart(esp_loader_t *loader, esp_loader_port_t *port);
 

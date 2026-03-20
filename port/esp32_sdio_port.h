@@ -17,6 +17,7 @@
 
 #include "esp_loader_io.h"
 #include "driver/sdmmc_host.h"
+#include "sdmmc_cmd.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,54 +28,60 @@ typedef enum {
     SDIO_1BIT,
 } sdio_bus_width_t;
 
+/**
+ * @brief Concrete ESP32 SDIO port instance.
+ *
+ * Declare one of these, fill the config fields, then pass &port.port to
+ * esp_loader_init_sdio(). Hardware initialisation is called automatically
+ * inside esp_loader_init_sdio() — no separate init step is needed.
+ *
+ * @code
+ *   esp32_sdio_port_t port = {
+ *       .port.ops              = &esp32_sdio_ops,
+ *       .slot                  = SDMMC_HOST_SLOT_1,
+ *       .max_freq_khz          = SDMMC_FREQ_DEFAULT,
+ *       .reset_trigger_pin     = GPIO_NUM_54,
+ *       .boot_pin              = GPIO_NUM_53,
+ *       .bus_width             = SDIO_4BIT,
+ *   };
+ *   esp_loader_t loader;
+ *   esp_loader_init_sdio(&loader, &port.port);
+ * @endcode
+ */
 typedef struct {
-    /* The SDIO slot to use, changes the pin mapping when SOC_SDMMC_USE_IOMUX is used. */
-    int slot;
-    /* Valid frequencies: round divisors of 40MHz.
-       The frequency is limited by the GPIO matrix if it is used. */
-    uint32_t max_freq_khz;
-    /*
-       SDIO pin values are used only when SOC_SDMMC_USE_GPIO_MATRIX is used.
-       Otherwise, when using the IOMUX signal routing, they are predefined.
-    */
-    uint8_t sdio_clk_pin;
-    uint8_t sdio_d0_pin;
-    uint8_t sdio_d1_pin;
-    uint8_t sdio_d2_pin;
-    uint8_t sdio_d3_pin;
-    uint8_t sdio_cmd_pin;
-    /* Reset and strapping pins */
-    uint8_t reset_trigger_pin;
-    uint8_t boot_pin;
-    /* Use when you want to initialize and deinitialize the host driver yourself,
-       for instance when you have multiple devices on the bus.
-       All configuration values except reset and strapping pins are unused if set.*/
-    bool dont_initialize_host_driver;
+    esp_loader_port_t port;           /*!< Embedded port base */
+
+    /* Configuration — fill before calling esp_loader_init_sdio() */
+    int              slot;
+    uint32_t         max_freq_khz;
+    uint8_t          sdio_clk_pin;
+    uint8_t          sdio_d0_pin;
+    uint8_t          sdio_d1_pin;
+    uint8_t          sdio_d2_pin;
+    uint8_t          sdio_d3_pin;
+    uint8_t          sdio_cmd_pin;
+    uint8_t          reset_trigger_pin;
+    uint8_t          boot_pin;
+    bool             dont_initialize_host_driver;
     sdio_bus_width_t bus_width;
-} loader_esp32_sdio_config_t;
+
+    /* Private runtime state — do not access directly */
+    sdmmc_card_t  _card;
+    sdmmc_host_t  _card_config;
+    int64_t       _time_end;
+    bool          _host_driver_needs_deinit;
+} esp32_sdio_port_t;
 
 /** Port operations vtable for the ESP32 SDIO port. */
-extern esp_loader_port_t esp32_sdio_port;
+extern const esp_loader_port_ops_t esp32_sdio_ops;
 
 /**
-  * @brief Initializes the SDIO hardware.
-  *
-  * Call this before esp_loader_init() to configure the SDMMC peripheral.
-  *
-  * @param config[in] Configuration structure
-  *
-  * @return
-  *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_FAIL Initialization failure
-  */
-esp_loader_error_t loader_port_esp32_sdio_init(const loader_esp32_sdio_config_t *config);
-
-/**
-  * @brief Deinitializes the SDIO interface.
-  */
-void loader_port_esp32_sdio_deinit(void);
-
-esp_loader_error_t loader_port_wait_int(uint32_t timeout);
+ * @brief Wait for an SDIO interrupt from the target.
+ *
+ * @param port    Pointer to the SDIO port instance.
+ * @param timeout Timeout in milliseconds.
+ */
+esp_loader_error_t loader_port_wait_int(esp32_sdio_port_t *port, uint32_t timeout);
 
 #ifdef __cplusplus
 }

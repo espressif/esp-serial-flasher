@@ -64,40 +64,41 @@ static uint32_t timeout_per_mb(uint32_t size_bytes, uint32_t time_per_mb)
 }
 
 
-static void loader_init_common(esp_loader_t *loader,
-                               esp_loader_protocol_t protocol,
-                               const esp_loader_protocol_ops_t *proto_ops,
-                               esp_loader_port_t *port)
+static esp_loader_error_t loader_init_common(esp_loader_t *loader,
+        esp_loader_protocol_t protocol,
+        const esp_loader_protocol_ops_t *proto_ops,
+        esp_loader_port_t *port)
 {
     memset(loader, 0, sizeof(*loader));
     loader->_protocol_type = protocol;
     loader->_protocol      = proto_ops;
     loader->_port          = port;
     loader->_target        = ESP_UNKNOWN_CHIP;
+
+    if (port->ops->init) {
+        return port->ops->init(port);
+    }
+    return ESP_LOADER_SUCCESS;
 }
 
 esp_loader_error_t esp_loader_init_uart(esp_loader_t *loader, esp_loader_port_t *port)
 {
-    loader_init_common(loader, ESP_LOADER_PROTOCOL_UART, esp_loader_get_uart_ops(), port);
-    return ESP_LOADER_SUCCESS;
+    return loader_init_common(loader, ESP_LOADER_PROTOCOL_UART, esp_loader_get_uart_ops(), port);
 }
 
 esp_loader_error_t esp_loader_init_usb(esp_loader_t *loader, esp_loader_port_t *port)
 {
-    loader_init_common(loader, ESP_LOADER_PROTOCOL_USB, esp_loader_get_usb_ops(), port);
-    return ESP_LOADER_SUCCESS;
+    return loader_init_common(loader, ESP_LOADER_PROTOCOL_USB, esp_loader_get_usb_ops(), port);
 }
 
 esp_loader_error_t esp_loader_init_spi(esp_loader_t *loader, esp_loader_port_t *port)
 {
-    loader_init_common(loader, ESP_LOADER_PROTOCOL_SPI, esp_loader_get_spi_ops(), port);
-    return ESP_LOADER_SUCCESS;
+    return loader_init_common(loader, ESP_LOADER_PROTOCOL_SPI, esp_loader_get_spi_ops(), port);
 }
 
 esp_loader_error_t esp_loader_init_sdio(esp_loader_t *loader, esp_loader_port_t *port)
 {
-    loader_init_common(loader, ESP_LOADER_PROTOCOL_SDIO, esp_loader_get_sdio_ops(), port);
-    return ESP_LOADER_SUCCESS;
+    return loader_init_common(loader, ESP_LOADER_PROTOCOL_SDIO, esp_loader_get_sdio_ops(), port);
 }
 
 esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)

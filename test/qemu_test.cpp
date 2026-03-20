@@ -33,7 +33,7 @@ static esp_loader_t g_loader;
 
 TEST_CASE( "Can connect " )
 {
-    esp_loader_init_uart(&g_loader, &test_tcp_port);
+    esp_loader_init_uart(&g_loader, &test_tcp_port.port);
 
     esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
 

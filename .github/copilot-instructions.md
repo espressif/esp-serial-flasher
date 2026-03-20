@@ -235,10 +235,10 @@ port/                  # Platform-specific implementations
 
 In v2 there are no compile-time interface flags. The protocol is selected at runtime by calling the appropriate init function before any other `esp_loader_*` call:
 
-- `esp_loader_init_uart(&loader, &my_uart_port)` — UART
-- `esp_loader_init_usb(&loader, &my_usb_port)` — USB CDC-ACM
-- `esp_loader_init_spi(&loader, &my_spi_port)` — SPI (RAM download only)
-- `esp_loader_init_sdio(&loader, &my_sdio_port)` — SDIO (experimental)
+- `esp_loader_init_uart(&loader, &port.port)` — UART
+- `esp_loader_init_usb(&loader, &port.port)` — USB CDC-ACM
+- `esp_loader_init_spi(&loader, &port.port)` — SPI (RAM download only)
+- `esp_loader_init_sdio(&loader, &port.port)` — SDIO (experimental)
 
 For ESP-IDF / Kconfig builds, enable the port implementations you need with:
 
@@ -247,7 +247,7 @@ For ESP-IDF / Kconfig builds, enable the port implementations you need with:
 - `CONFIG_SERIAL_FLASHER_PORT_SPI=y`
 - `CONFIG_SERIAL_FLASHER_PORT_SDIO=y`
 
-Each enabled option compiles the matching `*_port.c` and exposes an `esp_loader_port_t` instance (e.g. `esp32_uart_port`). Multiple ports can be enabled simultaneously.
+Each enabled option compiles the matching `*_port.c` and exposes a `const esp_loader_port_ops_t` vtable (e.g. `esp32_uart_ops`, `esp32_spi_ops`). The caller owns the port struct (e.g. `esp32_port_t`) and sets `.port.ops` to point at the vtable. Multiple ports can be enabled simultaneously.
 
 **Common Options:**
 

@@ -38,17 +38,20 @@ extern const uint8_t app_bin_md5[];
 int main(void)
 {
 
-    const loader_raspberry_config_t config = {
-        .device = SERIAL_DEVICE,
-        .baudrate = DEFAULT_BAUD_RATE,
+    esp_loader_t loader;
+
+    raspi_port_t port = {
+        .port.ops          = &raspi_uart_ops,
+        .device            = SERIAL_DEVICE,
+        .baudrate          = DEFAULT_BAUD_RATE,
         .reset_trigger_pin = TARGET_RST_Pin,
         .gpio0_trigger_pin = TARGET_IO0_Pin,
     };
 
-    esp_loader_t loader;
-
-    loader_port_raspberry_init(&config);
-    esp_loader_init_uart(&loader, &raspi_uart_port);
+    if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {
+        fprintf(stderr, "Failed to initialize loader port\n");
+        return 1;
+    }
 
     if (connect_to_target(&loader, HIGHER_BAUD_RATE) == ESP_LOADER_SUCCESS) {
 

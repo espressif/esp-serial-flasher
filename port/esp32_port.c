@@ -37,22 +37,15 @@ static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
 }
 #endif
 
-static int64_t s_time_end;
-static int32_t s_uart_port;
-static int32_t s_reset_trigger_pin;
-static int32_t s_gpio0_trigger_pin;
-static bool s_peripheral_needs_deinit;
-
-esp_loader_error_t loader_port_esp32_init(const loader_esp32_config_t *config)
+static esp_loader_error_t esp32_port_init(esp_loader_port_t *port)
 {
-    s_uart_port = config->uart_port;
-    s_reset_trigger_pin = config->reset_trigger_pin;
-    s_gpio0_trigger_pin = config->gpio0_trigger_pin;
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
 
-    // Initialize UART
-    if (!config->dont_initialize_peripheral) {
+    p->_peripheral_needs_deinit = false;
+
+    if (!p->dont_initialize_peripheral) {
         uart_config_t uart_config = {
-            .baud_rate = config->baud_rate,
+            .baud_rate = (int)p->baud_rate,
             .data_bits = UART_DATA_8_BITS,
             .parity    = UART_PARITY_DISABLE,
             .stop_bits = UART_STOP_BITS_1,
@@ -62,55 +55,60 @@ esp_loader_error_t loader_port_esp32_init(const loader_esp32_config_t *config)
 #endif
         };
 
-        int rx_buffer_size = config->rx_buffer_size ? config->rx_buffer_size : 400;
-        int tx_buffer_size = config->tx_buffer_size ? config->tx_buffer_size : 400;
-        QueueHandle_t *uart_queue = config->uart_queue ? config->uart_queue : NULL;
-        int queue_size = config->queue_size ? config->queue_size : 0;
+        int rx_buffer_size = p->rx_buffer_size ? (int)p->rx_buffer_size : 400;
+        int tx_buffer_size = p->tx_buffer_size ? (int)p->tx_buffer_size : 400;
+        QueueHandle_t *uart_queue = p->uart_queue ? p->uart_queue : NULL;
+        int queue_size = p->queue_size ? (int)p->queue_size : 0;
 
         // Sets pin current strength to 40 mA, because some pins default to 10 mA,
         // which is not enough when USB-UART is also present on the UART lines (at least 20 mA should be sufficient).
-        if ( gpio_set_drive_capability(config->uart_tx_pin, GPIO_DRIVE_CAP_3) != ESP_OK ) {
+        if (gpio_set_drive_capability((gpio_num_t)p->uart_tx_pin, GPIO_DRIVE_CAP_3) != ESP_OK) {
+            return ESP_LOADER_ERROR_FAIL;
+        }
+        if (uart_param_config((uart_port_t)p->uart_port, &uart_config) != ESP_OK) {
+            return ESP_LOADER_ERROR_FAIL;
+        }
+        if (uart_set_pin((uart_port_t)p->uart_port, (int)p->uart_tx_pin, (int)p->uart_rx_pin,
+                         UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
+            return ESP_LOADER_ERROR_FAIL;
+        }
+        if (uart_driver_install((uart_port_t)p->uart_port, rx_buffer_size, tx_buffer_size,
+                                queue_size, uart_queue, 0) != ESP_OK) {
             return ESP_LOADER_ERROR_FAIL;
         }
 
-        if ( uart_param_config(s_uart_port, &uart_config) != ESP_OK ) {
-            return ESP_LOADER_ERROR_FAIL;
-        }
-        if ( uart_set_pin(s_uart_port, config->uart_tx_pin, config->uart_rx_pin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK ) {
-            return ESP_LOADER_ERROR_FAIL;
-        }
-        if ( uart_driver_install(s_uart_port, rx_buffer_size, tx_buffer_size, queue_size, uart_queue, 0) != ESP_OK ) {
-            return ESP_LOADER_ERROR_FAIL;
-        }
-
-        s_peripheral_needs_deinit = true;
+        p->_peripheral_needs_deinit = true;
     }
 
-    // Initialize boot pin selection pins
-    gpio_reset_pin(s_reset_trigger_pin);
-    gpio_set_pull_mode(s_reset_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_reset_trigger_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin((gpio_num_t)p->reset_trigger_pin);
+    gpio_set_pull_mode((gpio_num_t)p->reset_trigger_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction((gpio_num_t)p->reset_trigger_pin, GPIO_MODE_OUTPUT);
 
-    gpio_reset_pin(s_gpio0_trigger_pin);
-    gpio_set_pull_mode(s_gpio0_trigger_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction(s_gpio0_trigger_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin((gpio_num_t)p->gpio0_trigger_pin);
+    gpio_set_pull_mode((gpio_num_t)p->gpio0_trigger_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction((gpio_num_t)p->gpio0_trigger_pin, GPIO_MODE_OUTPUT);
 
     return ESP_LOADER_SUCCESS;
 }
 
-void loader_port_esp32_deinit(void)
+
+static void esp32_port_deinit(esp_loader_port_t *port)
 {
-    if (s_peripheral_needs_deinit) {
-        uart_driver_delete(s_uart_port);
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+
+    if (p->_peripheral_needs_deinit) {
+        uart_driver_delete((uart_port_t)p->uart_port);
+        p->_peripheral_needs_deinit = false;
     }
 }
 
 
 static esp_loader_error_t esp32_uart_write(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout)
 {
-    (void)port;
-    uart_write_bytes(s_uart_port, (const char *)data, size);
-    esp_err_t err = uart_wait_tx_done(s_uart_port, pdMS_TO_TICKS(timeout));
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+
+    uart_write_bytes((uart_port_t)p->uart_port, (const char *)data, size);
+    esp_err_t err = uart_wait_tx_done((uart_port_t)p->uart_port, pdMS_TO_TICKS(timeout));
 
     if (err == ESP_OK) {
 #if SERIAL_FLASHER_DEBUG_TRACE
@@ -127,8 +125,9 @@ static esp_loader_error_t esp32_uart_write(esp_loader_port_t *port, const uint8_
 
 static esp_loader_error_t esp32_uart_read(esp_loader_port_t *port, uint8_t *data, uint16_t size, uint32_t timeout)
 {
-    (void)port;
-    int read = uart_read_bytes(s_uart_port, data, size, pdMS_TO_TICKS(timeout));
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+
+    int read = uart_read_bytes((uart_port_t)p->uart_port, data, size, pdMS_TO_TICKS(timeout));
 
     if (read < 0) {
         return ESP_LOADER_ERROR_FAIL;
@@ -155,37 +154,37 @@ static void esp32_uart_delay_ms(esp_loader_port_t *port, uint32_t ms)
 
 static void esp32_uart_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
-    (void)port;
-    s_time_end = esp_timer_get_time() + ms * 1000;
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+    p->_time_end = esp_timer_get_time() + ms * 1000;
 }
 
 
 static uint32_t esp32_uart_remaining_time(esp_loader_port_t *port)
 {
-    (void)port;
-    int64_t remaining = (s_time_end - esp_timer_get_time()) / 1000;
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+    int64_t remaining = (p->_time_end - esp_timer_get_time()) / 1000;
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
 
 static void esp32_uart_reset_target(esp_loader_port_t *port)
 {
-    (void)port;
-    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
 }
 
 
 static void esp32_uart_enter_bootloader(esp_loader_port_t *port)
 {
-    (void)port;
-    gpio_set_level(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
-    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+    gpio_set_level((gpio_num_t)p->gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
+    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_set_level((gpio_num_t)p->reset_trigger_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
     usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
-    gpio_set_level(s_gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
+    gpio_set_level((gpio_num_t)p->gpio0_trigger_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
 }
 
 
@@ -195,14 +194,18 @@ static void esp32_uart_debug_print(esp_loader_port_t *port, const char *str)
     printf("DEBUG: %s\n", str);
 }
 
+
 static esp_loader_error_t esp32_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
-    (void)port;
-    esp_err_t err = uart_set_baudrate(s_uart_port, baudrate);
+    esp32_port_t *p = container_of(port, esp32_port_t, port);
+    esp_err_t err = uart_set_baudrate((uart_port_t)p->uart_port, baudrate);
     return (err == ESP_OK) ? ESP_LOADER_SUCCESS : ESP_LOADER_ERROR_FAIL;
 }
 
-static const esp_loader_port_ops_t esp32_uart_ops = {
+
+const esp_loader_port_ops_t esp32_uart_ops = {
+    .init                     = esp32_port_init,
+    .deinit                   = esp32_port_deinit,
     .enter_bootloader         = esp32_uart_enter_bootloader,
     .reset_target             = esp32_uart_reset_target,
     .start_timer              = esp32_uart_start_timer,
@@ -213,5 +216,3 @@ static const esp_loader_port_ops_t esp32_uart_ops = {
     .write                    = esp32_uart_write,
     .read                     = esp32_uart_read,
 };
-
-esp_loader_port_t esp32_uart_port = { .ops = &esp32_uart_ops };

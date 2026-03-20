@@ -22,24 +22,41 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Concrete Raspberry Pi UART port instance.
+ *
+ * Declare one of these, fill the config fields, then pass &port.port to
+ * esp_loader_init_uart(). Hardware initialisation is called automatically
+ * inside esp_loader_init_uart() — no separate init step is needed.
+ *
+ * @code
+ *   raspi_port_t port = {
+ *       .port.ops          = &raspi_uart_ops,
+ *       .device            = "/dev/ttyS0",
+ *       .baudrate          = 115200,
+ *       .reset_trigger_pin = TARGET_RST_Pin,
+ *       .gpio0_trigger_pin = TARGET_IO0_Pin,
+ *   };
+ *   esp_loader_t loader;
+ *   esp_loader_init_uart(&loader, &port.port);
+ * @endcode
+ */
 typedef struct {
+    esp_loader_port_t port;          /*!< Embedded port base */
+
+    /* Configuration — fill before calling esp_loader_init_uart() */
     const char *device;
-    uint32_t baudrate;
-    uint32_t reset_trigger_pin;
-    uint32_t gpio0_trigger_pin;
-} loader_raspberry_config_t;
+    uint32_t    baudrate;
+    uint32_t    reset_trigger_pin;
+    uint32_t    gpio0_trigger_pin;
+
+    /* Private runtime state — do not access directly */
+    int     _serial;
+    int64_t _time_end;
+} raspi_port_t;
 
 /** Port operations vtable for the Raspberry Pi UART port. */
-extern esp_loader_port_t raspi_uart_port;
-
-/**
-  * @brief Initializes the Raspberry Pi UART hardware.
-  *
-  * Call this before esp_loader_init() to open and configure the serial device.
-  */
-esp_loader_error_t loader_port_raspberry_init(const loader_raspberry_config_t *config);
-
-void loader_port_deinit(void);
+extern const esp_loader_port_ops_t raspi_uart_ops;
 
 #ifdef __cplusplus
 }

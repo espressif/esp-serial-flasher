@@ -74,16 +74,6 @@ typedef enum {
     SLAVE_CMD_DONE = 0x55,
 } slave_cmd_t;
 
-typedef struct {
-    uint8_t slave_seq_tx;
-    uint8_t slave_seq_rx;
-} spi_protocol_ctx_t;
-
-/* Single module-level context — only one SPI loader instance can be active at a time.
- * Multi-instance use on SPI is not supported; two esp_loader_t instances using SPI
- * would share and corrupt this state. */
-static spi_protocol_ctx_t s_spi_ctx;
-
 static esp_loader_error_t write_slave_reg(esp_loader_t *loader, const uint8_t *data, const uint32_t addr,
         const uint8_t size);
 static esp_loader_error_t read_slave_reg(esp_loader_t *loader, uint8_t *out_data, const uint32_t addr,
@@ -141,7 +131,7 @@ static esp_loader_error_t spi_send_cmd(esp_loader_t *loader, const send_cmd_conf
     uint32_t target_buf_size;
     bool slave_ready = false;
     while (!slave_ready) {
-        RETURN_ON_ERROR(handle_slave_state(loader, SLAVE_REGISTER_RXSTA, &s_spi_ctx.slave_seq_rx,
+        RETURN_ON_ERROR(handle_slave_state(loader, SLAVE_REGISTER_RXSTA, &loader->_proto_ctx.spi.slave_seq_rx,
                                            &slave_ready, &target_buf_size));
     }
 
@@ -255,7 +245,7 @@ static esp_loader_error_t spi_check_response(esp_loader_t *loader, const command
     uint32_t target_buf_size;
     bool slave_ready = false;
     while (!slave_ready) {
-        RETURN_ON_ERROR(handle_slave_state(loader, SLAVE_REGISTER_TXSTA, &s_spi_ctx.slave_seq_tx,
+        RETURN_ON_ERROR(handle_slave_state(loader, SLAVE_REGISTER_TXSTA, &loader->_proto_ctx.spi.slave_seq_tx,
                                            &slave_ready, &target_buf_size));
     }
 

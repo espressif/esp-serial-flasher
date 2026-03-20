@@ -61,29 +61,26 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-    const loader_esp32_spi_config_t config = {
-        .spi_bus = SPI2_HOST,
-        .frequency = 20 * 1000000,
-        .reset_trigger_pin = GPIO_NUM_5,
-        .spi_clk_pin = GPIO_NUM_12,
-        .spi_cs_pin = GPIO_NUM_10,
-        .spi_miso_pin = GPIO_NUM_13,
-        .spi_mosi_pin = GPIO_NUM_11,
-        .spi_quadwp_pin = GPIO_NUM_14,
-        .spi_quadhd_pin = GPIO_NUM_9,
-        .strap_bit0_pin = GPIO_NUM_13,
-        .strap_bit1_pin = GPIO_NUM_2,
-        .strap_bit2_pin = GPIO_NUM_3,
-        .strap_bit3_pin = GPIO_NUM_4,
-    };
-
     esp_loader_t loader;
 
-    if (loader_port_esp32_spi_init(&config) != ESP_LOADER_SUCCESS) {
-        ESP_LOGE(TAG, "SPI initialization failed.");
-        abort();
-    }
-    if (esp_loader_init_spi(&loader, &esp32_spi_port) != ESP_LOADER_SUCCESS) {
+    esp32_spi_port_t port = {
+        .port.ops          = &esp32_spi_ops,
+        .spi_bus           = SPI2_HOST,
+        .frequency         = 20 * 1000000,
+        .reset_trigger_pin = GPIO_NUM_5,
+        .spi_clk_pin       = GPIO_NUM_12,
+        .spi_cs_pin        = GPIO_NUM_10,
+        .spi_miso_pin      = GPIO_NUM_13,
+        .spi_mosi_pin      = GPIO_NUM_11,
+        .spi_quadwp_pin    = GPIO_NUM_14,
+        .spi_quadhd_pin    = GPIO_NUM_9,
+        .strap_bit0_pin    = GPIO_NUM_13,
+        .strap_bit1_pin    = GPIO_NUM_2,
+        .strap_bit2_pin    = GPIO_NUM_3,
+        .strap_bit3_pin    = GPIO_NUM_4,
+    };
+
+    if (esp_loader_init_spi(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "SPI initialization failed.");
         abort();
     }

@@ -22,38 +22,46 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Concrete Raspberry Pi Pico UART port instance.
+ *
+ * Declare one of these, fill the config fields, then pass &port.port to
+ * esp_loader_init_uart(). Hardware initialisation is called automatically
+ * inside esp_loader_init_uart() — no separate init step is needed.
+ *
+ * @code
+ *   pi_pico_port_t port = {
+ *       .port.ops             = &pi_pico_uart_ops,
+ *       .uart_inst            = uart1,
+ *       .baudrate             = 115200,
+ *       .uart_rx_pin_num      = 21,
+ *       .uart_tx_pin_num      = 20,
+ *       .reset_trigger_pin_num = 19,
+ *       .boot_pin_num          = 18,
+ *   };
+ *   esp_loader_t loader;
+ *   esp_loader_init_uart(&loader, &port.port);
+ * @endcode
+ */
 typedef struct {
+    esp_loader_port_t port;              /*!< Embedded port base */
+
+    /* Configuration — fill before calling esp_loader_init_uart() */
     uart_inst_t *uart_inst;
-    uint baudrate;
-    uint uart_rx_pin_num;
-    uint uart_tx_pin_num;
-    uint reset_trigger_pin_num;
-    uint boot_pin_num;
-    bool dont_initialize_peripheral; /* Use if the peripheral has already been initialized,
-                                        useful when using the peripheral for multiple
-                                        purposes (e.g. monitoring) */
-} loader_pi_pico_config_t;
+    uint          baudrate;
+    uint          uart_rx_pin_num;
+    uint          uart_tx_pin_num;
+    uint          reset_trigger_pin_num;
+    uint          boot_pin_num;
+    bool          dont_initialize_peripheral; /*!< Set if UART already initialised externally */
+
+    /* Private runtime state — do not access directly */
+    uint32_t _time_end;
+    bool     _peripheral_needs_deinit;
+} pi_pico_port_t;
 
 /** Port operations vtable for the Raspberry Pi Pico UART port. */
-extern esp_loader_port_t pi_pico_uart_port;
-
-/**
-  * @brief Initializes the Pi Pico UART hardware.
-  *
-  * Call this before esp_loader_init() to configure the UART peripheral.
-  *
-  * @param config[in] Port configuration data
-  *
-  * @return
-  *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_FAIL Initialization failure
-  */
-esp_loader_error_t loader_port_pi_pico_init(const loader_pi_pico_config_t *config);
-
-/**
-  * @brief Deinitialize serial interface.
-  */
-void loader_port_pi_pico_deinit(void);
+extern const esp_loader_port_ops_t pi_pico_uart_ops;
 
 #ifdef __cplusplus
 }

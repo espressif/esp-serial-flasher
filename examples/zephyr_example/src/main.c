@@ -36,49 +36,45 @@ extern const uint8_t app_bin_md5[];
 #define HIGHER_BAUDRATE 230400
 #define DEFAULT_BAUDRATE 115200
 
-/* Get UART DTS entry used as flash interface */
-static const struct device *esp_uart_dev = DEVICE_DT_GET(DT_ALIAS(uart));
-/* Get GPIO pin connected to the ESP's enable pin. */
-static const struct gpio_dt_spec esp_enable_spec = GPIO_DT_SPEC_GET(DT_ALIAS(en), gpios);
-/* Get GPIO pin  connected to the ESP's boot pin. */
-static const struct gpio_dt_spec esp_boot_spec = GPIO_DT_SPEC_GET(DT_ALIAS(boot), gpios);
+/*
+ * Declare the port as static so that _tty, _tty_rx_buf, and _tty_tx_buf
+ * reside in BSS rather than on the thread stack. In the previous API these
+ * buffers were static globals; moving them into a stack-local zephyr_port_t
+ * risks stack overflow on targets with small default stack sizes.
+ */
+static zephyr_port_t port = {
+    .port.ops    = &zephyr_uart_ops,
+    .uart_dev    = DEVICE_DT_GET(DT_ALIAS(uart)),
+    .enable_spec = GPIO_DT_SPEC_GET(DT_ALIAS(en), gpios),
+    .boot_spec   = GPIO_DT_SPEC_GET(DT_ALIAS(boot), gpios),
+};
 
 int main(void)
 {
 
-    const loader_zephyr_config_t config = {
-        .uart_dev = esp_uart_dev,
-        .enable_spec = esp_enable_spec,
-        .boot_spec = esp_boot_spec
-    };
-
     printk("Running ESP Flasher from Zephyr\r\n");
 
-    if (!device_is_ready(esp_uart_dev)) {
+    if (!device_is_ready(port.uart_dev)) {
         printk("ESP UART not ready");
         return -ENODEV;
     }
 
-    if (!device_is_ready(esp_boot_spec.port)) {
+    if (!device_is_ready(port.boot_spec.port)) {
         printk("ESP boot GPIO not ready");
         return -ENODEV;
     }
 
-    if (!device_is_ready(esp_enable_spec.port)) {
+    if (!device_is_ready(port.enable_spec.port)) {
         printk("ESP enable GPIO not ready");
         return -ENODEV;
     }
 
-    gpio_pin_configure_dt(&esp_boot_spec, GPIO_OUTPUT_ACTIVE);
-    gpio_pin_configure_dt(&esp_enable_spec, GPIO_OUTPUT_INACTIVE);
+    gpio_pin_configure_dt(&port.boot_spec, GPIO_OUTPUT_ACTIVE);
+    gpio_pin_configure_dt(&port.enable_spec, GPIO_OUTPUT_INACTIVE);
 
     esp_loader_t loader;
 
-    if (loader_port_zephyr_init(&config) != ESP_LOADER_SUCCESS) {
-        printk("ESP loader init failed");
-        return -EIO;
-    }
-    if (esp_loader_init_uart(&loader, &zephyr_uart_port) != ESP_LOADER_SUCCESS) {
+    if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         printk("ESP loader init failed");
         return -EIO;
     }
@@ -96,7 +92,7 @@ int main(void)
 
     esp_loader_reset_target(&loader);
 
-    if (zephyr_uart_port.ops->change_transmission_rate(&zephyr_uart_port, DEFAULT_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (port.port.ops->change_transmission_rate(&port.port, DEFAULT_BAUDRATE) == ESP_LOADER_SUCCESS) {
         // Delay for skipping the boot message of the targets
         k_msleep(500);
 
@@ -105,7 +101,7 @@ int main(void)
         printk("********************************************\n");
         while (1) {
             uint8_t c;
-            if (uart_poll_in(esp_uart_dev, &c) == 0) {
+            if (uart_poll_in(port.uart_dev, &c) == 0) {
                 printk("%c", c);
             }
         }

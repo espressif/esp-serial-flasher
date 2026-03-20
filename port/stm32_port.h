@@ -46,23 +46,42 @@
 extern "C" {
 #endif
 
+/**
+ * @brief Concrete STM32 UART port instance.
+ *
+ * Declare one of these, fill the config fields, then pass &port.port to
+ * esp_loader_init_uart(). Hardware initialisation is called automatically
+ * inside esp_loader_init_uart() — no separate init step is needed.
+ *
+ * @code
+ *   stm32_port_t port = {
+ *       .port.ops    = &stm32_uart_ops,
+ *       .huart       = &huart2,
+ *       .port_io0    = TARGET_IO0_GPIO_Port,
+ *       .pin_num_io0 = TARGET_IO0_Pin,
+ *       .port_rst    = TARGET_RESET_GPIO_Port,
+ *       .pin_num_rst = TARGET_RESET_Pin,
+ *   };
+ *   esp_loader_t loader;
+ *   esp_loader_init_uart(&loader, &port.port);
+ * @endcode
+ */
 typedef struct {
+    esp_loader_port_t   port;         /*!< Embedded port base */
+
+    /* Configuration — fill before calling esp_loader_init_uart() */
     UART_HandleTypeDef *huart;
-    GPIO_TypeDef *port_io0;
-    uint16_t pin_num_io0;
-    GPIO_TypeDef *port_rst;
-    uint16_t pin_num_rst;
-} loader_stm32_config_t;
+    GPIO_TypeDef       *port_io0;
+    uint16_t            pin_num_io0;
+    GPIO_TypeDef       *port_rst;
+    uint16_t            pin_num_rst;
+
+    /* Private runtime state — do not access directly */
+    uint32_t _time_end;
+} stm32_port_t;
 
 /** Port operations vtable for the STM32 UART port. */
-extern esp_loader_port_t stm32_uart_port;
-
-/**
-  * @brief Initializes the STM32 UART hardware.
-  *
-  * Call this before esp_loader_init() to configure the UART peripheral.
-  */
-void loader_port_stm32_init(loader_stm32_config_t *config);
+extern const esp_loader_port_ops_t stm32_uart_ops;
 
 #ifdef __cplusplus
 }

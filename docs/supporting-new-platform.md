@@ -1,291 +1,277 @@
 # Supporting New Host Platforms
 
-This guide explains how to add support for new host microcontrollers or platforms to ESP Serial Flasher.
+This guide explains how to add support for a new host microcontroller or platform to ESP Serial Flasher.
 
 ## Overview
 
-ESP Serial Flasher uses a port layer abstraction to support different host platforms. To add support for a new host, implement the `esp_esp_loader_port_ops_t` vtable defined in `include/esp_loader_io.h` and expose it as a constant for application code to use.
+ESP Serial Flasher uses a port-layer abstraction based on a vtable (`esp_loader_port_ops_t`) embedded inside a caller-owned port struct. Each port struct embeds `esp_loader_port_t` as its first member, which allows the library to dispatch hardware operations without knowing the concrete type. Callbacks recover the full struct with the `container_of` macro.
+
+```
+ ┌─────────────────────────────────────────┐
+ │  my_platform_port_t  (your struct)      │
+ │ ┌───────────────────────────────────┐   │
+ │ │  esp_loader_port_t  port          │ ◄─┼── pass &port to esp_loader_init_*()
+ │ │  .ops ──────────────────────────► │   │
+ │ └───────────────────────────────────┘   │
+ │  uart_handle, gpio_pin, _time_end, …    │
+ └─────────────────────────────────────────┘
+           │ container_of(port, my_platform_port_t, port)
+           ▼
+   callbacks access per-instance state
+```
 
 ## Port Operations Vtable
 
-Port operations are split into per-protocol typed structs. Each struct embeds
-`esp_esp_loader_port_ops_t` as its first member (`common`), which contains the
-fields that are identical across all protocols. Provide the concrete
-per-protocol type that matches the `esp_loader_init_*` function you intend to call.
+All operations are dispatched through `esp_loader_port_ops_t` (defined in `include/esp_loader_io.h`):
 
 ```c
-/* Common to all protocols (always the first member of the per-protocol structs) */
 typedef struct {
-    void               (*enter_bootloader)(void);
-    void               (*reset_target)(void);
-    void               (*start_timer)(uint32_t ms);
-    uint32_t           (*remaining_time)(void);
-    void               (*delay_ms)(uint32_t ms);
-    void               (*debug_print)(const char *str);         /* NULL = no debug output */
-    esp_loader_error_t (*change_transmission_rate)(uint32_t rate); /* NULL if not supported */
-} esp_esp_loader_port_ops_t;
+    esp_loader_error_t (*init)(esp_loader_port_t *port);             /* NULL = no init needed */
+    void               (*deinit)(esp_loader_port_t *port);           /* NULL = no deinit needed */
+    void               (*enter_bootloader)(esp_loader_port_t *port);
+    void               (*reset_target)(esp_loader_port_t *port);
+    void               (*start_timer)(esp_loader_port_t *port, uint32_t ms);
+    uint32_t           (*remaining_time)(esp_loader_port_t *port);
+    void               (*delay_ms)(esp_loader_port_t *port, uint32_t ms);
+    void               (*debug_print)(esp_loader_port_t *port, const char *str); /* NULL = no debug */
+    esp_loader_error_t (*change_transmission_rate)(esp_loader_port_t *port, uint32_t rate); /* NULL if unsupported */
 
-/* UART — pass to esp_loader_init_uart() */
-typedef struct {
-    esp_esp_loader_port_ops_t common;
-    esp_loader_error_t (*write)(const uint8_t *data, uint16_t size, uint32_t timeout);
-    esp_loader_error_t (*read)(uint8_t *data, uint16_t size, uint32_t timeout);
-} esp_loader_uart_port_ops_t;
+    /* UART / USB / SPI */
+    esp_loader_error_t (*write)(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout);
+    esp_loader_error_t (*read)(esp_loader_port_t *port, uint8_t *data, uint16_t size, uint32_t timeout);
 
-/* USB CDC-ACM — pass to esp_loader_init_usb() */
-typedef struct {
-    esp_esp_loader_port_ops_t common;
-    esp_loader_error_t (*write)(const uint8_t *data, uint16_t size, uint32_t timeout);
-    esp_loader_error_t (*read)(uint8_t *data, uint16_t size, uint32_t timeout);
-} esp_loader_usb_port_ops_t;
+    /* SPI only */
+    void               (*spi_set_cs)(esp_loader_port_t *port, uint32_t level);
 
-/* SPI — pass to esp_loader_init_spi() */
-typedef struct {
-    esp_esp_loader_port_ops_t common;
-    esp_loader_error_t (*write)(const uint8_t *data, uint16_t size, uint32_t timeout);
-    esp_loader_error_t (*read)(uint8_t *data, uint16_t size, uint32_t timeout);
-    void               (*spi_set_cs)(uint32_t level);
-} esp_loader_spi_port_ops_t;
-
-/* SDIO — pass to esp_loader_init_sdio() */
-typedef struct {
-    esp_esp_loader_port_ops_t common;
-    esp_loader_error_t (*sdio_write)(uint32_t function, uint32_t addr,
+    /* SDIO only */
+    esp_loader_error_t (*sdio_write)(esp_loader_port_t *port, uint32_t function, uint32_t addr,
                                      const uint8_t *data, uint16_t size, uint32_t timeout);
-    esp_loader_error_t (*sdio_read)(uint32_t function, uint32_t addr,
+    esp_loader_error_t (*sdio_read)(esp_loader_port_t *port, uint32_t function, uint32_t addr,
                                     uint8_t *data, uint16_t size, uint32_t timeout);
-    esp_loader_error_t (*sdio_card_init)(void);
-} esp_loader_sdio_port_ops_t;
+    esp_loader_error_t (*sdio_card_init)(esp_loader_port_t *port);
+} esp_loader_port_ops_t;
 ```
 
-## Required Members
+Set unused pointers to `NULL`.
 
-### `write` (UART, USB, SPI)
+## Required and Optional Members
+
+### `init` / `deinit` (optional)
 
 ```c
-esp_loader_error_t (*write)(const uint8_t *data, uint16_t size, uint32_t timeout);
+esp_loader_error_t (*init)(esp_loader_port_t *port);
+void               (*deinit)(esp_loader_port_t *port);
 ```
 
-Write bytes to the transport. Present in `esp_loader_uart_port_ops_t`,
-`esp_loader_usb_port_ops_t`, and `esp_loader_spi_port_ops_t`; not present for
-SDIO (use `sdio_write` instead).
+`init` is called automatically by `esp_loader_init_uart()` / `esp_loader_init_spi()` / etc. before the connection phase. Use it to open the serial port, configure GPIO, install peripheral drivers, etc.
 
-- `data` — source buffer
-- `size` — number of bytes to send
-- `timeout` — timeout in milliseconds
-- Returns `ESP_LOADER_SUCCESS` on success.
-
-> [!NOTE]
-> Should block until all bytes are queued/transmitted or an error occurs.
+`deinit` is the caller's responsibility to invoke when the port is no longer needed — the library never calls it automatically. Call it directly: `port.port.ops->deinit(&port.port)`. Set both to `NULL` if the peripheral is already configured before the port struct is created (e.g. STM32 with CubeMX-generated HAL code) or if teardown is not needed.
 
 ---
 
-### `read` (UART, USB, SPI)
+### `write` / `read` (UART, USB, SPI)
 
 ```c
-esp_loader_error_t (*read)(uint8_t *data, uint16_t size, uint32_t timeout);
+esp_loader_error_t (*write)(esp_loader_port_t *port, const uint8_t *data,
+                             uint16_t size, uint32_t timeout);
+esp_loader_error_t (*read)(esp_loader_port_t *port, uint8_t *data,
+                            uint16_t size, uint32_t timeout);
 ```
 
-Read bytes from the transport. Present in `esp_loader_uart_port_ops_t`,
-`esp_loader_usb_port_ops_t`, and `esp_loader_spi_port_ops_t`; not present for
-SDIO (use `sdio_read` instead).
+Transmit / receive bytes over the transport.
 
-- `data` — destination buffer
-- `size` — requested bytes
-- `timeout` — maximum time to wait [ms]
-- Returns `ESP_LOADER_SUCCESS` on success, `ESP_LOADER_ERROR_TIMEOUT` when the deadline expires before `size` bytes arrive.
+- Block until all bytes are sent / received or `timeout` (ms) elapses.
+- Return `ESP_LOADER_SUCCESS` on success, `ESP_LOADER_ERROR_TIMEOUT` on timeout.
 
-> [!NOTE]
-> Should block until at least 1 byte is read or `timeout` elapses. May be called repeatedly by higher layers until `size` is satisfied.
+Not present for SDIO — use `sdio_write` / `sdio_read` instead.
 
 ---
 
 ### `enter_bootloader`
 
 ```c
-void (*enter_bootloader)(void);
+void (*enter_bootloader)(esp_loader_port_t *port);
 ```
 
-Put the target device into ROM bootloader mode.
+Put the target into ROM bootloader mode (assert BOOT/GPIO0, toggle RESET).
 
 > [!NOTE]
-> Typical UART sequence: assert BOOT low, hold RESET low for `SERIAL_FLASHER_RESET_HOLD_TIME_MS`, keep BOOT asserted for `SERIAL_FLASHER_BOOT_HOLD_TIME_MS`, then release. Respect `SERIAL_FLASHER_RESET_INVERT` and `SERIAL_FLASHER_BOOT_INVERT` settings when controlling GPIOs.
+> Respect `SERIAL_FLASHER_RESET_INVERT` and `SERIAL_FLASHER_BOOT_INVERT` when
+> controlling GPIOs. Hold times are `SERIAL_FLASHER_RESET_HOLD_TIME_MS` and
+> `SERIAL_FLASHER_BOOT_HOLD_TIME_MS`.
 
 ---
 
 ### `reset_target`
 
 ```c
-void (*reset_target)(void);
+void (*reset_target)(esp_loader_port_t *port);
 ```
 
-Toggle the hardware reset pin to restart the target.
-
-> [!NOTE]
-> Reset pin should stay asserted for at least `SERIAL_FLASHER_RESET_HOLD_TIME_MS` milliseconds.
+Toggle the hardware RESET pin to restart the target. Hold for at least `SERIAL_FLASHER_RESET_HOLD_TIME_MS`.
 
 ---
 
-### `start_timer`
+### `start_timer` / `remaining_time`
 
 ```c
-void (*start_timer)(uint32_t ms);
+void     (*start_timer)(esp_loader_port_t *port, uint32_t ms);
+uint32_t (*remaining_time)(esp_loader_port_t *port);
 ```
 
-Start a one-shot deadline timer.
-
-- `ms` — timeout duration in milliseconds
-
-> [!NOTE]
-> Subsequent calls to `remaining_time` should reflect remaining time relative to this start.
-
----
-
-### `remaining_time`
-
-```c
-uint32_t (*remaining_time)(void);
-```
-
-Return remaining milliseconds since the last `start_timer` call, or `0` if the timer has elapsed. Must never return a negative value.
+One-shot deadline timer. `remaining_time` returns milliseconds until the deadline, or `0` when elapsed. These two functions work together; store the deadline in the concrete port struct.
 
 ---
 
 ### `delay_ms`
 
 ```c
-void (*delay_ms)(uint32_t ms);
+void (*delay_ms)(esp_loader_port_t *port, uint32_t ms);
 ```
 
-Block for the given number of milliseconds.
+Blocking delay in milliseconds.
 
 ---
 
-## Optional Members
-
-Set to `NULL` when not needed.
-
-### `debug_print`
+### `debug_print` (optional)
 
 ```c
-void (*debug_print)(const char *str);
+void (*debug_print)(esp_loader_port_t *port, const char *str);
 ```
 
-Print a debug message string from the library. Route to your platform's logging/console facility. Pass `NULL` to suppress all debug output.
+Route library debug messages to your platform's console/logger. Set to `NULL` to suppress all output.
 
 ---
 
-### `change_transmission_rate`
+### `change_transmission_rate` (optional)
 
 ```c
-esp_loader_error_t (*change_transmission_rate)(uint32_t rate);
+esp_loader_error_t (*change_transmission_rate)(esp_loader_port_t *port, uint32_t rate);
 ```
 
-Change the baud rate / peripheral clock speed. Used after initial sync to speed up transfers. Set to `NULL` for SDIO (rate is managed by the host driver).
+Reconfigure the peripheral baud rate / clock speed. Set to `NULL` for SDIO (the host driver manages the clock).
 
 ---
 
-## Interface-Specific Members
-
-### SPI Interface
+### SPI-specific: `spi_set_cs`
 
 ```c
-void (*spi_set_cs)(uint32_t level);
+void (*spi_set_cs)(esp_loader_port_t *port, uint32_t level);
 ```
 
-Control the SPI chip-select pin. This field is only present in `esp_loader_spi_port_ops_t`.
+Drive the SPI chip-select GPIO. Required for SPI ports.
 
 ---
 
-### SDIO Interface
+### SDIO-specific: `sdio_write`, `sdio_read`, `sdio_card_init`
 
 ```c
-esp_loader_error_t (*sdio_write)(uint32_t function, uint32_t addr,
-                                 const uint8_t *data, uint16_t size, uint32_t timeout);
-
-esp_loader_error_t (*sdio_read)(uint32_t function, uint32_t addr,
-                                uint8_t *data, uint16_t size, uint32_t timeout);
-
-esp_loader_error_t (*sdio_card_init)(void);
+esp_loader_error_t (*sdio_write)(esp_loader_port_t *port, uint32_t function,
+                                 uint32_t addr, const uint8_t *data,
+                                 uint16_t size, uint32_t timeout);
+esp_loader_error_t (*sdio_read)(esp_loader_port_t *port, uint32_t function,
+                                uint32_t addr, uint8_t *data,
+                                uint16_t size, uint32_t timeout);
+esp_loader_error_t (*sdio_card_init)(esp_loader_port_t *port);
 ```
 
-These fields are only present in `esp_loader_sdio_port_ops_t`.
-
-- `sdio_write` / `sdio_read` handle SDIO function number and address routing.
-- `sdio_card_init` initializes the SDIO bus (bus width, speed, interrupts).
+These replace `write`/`read` for SDIO. `sdio_card_init` performs bus-level card initialisation and is called once per connection (before `enter_bootloader`).
 
 ---
 
 ## Implementation Steps
 
-There are two main approaches to adding support for your platform:
-
-### Option A: Contributing to the ESP Serial Flasher Repository
+### Option A: Contributing to the Repository
 
 #### 1. Add Port Files
-
-Place your implementation under `port/`:
 
 ```text
 port/your_platform_port.c
 port/your_platform_port.h
 ```
 
-#### 2. Implement the Vtable
+#### 2. Define the Port Struct
 
-In `your_platform_port.c`, implement each required function as a `static` helper and assign it to a `const esp_esp_loader_port_ops_t`:
-
-```c
-#include "esp_loader_io.h"
-#include "your_platform_port.h"
-
-static esp_loader_error_t my_write(const uint8_t *data, uint16_t size, uint32_t timeout)
-{
-    // platform-specific write
-}
-
-static esp_loader_error_t my_read(uint8_t *data, uint16_t size, uint32_t timeout)
-{
-    // platform-specific read
-}
-
-static void my_enter_bootloader(void) { /* assert BOOT, toggle RESET */ }
-static void my_reset_target(void)     { /* toggle RESET */ }
-static void my_start_timer(uint32_t ms) { /* start deadline timer */ }
-static uint32_t my_remaining_time(void) { /* return ms remaining */ }
-static void my_delay_ms(uint32_t ms)    { /* blocking delay */ }
-static void my_debug_print(const char *str) { printf("%s", str); }
-static esp_loader_error_t my_change_rate(uint32_t rate) { /* reconfigure peripheral */ }
-
-const esp_loader_uart_port_ops_t your_platform_port_ops = {
-    .common = {
-        .enter_bootloader         = my_enter_bootloader,
-        .reset_target             = my_reset_target,
-        .start_timer              = my_start_timer,
-        .remaining_time           = my_remaining_time,
-        .delay_ms                 = my_delay_ms,
-        .debug_print              = my_debug_print,
-        .change_transmission_rate = my_change_rate,
-    },
-    .write = my_write,
-    .read  = my_read,
-};
-```
-
-#### 3. Expose the Vtable in the Header
+In `your_platform_port.h`:
 
 ```c
-// your_platform_port.h
 #pragma once
 #include "esp_loader_io.h"
 
-typedef struct { /* your platform config */ } your_platform_config_t;
+typedef struct {
+    esp_loader_port_t port;          /* embedded base — pass &port to esp_loader_init_*().
+                                        By convention placed first in the struct. */
 
-/** Port operations vtable for your platform (UART). */
-extern const esp_loader_uart_port_ops_t your_platform_port_ops;
+    /* Configuration fields — set before calling esp_loader_init_*() */
+    uart_handle_t *uart;
+    uint32_t       reset_pin;
+    uint32_t       boot_pin;
+    /* ... */
 
-esp_loader_error_t loader_port_your_platform_init(const your_platform_config_t *config);
-void               loader_port_your_platform_deinit(void);
+    /* Private runtime state — prefix with _ by convention */
+    uint32_t _time_end;
+} your_platform_port_t;
+
+/** Port operations vtable. */
+extern const esp_loader_port_ops_t your_platform_ops;
+```
+
+#### 3. Implement the Vtable
+
+In `your_platform_port.c`:
+
+```c
+#include "your_platform_port.h"
+
+static esp_loader_error_t your_port_init(esp_loader_port_t *port)
+{
+    your_platform_port_t *p = container_of(port, your_platform_port_t, port);
+    /* Open / configure hardware using p->uart, p->reset_pin, etc. */
+    return ESP_LOADER_SUCCESS;
+}
+
+static esp_loader_error_t your_write(esp_loader_port_t *port, const uint8_t *data,
+                                     uint16_t size, uint32_t timeout)
+{
+    your_platform_port_t *p = container_of(port, your_platform_port_t, port);
+    /* transmit via p->uart */
+}
+
+static esp_loader_error_t your_read(esp_loader_port_t *port, uint8_t *data,
+                                    uint16_t size, uint32_t timeout)
+{
+    your_platform_port_t *p = container_of(port, your_platform_port_t, port);
+    /* receive via p->uart */
+}
+
+static void your_enter_bootloader(esp_loader_port_t *port) { /* ... */ }
+static void your_reset_target(esp_loader_port_t *port)     { /* ... */ }
+static void your_start_timer(esp_loader_port_t *port, uint32_t ms)
+{
+    your_platform_port_t *p = container_of(port, your_platform_port_t, port);
+    p->_time_end = now_ms() + ms;
+}
+static uint32_t your_remaining_time(esp_loader_port_t *port)
+{
+    your_platform_port_t *p = container_of(port, your_platform_port_t, port);
+    int32_t r = (int32_t)(p->_time_end - now_ms());
+    return (r > 0) ? (uint32_t)r : 0;
+}
+static void your_delay_ms(esp_loader_port_t *port, uint32_t ms) { platform_sleep(ms); }
+
+const esp_loader_port_ops_t your_platform_ops = {
+    .init                     = your_port_init,
+    .deinit                   = NULL,
+    .enter_bootloader         = your_enter_bootloader,
+    .reset_target             = your_reset_target,
+    .start_timer              = your_start_timer,
+    .remaining_time           = your_remaining_time,
+    .delay_ms                 = your_delay_ms,
+    .debug_print              = NULL,
+    .change_transmission_rate = NULL,
+    .write                    = your_write,
+    .read                     = your_read,
+};
 ```
 
 #### 4. Update the Build System
@@ -295,16 +281,15 @@ Add your port to the main `CMakeLists.txt`:
 ```cmake
 elseif(PORT STREQUAL "YOUR_PLATFORM")
     list(APPEND flasher_srcs "port/your_platform_port.c")
-    # Add any platform-specific dependencies here
 ```
 
 ---
 
 ### Option B: Using ESP Serial Flasher as an External Library
 
-This approach uses ESP Serial Flasher as a submodule or external dependency in your own project.
+This approach uses ESP Serial Flasher as a submodule or external dependency.
 
-#### 1. Add ESP Serial Flasher to Your Project
+#### 1. Add as Submodule
 
 ```bash
 git submodule add https://github.com/espressif/esp-serial-flasher.git external/esp-serial-flasher
@@ -316,12 +301,12 @@ git submodule update --init --recursive
 ```text
 your_project/
 ├── main/
-│   ├── main.c                # Your application code
-│   ├── your_port.c           # Port implementation
-│   ├── your_port.h           # Vtable export + init/deinit declarations
+│   ├── main.c
+│   ├── your_port.c
+│   ├── your_port.h
 │   └── CMakeLists.txt
 ├── external/
-│   └── esp-serial-flasher/   # Git submodule
+│   └── esp-serial-flasher/
 ├── CMakeLists.txt
 └── .gitmodules
 ```
@@ -361,60 +346,52 @@ target_include_directories(flasher PRIVATE
 target_link_libraries(your_app PRIVATE flasher)
 ```
 
-**Key Points:**
+Set `PORT=USER_DEFINED` so ESP Serial Flasher does not compile any built-in port.
 
-- Set `PORT=USER_DEFINED` to tell ESP Serial Flasher to expect an external port implementation.
-- Add your port `.c` file to the `flasher` target via `target_sources(flasher PRIVATE ...)`.
-
-#### 4. Use the Port in Application Code
+#### 4. Use the Port
 
 ```c
 #include "esp_loader.h"
 #include "your_port.h"
 
-void app_main(void)
+int main(void)
 {
-    const your_platform_config_t cfg = { /* ... */ };
-    loader_port_your_platform_init(&cfg);
+    your_platform_port_t port = {
+        .port.ops  = &your_platform_ops,
+        .uart      = &my_uart_handle,
+        .reset_pin = 25,
+        .boot_pin  = 26,
+    };
 
     esp_loader_t loader;
-    esp_loader_init_uart(&loader, &your_platform_port_ops);
+    esp_loader_init_uart(&loader, &port.port);
 
     esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
     esp_loader_connect(&loader, &args);
-
-    // flash, read, etc. ...
+    /* flash, read, etc. */
 }
 ```
 
 ---
 
-## Submitting Your Port
+## Reference Implementations
 
-### Before Submitting
+Study the existing ports for examples:
 
-1. Test thoroughly on your platform.
-2. Follow coding standards (see [Contributing Guide](contributing.md)).
-3. Add documentation for your platform.
-4. Provide or reference a minimal example demonstrating usage.
-
-### Pull Request
-
-1. Open an issue first to discuss the new platform support.
-2. Create a pull request with your implementation.
-3. Include an example and documentation.
-4. Provide testing results.
+| Platform          | Files                               | Notes                                |
+| ----------------- | ----------------------------------- | ------------------------------------ |
+| Raspberry Pi      | `port/raspberry_port.{c,h}`         | pigpio-based GPIO                    |
+| STM32 HAL         | `port/stm32_port.{c,h}`             | Pre-initialised peripheral (no init) |
+| Zephyr            | `port/zephyr_port.{c,h}`            | TTY-based UART with GPIO DT specs    |
+| ESP32 UART        | `port/esp32_port.{c,h}`             | Full example with peripheral init    |
+| ESP32 SPI         | `port/esp32_spi_port.{c,h}`         | SPI with CS GPIO and strapping pins  |
+| ESP32 SDIO        | `port/esp32_sdio_port.{c,h}`        | Reference SDIO implementation        |
+| ESP32 USB CDC-ACM | `port/esp32_usb_cdc_acm_port.{c,h}` | Reconnection-capable USB port        |
+| Raspberry Pi Pico | `port/pi_pico_port.{c,h}`           | SDK-based UART with baud tolerance   |
 
 ---
 
 ## Getting Help
 
-### Resources
-
-- Study existing port implementations in `port/` — `port/raspberry_port.c` is a good minimal example.
-- See `include/esp_loader_io.h` for the vtable definition and member documentation.
-- Review `examples/` for usage patterns.
-
-### Support
-
+- See `include/esp_loader_io.h` for the vtable definition and `container_of` macro.
 - Open a [GitHub issue](https://github.com/espressif/esp-serial-flasher/issues) for questions.

@@ -64,27 +64,24 @@ void slave_monitor(void *arg)
 
 void app_main(void)
 {
-    const loader_esp32_sdio_config_t config = {
-        .slot = SDMMC_HOST_SLOT_1,
-        .max_freq_khz = SDMMC_FREQ_DEFAULT,
-        .reset_trigger_pin = GPIO_NUM_54,
-        .boot_pin = GPIO_NUM_53,
-        .bus_width = SDIO_4BIT,
-        .sdio_d0_pin = GPIO_NUM_50,
-        .sdio_d1_pin = GPIO_NUM_49,
-        .sdio_d2_pin = GPIO_NUM_48,
-        .sdio_d3_pin = GPIO_NUM_47,
-        .sdio_clk_pin = GPIO_NUM_51,
-        .sdio_cmd_pin = GPIO_NUM_52,
-    };
-
     esp_loader_t loader;
 
-    if (loader_port_esp32_sdio_init(&config) != ESP_LOADER_SUCCESS) {
-        ESP_LOGE(TAG, " SDIO initialization failed.");
-        abort();
-    }
-    if (esp_loader_init_sdio(&loader, &esp32_sdio_port) != ESP_LOADER_SUCCESS) {
+    esp32_sdio_port_t port = {
+        .port.ops          = &esp32_sdio_ops,
+        .slot              = SDMMC_HOST_SLOT_1,
+        .max_freq_khz      = SDMMC_FREQ_DEFAULT,
+        .reset_trigger_pin = GPIO_NUM_54,
+        .boot_pin          = GPIO_NUM_53,
+        .bus_width         = SDIO_4BIT,
+        .sdio_d0_pin       = GPIO_NUM_50,
+        .sdio_d1_pin       = GPIO_NUM_49,
+        .sdio_d2_pin       = GPIO_NUM_48,
+        .sdio_d3_pin       = GPIO_NUM_47,
+        .sdio_clk_pin      = GPIO_NUM_51,
+        .sdio_cmd_pin      = GPIO_NUM_52,
+    };
+
+    if (esp_loader_init_sdio(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, " SDIO initialization failed.");
         abort();
     }

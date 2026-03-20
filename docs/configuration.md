@@ -22,20 +22,18 @@ Starting from v2, the communication protocol is **selected at runtime** by calli
 
 ```c
 esp_loader_t loader;
-esp_loader_init_uart(&loader, &esp32_uart_port_ops);   // UART
-esp_loader_init_usb(&loader, &esp32_usb_cdc_acm_port_ops); // USB CDC-ACM
-esp_loader_init_spi(&loader, &esp32_spi_port_ops);    // SPI
-esp_loader_init_sdio(&loader, &esp32_sdio_port_ops);  // SDIO
+esp32_port_t port = { .port.ops = &esp32_uart_ops, /* ... */ };
+esp_loader_init_uart(&loader, &port.port);   // UART
 ```
 
-Each init function accepts the matching per-protocol port ops type:
+All four init functions accept an `esp_loader_port_t *` (the embedded base of a caller-owned port struct):
 
-| Init function            | Port ops type                | Interface   | Notes                                  |
-| ------------------------ | ---------------------------- | ----------- | -------------------------------------- |
-| `esp_loader_init_uart()` | `esp_loader_uart_port_ops_t` | UART        | Default; full feature set              |
-| `esp_loader_init_usb()`  | `esp_loader_usb_port_ops_t`  | USB CDC-ACM | Full feature set                       |
-| `esp_loader_init_spi()`  | `esp_loader_spi_port_ops_t`  | SPI         | RAM download only                      |
-| `esp_loader_init_sdio()` | `esp_loader_sdio_port_ops_t` | SDIO        | Experimental; limited platform support |
+| Init function            | Interface   | Notes                                  |
+| ------------------------ | ----------- | -------------------------------------- |
+| `esp_loader_init_uart()` | UART        | Default; full feature set              |
+| `esp_loader_init_usb()`  | USB CDC-ACM | Full feature set                       |
+| `esp_loader_init_spi()`  | SPI         | RAM download only                      |
+| `esp_loader_init_sdio()` | SDIO        | Experimental; limited platform support |
 
 Functions not supported by a given protocol return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC`.
 
@@ -47,26 +45,26 @@ For ESP-IDF builds, you choose which port implementations to compile into the li
 
 - **Type**: Kconfig (`bool`)
 - **Default**: Enabled (`y`)
-- **Description**: Compile the ESP32 UART port (`esp32_port.c`). Exposes `esp32_uart_port_ops`.
+- **Description**: Compile the ESP32 UART port (`esp32_port.c`). Exposes `esp32_uart_ops`.
 
 #### `CONFIG_SERIAL_FLASHER_PORT_SPI`
 
 - **Type**: Kconfig (`bool`)
 - **Default**: Disabled
-- **Description**: Compile the ESP32 SPI port (`esp32_spi_port.c`). Exposes `esp32_spi_port_ops`. Only supports RAM download operations.
+- **Description**: Compile the ESP32 SPI port (`esp32_spi_port.c`). Exposes `esp32_spi_ops`. Only supports RAM download operations.
 
 #### `CONFIG_SERIAL_FLASHER_PORT_SDIO`
 
 - **Type**: Kconfig (`bool`)
 - **Default**: Disabled
-- **Description**: Compile the ESP32 SDIO port (`esp32_sdio_port.c`). Exposes `esp32_sdio_port_ops`. Experimental; only available on targets with SDIO host support.
+- **Description**: Compile the ESP32 SDIO port (`esp32_sdio_port.c`). Exposes `esp32_sdio_ops`. Experimental; only available on targets with SDIO host support.
 
 #### `CONFIG_SERIAL_FLASHER_PORT_USB_CDC_ACM`
 
 - **Type**: Kconfig (`bool`)
 - **Default**: Disabled
 - **Depends on**: `SOC_USB_OTG_SUPPORTED`
-- **Description**: Compile the ESP32 USB CDC-ACM port (`esp32_usb_cdc_acm_port.c`). Exposes `esp32_usb_cdc_acm_port_ops`. Requires the `espressif/usb_host_cdc_acm` managed component.
+- **Description**: Compile the ESP32 USB CDC-ACM port (`esp32_usb_cdc_acm_port.c`). Exposes `esp32_usb_cdc_acm_ops`. Requires the `espressif/usb_host_cdc_acm` managed component.
 
 ### Retry and Timing Configuration
 
