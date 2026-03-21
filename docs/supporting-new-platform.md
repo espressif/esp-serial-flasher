@@ -316,7 +316,7 @@ your_project/
 **Root CMakeLists.txt:**
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 project(your_project C)
 
 set(PORT USER_DEFINED)

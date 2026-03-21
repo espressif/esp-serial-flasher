@@ -83,7 +83,7 @@ cmake .. && cmake --build .
 ```
 
 > [!NOTE]
-> CMake 3.13 or later is required.
+> CMake 3.22 or later is required.
 
 Binaries to be flashed are placed in the `binaries.c` file for each possible target and converted to C arrays. Flash integrity verification is enabled by default.
 

@@ -13,12 +13,19 @@ Qemu tests use emulated esp32 to test the correctness of the library.
 
 ### Installation
 
-Please refer to [building qemu](https://github.com/espressif/qemu) for instructions on how to compile.
+Install QEMU for ESP-IDF by following the [official ESP-IDF QEMU guide](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/tools/qemu.html).
 
-QEMU_PATH environment variable pointing to compiled `qemu/build/xtensa-softmmu/qemu-system-xtensa` has to be defined.
+`qemu-system-xtensa` must be available on `PATH`. This is the case by default when using the ESP-IDF installer or the `espressif/idf` Docker image.
+
+Optionally, if your `qemu-system-xtensa` binary is not on `PATH`, set `QEMU_PATH` to point to it:
 
 ```bash
 export QEMU_PATH=path_to_qemu-system-xtensa
+```
+
+### Running
+
+```bash
 ./run_qemu_test.sh
 ```
 

@@ -76,6 +76,10 @@ static esp_loader_error_t test_port_write(esp_loader_port_t *port, const uint8_t
 #endif
         written += bytes_written;
     } while (written != size);
+
+    // Give QEMU time to complete the async MTD write before the next command arrives,
+    // otherwise the ROM may respond with INVALID_CRC or INVALID_COMMAND.
+    this_thread::sleep_for(chrono::milliseconds(10));
     return ESP_LOADER_SUCCESS;
 }
 

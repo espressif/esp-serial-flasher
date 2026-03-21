@@ -16,7 +16,6 @@ variables:
   STM32_CUBE_H7_REPO: https://github.com/STMicroelectronics/STM32CubeH7
   STM32_CUBE_H7_REPO_TAG: v1.11.1
   ARM_TOOLCHAIN_URL: https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz?rev=e434b9ea4afc4ed7998329566b764309&hash=CA590209F5774EE1C96E6450E14A3E26
-  QEMU_PATH: /opt/qemu/bin/qemu-system-xtensa
   ZEPHYR_REPO: https://github.com/zephyrproject-rtos/zephyr.git
   ZEPHYR_REPO_REV: v4.0.0
   ZEPHYR_TOOLCHAIN: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.0/toolchain_linux-x86_64_xtensa-espressif_esp32_zephyr-elf.tar.xz
@@ -322,13 +321,12 @@ build_host_pi:
 
 test_host_qemu:
   stage: test
-  image: ${CI_DOCKER_REGISTRY}/qemu:esp-develop-20191124
+  image: espressif/idf:release-v6.0
   tags:
     - build
     - internet
   script:
     - cd $CI_PROJECT_DIR/test
-    - export QEMU_PATH=/opt/qemu/bin/qemu-system-xtensa
     - ./run_qemu_test.sh
 
 .test_template:

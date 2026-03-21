@@ -295,7 +295,7 @@ examples/
 
 ### Build Tools
 
-- **CMake**: 3.5+ (3.10+ recommended to avoid warnings)
+- **CMake**: 3.22+
 - **GCC/Clang**: Standard C99 compiler
 - **Python**: 3.11+ for testing and pre-commit
 

@@ -467,7 +467,9 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
 
     unsigned int attempt = 0;
     esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;
+    uint32_t saved_seq = cfg->_state._sequence_number;
     do {
+        cfg->_state._sequence_number = saved_seq;
         loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
         result = loader_flash_data_cmd(loader, &cfg->_state._sequence_number, (uint8_t *)payload, cfg->block_size);
         attempt++;
@@ -557,7 +559,9 @@ esp_loader_error_t esp_loader_flash_deflate_write(esp_loader_t *loader, esp_load
 
     unsigned int attempt = 0;
     esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;
+    uint32_t saved_seq = cfg->_state._sequence_number;
     do {
+        cfg->_state._sequence_number = saved_seq;
         loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
         result = loader_flash_deflate_data_cmd(loader, &cfg->_state._sequence_number, payload, size);
         attempt++;
