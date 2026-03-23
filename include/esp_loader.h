@@ -190,6 +190,7 @@ typedef struct esp_loader {
     const struct target_registers_t        *_reg;
     uint32_t  _target_flash_size;
     bool      _stub_running;
+    bool      _spi_attached;
     union {
         struct {
             uint32_t sip_seq_tx;
