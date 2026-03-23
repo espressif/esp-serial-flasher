@@ -221,7 +221,7 @@ This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENS
 The following limitations are currently known:
 
 - Binary image size must be known before flashing
-- ESP8266 targets do not support the MD5 verify command; set `skip_verify = true` in `esp_loader_flash_cfg_t` for ESP8266 targets
+- ESP8266 targets do not support the MD5 verify command without stub; set `skip_verify = true` in `esp_loader_flash_cfg_t` for ESP8266 targets
 - SPI interface only supports RAM download operations
 - SDIO interface is experimental with limited platform support
 - Only one target can be flashed at a time
