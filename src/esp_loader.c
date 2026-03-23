@@ -102,7 +102,7 @@ esp_loader_error_t esp_loader_init_sdio(esp_loader_t *loader, esp_loader_port_t 
 }
 
 /*
- * Lazily attaches the SPI flash to the ROM bootloader targets.
+ * Attaches the SPI flash to the ROM bootloader targets if not already attached.
  * Must be called before any flash operation (handled via init_flash_params).
  * Safe to call multiple times — it is a no-op once already attached.
  */
@@ -201,15 +201,13 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
 
 esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
         esp_loader_connect_args_t *connect_args,
-        const uint32_t flash_size, const target_chip_t target_chip)
+        const uint32_t flash_size)
 {
-
     if (loader->_protocol->spi_attach == NULL) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
     loader->_target_flash_size = flash_size;
-    loader->_target = target_chip;
 
     loader->_port->ops->enter_bootloader(loader->_port);
 
@@ -217,13 +215,12 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
 
-    if (loader->_target == ESP8266_CHIP) {
-        loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-        RETURN_ON_ERROR(loader_flash_begin_cmd(loader, 0, 0, 0, 0, 0, false));
-    } else {
-        loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-        RETURN_ON_ERROR(loader->_protocol->spi_attach(loader, 0));
+    if (loader->_target == ESP8266_CHIP || loader->_target == ESP32_CHIP) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
+
+    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+    RETURN_ON_ERROR(loader->_protocol->spi_attach(loader, 0));
 
     /* Mark as attached so loader_ensure_spi_attached() does not repeat the call.
      * spi_config is 0 here because efuse registers are not readable in secure
