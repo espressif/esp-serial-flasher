@@ -12,7 +12,7 @@ def pytest_configure(config):
 
     if "stm32" in target:
         config.option.embedded_services = "serial"
-    elif "raspberry" in target:
+    elif "linux" in target:
         pass
     elif "pi_pico" in target:
         config.option.embedded_services = "serial"

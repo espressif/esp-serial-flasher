@@ -2,7 +2,7 @@
 
 | Document                                               | Description                                                                 |
 | ------------------------------------------------------ | --------------------------------------------------------------------------- |
-| [Platform Setup](platform-setup.md)                    | Setup instructions for ESP32, STM32, Raspberry Pi, and other platforms      |
+| [Platform Setup](platform-setup.md)                    | Setup instructions for ESP32, STM32, Linux, and other platforms             |
 | [Hardware Connections](hardware-connections.md)        | Wiring diagrams and pin assignments for UART, SPI, SDIO, and USB interfaces |
 | [Configuration](configuration.md)                      | Build options, CMake variables, and feature configuration                   |
 | [Supporting New Platforms](supporting-new-platform.md) | Guide for adding support for new host platforms                             |

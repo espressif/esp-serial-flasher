@@ -16,6 +16,7 @@ This guide describes the breaking changes introduced in v2 and explains how to u
 | Error type header           | Defined in `esp_loader.h`                                     | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                              |
 | Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*` | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable                 |
 | `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues     | `reboot` parameter removed; **must now be called** — performs MD5 verification                               |
+| Raspberry Pi port           | Dedicated `port/raspberry_port.{c,h}` using pigpio            | Replaced by the generic `port/linux_port.{c,h}` (see below)                                                  |
 
 ---
 
@@ -328,7 +329,7 @@ Because all state is in caller-owned structs, you can run multiple fully indepen
 Each instance needs:
 
 - Its own `esp_loader_t` context.
-- Its own port struct (e.g. `esp32_port_t`, `raspi_port_t`) with unique hardware resources (different UART port numbers, GPIO pins, etc.).
+- Its own port struct (e.g. `esp32_port_t`, `linux_port_t`) with unique hardware resources (different UART port numbers, GPIO pins, etc.).
 - A call to the matching `esp_loader_init_*()` function.
 
 ```c
@@ -426,3 +427,29 @@ void app_main(void)
     esp_loader_reset_target(&loader);
 }
 ```
+
+---
+
+## 10. Raspberry Pi Port Removed — Use the Linux Port
+
+The dedicated `port/raspberry_port.{c,h}` (pigpio-based) has been removed. Raspberry Pi is a standard Linux SBC and is now fully covered by the generic `port/linux_port.{c,h}`.
+
+**v1 (pigpio port):**
+
+```cmake
+cmake -DPORT=RASPBERRY_PI ..
+```
+
+**v2 (Linux port with GPIO support):**
+
+```cmake
+cmake -DPORT=LINUX -DLINUX_PORT_GPIO=ON ..
+```
+
+Install the `libgpiod` dependency (≥ 2.0) instead of pigpio:
+
+```bash
+sudo apt-get install libgpiod-dev
+```
+
+The Linux port supports both DTR/RTS auto-reset (USB adapters) and GPIO character-device reset (SBCs). For wiring and run-time usage see [examples/linux_example/README.md](../examples/linux_example/README.md).

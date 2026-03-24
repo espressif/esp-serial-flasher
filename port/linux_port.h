@@ -1,0 +1,103 @@
+/* Copyright 2020-2026 Espressif Systems (Shanghai) CO LTD
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "esp_loader_io.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief Selects how the RESET and BOOT (GPIO0) signals are driven.
+ *
+ * LINUX_GPIO_NONE
+ *   No automatic GPIO control. The user must put the target into boot mode
+ *   manually before calling esp_loader_connect().
+ *
+ * LINUX_GPIO_GPIOD
+ *   Use the Linux GPIO character-device API via libgpiod (works on any SBC:
+ *   Raspberry Pi, BeagleBone, NanoPi, …).
+ *   Requires: libgpiod >= 2.0  (Debian 13 / Ubuntu 24.04 or later).
+ *   Populate gpio_chip_path, reset_trigger_pin and gpio0_trigger_pin.
+ *
+ * LINUX_GPIO_DTR_RTS
+ *   Drive RESET through the UART's RTS signal and BOOT (GPIO0) through DTR.
+ *   This is the standard esptool auto-reset circuit used on USB-to-UART
+ *   adapter boards (CP2102, CH340, FT232, …).
+ *   No extra config fields are needed beyond device and baudrate.
+ *
+ *   USB JTAG Serial devices (ESP32-C3/S3/C6/H2/P4 connected via their built-in
+ *   USB, appearing as /dev/ttyACM*) are **auto-detected** within this mode via
+ *   sysfs VID/PID lookup. The re-enumeration after reset is handled
+ *   transparently — no extra flag or mode is needed.
+ */
+typedef enum {
+    LINUX_GPIO_NONE,
+    LINUX_GPIO_GPIOD,
+    LINUX_GPIO_DTR_RTS,
+} linux_gpio_mode_t;
+
+/**
+ * @brief Concrete Linux UART port instance.
+ *
+ * Declare one of these, fill the config fields, then pass &port.port to
+ * esp_loader_init_uart(). Hardware initialisation is called automatically
+ * inside esp_loader_init_uart() — no separate init step is needed.
+ *
+ * @code
+ *   linux_port_t port = {
+ *       .port.ops          = &linux_uart_ops,
+ *       .device            = "/dev/ttyUSB0",
+ *       .baudrate          = 115200,
+ *       .gpio_mode         = LINUX_GPIO_DTR_RTS,
+ *   };
+ *   esp_loader_t loader;
+ *   esp_loader_init_uart(&loader, &port.port);
+ * @endcode
+ */
+typedef struct {
+    esp_loader_port_t port;           /*!< Embedded port base — pass &port to esp_loader_init_* */
+
+    /* Configuration — fill before calling esp_loader_init_uart() */
+    const char       *device;         /*!< Serial device, e.g. "/dev/ttyUSB0" */
+    uint32_t          baudrate;       /*!< Initial baud rate */
+    linux_gpio_mode_t gpio_mode;      /*!< How RESET/BOOT GPIOs are driven */
+    /**
+     * Used only when gpio_mode == LINUX_GPIO_GPIOD.
+     * Path to the GPIO chip (e.g. "/dev/gpiochip0") and line numbers.
+     */
+    const char       *gpio_chip_path;
+    uint32_t          reset_trigger_pin;
+    uint32_t          gpio0_trigger_pin;
+
+    /* Private runtime state — do not access directly */
+    int               _serial;
+    int64_t           _time_end;
+    bool              _is_usb_jtag; /*!< true when device is USB JTAG Serial (auto-detected) */
+#if defined(LINUX_PORT_GPIO)
+    struct gpiod_line_request *_gpio_request; /*!< libgpiod v2 bulk line request (reset + boot) */
+#endif
+} linux_port_t;
+
+/** Port operations vtable for the Linux UART port. */
+extern const esp_loader_port_ops_t linux_uart_ops;
+
+#ifdef __cplusplus
+}
+#endif

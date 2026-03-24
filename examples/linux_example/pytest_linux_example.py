@@ -2,11 +2,17 @@ import pytest
 import pexpect
 
 
-@pytest.mark.raspberry
-def test_raspberry_example():
+@pytest.mark.linux
+@pytest.mark.parametrize("mode", ["dtr-rts", "gpio"])
+def test_linux_example(port, mode):
     with pexpect.spawn(
-        "./examples/raspberry_example/build/raspberry_flasher",
-        timeout=10,
+        "./examples/linux_example/build/linux_flasher"
+        f" -p {port}"
+        f" -m {mode}"
+        " 0x0 examples/linux_example/target-firmware/bootloader.bin"
+        " 0x8000 examples/linux_example/target-firmware/partition-table.bin"
+        " 0x10000 examples/linux_example/target-firmware/app.bin",
+        timeout=60,
         encoding="utf-8",
     ) as p:
         # Check initial connection
@@ -14,25 +20,22 @@ def test_raspberry_example():
         p.expect("Transmission rate changed")
 
         # Check bootloader programming
-        p.expect("Loading bootloader")
         p.expect("Erasing flash")
         p.expect("Start programming")
         p.expect("Finished programming")
         p.expect("Flash verified")
 
         # Check partition table programming
-        p.expect("Loading partition table")
         p.expect("Erasing flash")
         p.expect("Start programming")
         p.expect("Finished programming")
         p.expect("Flash verified")
 
         # Check app programming
-        p.expect("Loading app")
         p.expect("Erasing flash")
         p.expect("Start programming")
         p.expect("Finished programming")
         p.expect("Flash verified")
 
-        # Check target output
-        p.expect("Hello world!")
+        # Check target reset
+        p.expect("All done! Resetting target...")

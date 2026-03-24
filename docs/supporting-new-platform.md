@@ -380,7 +380,6 @@ Study the existing ports for examples:
 
 | Platform          | Files                               | Notes                                |
 | ----------------- | ----------------------------------- | ------------------------------------ |
-| Raspberry Pi      | `port/raspberry_port.{c,h}`         | pigpio-based GPIO                    |
 | STM32 HAL         | `port/stm32_port.{c,h}`             | Pre-initialised peripheral (no init) |
 | Zephyr            | `port/zephyr_port.{c,h}`            | TTY-based UART with GPIO DT specs    |
 | ESP32 UART        | `port/esp32_port.{c,h}`             | Full example with peripheral init    |
@@ -388,6 +387,7 @@ Study the existing ports for examples:
 | ESP32 SDIO        | `port/esp32_sdio_port.{c,h}`        | Reference SDIO implementation        |
 | ESP32 USB CDC-ACM | `port/esp32_usb_cdc_acm_port.{c,h}` | Reconnection-capable USB port        |
 | Raspberry Pi Pico | `port/pi_pico_port.{c,h}`           | SDK-based UART with baud tolerance   |
+| Linux             | `port/linux_port.{c,h}`             | POSIX serial + optional libgpiod     |
 
 ---
 

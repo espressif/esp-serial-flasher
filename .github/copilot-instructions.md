@@ -2,7 +2,7 @@
 
 ## Repository Overview
 
-`esp-serial-flasher` is a portable C library for flashing or loading applications to RAM of Espressif SoCs from other host microcontrollers. The library supports multiple host platforms (STM32, Raspberry Pi, ESP32, Zephyr OS, Pi Pico) and target chips (ESP32 family, ESP8266) using various communication interfaces (UART, SPI, USB CDC ACM, SDIO).
+`esp-serial-flasher` is a portable C library for flashing or loading applications to RAM of Espressif SoCs from other host microcontrollers. The library supports multiple host platforms (STM32, ESP32, Zephyr OS, Pi Pico, Linux) and target chips (ESP32 family, ESP8266) using various communication interfaces (UART, SPI, USB CDC ACM, SDIO).
 
 **Repository size**: ~500 files, primarily C source code with CMake build system
 **Languages**: C (primary), Python (testing), CMake
@@ -108,18 +108,6 @@ cmake --build .
 **Time required**: 1-3 minutes
 **Output**: `.uf2` file for flashing to Pico
 
-### Raspberry Pi Build
-
-**Requires pigpio library**
-
-```bash
-# Install dependencies first
-apt-get update && apt-get install -y cmake gcc g++ make pigpio
-cd examples/raspberry_example
-mkdir build && cd build
-cmake .. && cmake --build .
-```
-
 ## Testing Instructions
 
 ### Pre-commit Validation
@@ -209,9 +197,9 @@ port/                  # Platform-specific implementations
 ├── esp32_spi_port.c  # ESP32 SPI implementation
 ├── esp32_usb_cdc_acm_port.c # ESP32 USB implementation
 ├── stm32_port.c      # STM32 HAL implementation
-├── raspberry_port.c  # Raspberry Pi pigpio implementation
 ├── pi_pico_port.c    # Pi Pico SDK implementation
-└── zephyr_port.c     # Zephyr RTOS implementation
+├── zephyr_port.c     # Zephyr RTOS implementation
+└── linux_port.c      # Linux POSIX serial + optional libgpiod
 ```
 
 ### Configuration Files
@@ -264,9 +252,9 @@ examples/
 ├── esp32_usb_cdc_acm_example/  # USB CDC ACM flashing
 ├── esp32_sdio_example/         # SDIO flashing (experimental)
 ├── stm32_example/              # STM32 host implementation
-├── raspberry_example/          # Raspberry Pi host
 ├── pi_pico_example/            # Pi Pico host
 ├── zephyr_example/             # Zephyr RTOS integration
+├── linux_example/              # Linux host (PC, SBC, Raspberry Pi)
 └── binaries/                   # Pre-built binaries for testing
 ```
 
@@ -305,7 +293,7 @@ examples/
 - **STM32**: ARM GCC toolchain 13.2+, STM32Cube H7 v1.11.1+
 - **Zephyr**: Zephyr SDK v0.17.0+, west build tool
 - **Pi Pico**: Pico SDK v1.5.1+, ARM GCC toolchain
-- **Raspberry Pi**: pigpio library for GPIO control
+- **Linux**: libgpiod ≥ 2.0 (for GPIO mode on SBCs)
 
 ### Python Dependencies (Testing)
 

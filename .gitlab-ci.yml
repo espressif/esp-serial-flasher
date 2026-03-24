@@ -53,7 +53,7 @@ build_target_example:
     matrix:
       - TARGET_CHIP: esp32
         BUILD_TYPE: flash
-        PATHS: "stm32_example:zephyr_example:pi_pico_example:raspberry_example"
+        PATHS: "stm32_example:zephyr_example:pi_pico_example:linux_example"
       - TARGET_CHIP: esp32c3
         BUILD_TYPE: flash
         PATHS: "esp32_usb_cdc_acm_example"
@@ -299,23 +299,23 @@ build_host_pi_pico:
     - cmake ..
     - cmake --build .
 
-build_host_pi:
+build_host_linux:
   stage: build_host_examples
-  image: dtcooper/raspberrypi-os:latest
+  image: debian:latest
   tags:
     - ESF-RPI-01
   needs:
     - build_target_example
   before_script:
     - apt-get update
-    - apt-get install -y cmake gcc g++ make pigpio
+    - apt-get install -y cmake gcc g++ make libgpiod-dev
   script:
-    - cd $CI_PROJECT_DIR/examples/raspberry_example
+    - cd $CI_PROJECT_DIR/examples/linux_example
     - mkdir build && cd build
-    - cmake .. && cmake --build .
+    - cmake -DLINUX_PORT_GPIO=ON .. && cmake --build .
   artifacts:
     paths:
-      - "${CI_PROJECT_DIR}/examples/raspberry_example/build/raspberry_flasher"
+      - "${CI_PROJECT_DIR}/examples/linux_example/build/linux_flasher"
     when: always
     expire_in: 3 days
 
@@ -415,21 +415,23 @@ test_pi_pico:
   script:
     - pytest --target=pi_pico --port=/dev/serial_ports/pico_ESP32
 
-test_rpi:
-  stage: test
-  image: dtcooper/raspberrypi-os:latest
+test_linux:
+  extends: .test_template
   tags:
     - ESF-RPI-01
   needs:
-    - build_host_pi
+    - build_target_example
+    - build_host_linux
   before_script:
     - apt-get update
-    - apt-get install -y pigpio python3 python3-pip python3-venv libffi-dev
+    - apt-get install -y python3 python3-pip python3-venv libffi-dev libgpiod3
     - python3 -m venv venv
     - source venv/bin/activate
     - pip install -r $CI_PROJECT_DIR/test/requirements_test.txt --prefer-binary
   script:
-    - pytest --target=raspberry
+    - cd $CI_PROJECT_DIR
+    - pytest --target=linux --port=/dev/serial_ports/ESP32_ESP32H2 -k dtr-rts
+    - pytest --target=linux --port=/dev/ttyS0 -k gpio
 
 push_to_the_components_registry:
   stage: deploy

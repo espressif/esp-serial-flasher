@@ -28,10 +28,10 @@ This library enables you to program Espressif SoCs from various host platforms u
 ### Supported Host Platforms (device running this library and performing flashing)
 
 - **STM32** microcontrollers
-- **Raspberry Pi** SBC
 - **ESP32 series** microcontrollers
 - **Zephyr OS** compatible devices
 - **Raspberry Pi Pico** (RP2040)
+- **Linux** (via UART or USB serial port, with optional GPIO control)
 
 ### Supported Target Devices (ESP device being flashed)
 
@@ -104,7 +104,7 @@ Different host platforms require specific setup procedures:
 - **[STM32](docs/platform-setup.md#stm32-setup)**: Requires [STM32 HAL libraries](https://www.st.com/en/embedded-software/stm32cube-mcu-mpu-packages.html) and [ARM toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)
 - **[Zephyr](docs/platform-setup.md#zephyr-setup)**: Integrates as [Zephyr](https://zephyrproject.org/) module with specific Kconfig options
 - **[Raspberry Pi Pico](docs/platform-setup.md#raspberry-pi-pico-setup)**: Uses [Pico SDK](https://github.com/raspberrypi/pico-sdk)
-- **[Raspberry Pi](docs/platform-setup.md#raspberry-pi-setup)**: Requires [pigpio library](https://abyz.me.uk/rpi/pigpio/)
+- **[Linux](docs/platform-setup.md#linux-setup)**: For SBCs (Raspberry Pi, BeagleBone, …) and PCs using [libgpiod](https://libgpiod.readthedocs.io/) or DTR/RTS
 - **[Custom platforms](docs/supporting-new-platform.md#implementation-steps)**: ESP Serial Flasher can be used as a git submodule with your own custom platform implementation
 
 For detailed setup instructions, see [Platform Setup Guide](docs/platform-setup.md).
@@ -173,7 +173,7 @@ For complete implementation examples, see the [examples](examples/) directory:
 
 - [ESP32 Example](examples/esp32_example/) - ESP32 family as host
 - [STM32 Example](examples/stm32_example/) - STM32 as host
-- [Raspberry Pi Example](examples/raspberry_example/) - Raspberry Pi as host
+- [Linux Example](examples/linux_example/) - Linux host (PC or SBC such as Raspberry Pi)
 - [Zephyr Example](examples/zephyr_example/) - Zephyr OS integration
 - [Raspberry Pi Pico Example](examples/pi_pico_example/) - RP2040 as host
 - [ESF Demo](https://github.com/Dzarda7/esf-demo) - End-to-end demo flashing ESP targets from an embedded host (M5Stack Dial) over USB CDC ACM; includes SD card image selection and on-device progress UI
