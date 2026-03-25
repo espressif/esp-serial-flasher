@@ -260,7 +260,7 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
 
 const target_registers_t *get_esp_target_data(target_chip_t chip)
 {
-    return (const target_registers_t *)&esp_target[chip];
+    return &esp_target[chip].regs;
 }
 
 esp_loader_error_t loader_detect_chip(esp_loader_t *loader)
@@ -269,7 +269,7 @@ esp_loader_error_t loader_detect_chip(esp_loader_t *loader)
     /* If the chip is already known (e.g. identified by SDIO card enumeration during
      * initialize_conn), skip the detection sequence and only look up the register table. */
     if (loader->_target != ESP_UNKNOWN_CHIP) {
-        loader->_reg = (const target_registers_t *)&esp_target[loader->_target];
+        loader->_reg = &esp_target[loader->_target].regs;
         return ESP_LOADER_SUCCESS;
     }
 
@@ -306,7 +306,7 @@ esp_loader_error_t loader_detect_chip(esp_loader_t *loader)
     return ESP_LOADER_ERROR_INVALID_TARGET;
 
 success:
-    loader->_reg = (const target_registers_t *)&esp_target[loader->_target];
+    loader->_reg = &esp_target[loader->_target].regs;
     return ESP_LOADER_SUCCESS;
 }
 
