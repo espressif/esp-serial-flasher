@@ -126,6 +126,7 @@ static void stm32_uart_debug_print(esp_loader_port_t *port, const char *str)
 static esp_loader_error_t stm32_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
     stm32_port_t *p = container_of(port, stm32_port_t, port);
+    HAL_UART_DeInit(p->huart);
     p->huart->Init.BaudRate = baudrate;
 
     if (HAL_UART_Init(p->huart) != HAL_OK) {

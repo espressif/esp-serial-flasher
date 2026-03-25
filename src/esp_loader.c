@@ -101,28 +101,38 @@ esp_loader_error_t esp_loader_init_sdio(esp_loader_t *loader, esp_loader_port_t 
     return loader_init_common(loader, ESP_LOADER_PROTOCOL_SDIO, esp_loader_get_sdio_ops(), port);
 }
 
+/*
+ * Attaches the SPI flash to the ROM bootloader targets if not already attached.
+ * Must be called before any flash operation (handled via init_flash_params).
+ * Safe to call multiple times — it is a no-op once already attached.
+ */
+static esp_loader_error_t loader_ensure_spi_attached(esp_loader_t *loader)
+{
+    if (loader->_spi_attached || loader->_protocol->spi_attach == NULL) {
+        return ESP_LOADER_SUCCESS;
+    }
+
+    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+
+    if (loader->_target == ESP8266_CHIP) {
+        RETURN_ON_ERROR(loader_flash_begin_cmd(loader, 0, 0, 0, 0, 0, false));
+    } else {
+        uint32_t spi_config;
+        RETURN_ON_ERROR(loader_read_spi_config(loader, loader->_target, &spi_config));
+        RETURN_ON_ERROR(loader->_protocol->spi_attach(loader, spi_config));
+    }
+
+    loader->_spi_attached = true;
+    return ESP_LOADER_SUCCESS;
+}
+
 esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
 {
-
     loader->_port->ops->enter_bootloader(loader->_port);
 
     RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
-
-    if (loader->_protocol->spi_attach != NULL) {
-        loader->_target_flash_size = 0;
-
-        if (loader->_target == ESP8266_CHIP) {
-            loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-            return loader_flash_begin_cmd(loader, 0, 0, 0, 0, 0, false);
-        } else {
-            uint32_t spi_config;
-            RETURN_ON_ERROR(loader_read_spi_config(loader, loader->_target, &spi_config));
-            loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-            return loader->_protocol->spi_attach(loader, spi_config);
-        }
-    }
 
     return ESP_LOADER_SUCCESS;
 }
@@ -191,15 +201,13 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
 
 esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
         esp_loader_connect_args_t *connect_args,
-        const uint32_t flash_size, const target_chip_t target_chip)
+        const uint32_t flash_size)
 {
-
     if (loader->_protocol->spi_attach == NULL) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
     loader->_target_flash_size = flash_size;
-    loader->_target = target_chip;
 
     loader->_port->ops->enter_bootloader(loader->_port);
 
@@ -207,14 +215,17 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
 
-    if (loader->_target == ESP8266_CHIP) {
-        loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-        return loader_flash_begin_cmd(loader, 0, 0, 0, 0, 0, false);
-    } else {
-        loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-        return loader->_protocol->spi_attach(loader, 0);
+    if (loader->_target == ESP8266_CHIP || loader->_target == ESP32_CHIP) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
+    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+    RETURN_ON_ERROR(loader->_protocol->spi_attach(loader, 0));
+
+    /* Mark as attached so loader_ensure_spi_attached() does not repeat the call.
+     * spi_config is 0 here because efuse registers are not readable in secure
+     * download mode; this differs from the normal attach path. */
+    loader->_spi_attached = true;
     return ESP_LOADER_SUCCESS;
 }
 
@@ -342,6 +353,8 @@ static uint32_t calc_erase_size(const target_chip_t target, bool stub_running,
 
 esp_loader_error_t esp_loader_flash_detect_size(esp_loader_t *loader, uint32_t *flash_size)
 {
+    RETURN_ON_ERROR(loader_ensure_spi_attached(loader));
+
     typedef struct {
         uint8_t id;
         uint32_t size;
@@ -391,6 +404,8 @@ esp_loader_error_t esp_loader_flash_detect_size(esp_loader_t *loader, uint32_t *
 
 static esp_loader_error_t init_flash_params(esp_loader_t *loader)
 {
+    RETURN_ON_ERROR(loader_ensure_spi_attached(loader));
+
     /* Flash size will be known in advance if we're in secure download mode or we already read it*/
     if (loader->_target_flash_size == 0) {
         if (esp_loader_flash_detect_size(loader, &loader->_target_flash_size) != ESP_LOADER_SUCCESS) {
@@ -975,5 +990,6 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(esp_loader_t *loader,
 void esp_loader_reset_target(esp_loader_t *loader)
 {
     loader->_stub_running = false;
+    loader->_spi_attached = false;
     loader->_port->ops->reset_target(loader->_port);
 }

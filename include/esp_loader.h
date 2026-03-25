@@ -190,6 +190,7 @@ typedef struct esp_loader {
     const struct target_registers_t        *_reg;
     uint32_t  _target_flash_size;
     bool      _stub_running;
+    bool      _spi_attached;
     union {
         struct {
             uint32_t sip_seq_tx;
@@ -312,24 +313,23 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
 /**
   * @brief Connects to the target running in secure download mode
   *
-  * @note  Only supported on UART interface.
+  * @note  Only supported on UART interfaces.
+  * @note  Not supported on ESP8266 and ESP32.
   *
   * @param loader[in]       Pointer to initialized loader context.
   * @param connect_args[in] Timing parameters to be used for connecting to target.
-  * @param flash_size Flash size of the target chip.
-  * @param target_chip Target chip. Used for the ESP32 and ESP8266, which do not support the
-  *                    GET_SECURITY_INFO command required to identify the target in secure
-  *                    download mode. Leave as ESP_UNKNOWN_CHIP for autodetection of newer chips.
+  * @param flash_size[in]   Flash size of the target chip in bytes.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Chip does not support secure download mode
   */
 esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
         esp_loader_connect_args_t *connect_args,
-        uint32_t flash_size, target_chip_t target_chip);
+        uint32_t flash_size);
 
 /**
   * @brief Initiates flash operation
