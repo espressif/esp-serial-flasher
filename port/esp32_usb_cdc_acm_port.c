@@ -67,7 +67,12 @@ static void usb_port_deinit_impl(esp32_usb_cdc_acm_port_t *p)
 static bool handle_usb_data(const uint8_t *data, size_t data_len, void *arg)
 {
     esp32_usb_cdc_acm_port_t *p = (esp32_usb_cdc_acm_port_t *)arg;
-    return xStreamBufferSend(p->_rx_stream_buffer, data, data_len, 0) == data_len;
+    size_t sent = xStreamBufferSend(p->_rx_stream_buffer, data, data_len, 0);
+    if (sent != data_len) {
+        ESP_LOGW(TAG, "RX stream buffer full: dropped %u bytes", (unsigned)(data_len - sent));
+        return false;
+    }
+    return true;
 }
 
 static void handle_usb_event(const cdc_acm_host_dev_event_data_t *event, void *user_ctx)
