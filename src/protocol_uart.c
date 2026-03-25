@@ -136,7 +136,7 @@ static esp_loader_error_t uart_flash_read_stub(esp_loader_t *loader, uint8_t *de
     length += overread_len;
 
     loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
-    loader_flash_read_stub_cmd(loader, address, length, sizeof(buf));
+    RETURN_ON_ERROR(loader_flash_read_stub_cmd(loader, address, length, sizeof(buf)));
 
     uint32_t copy_dest_start = 0;
     int32_t remaining = length;
