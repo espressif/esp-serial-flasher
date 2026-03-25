@@ -44,7 +44,7 @@ extern "C" {
 #endif
 
 #ifndef ROUNDUP
-#define ROUNDUP(a, b) ((((unsigned)a + (unsigned)b - 1) / (unsigned)b) * (unsigned)b)
+#define ROUNDUP(a, b) (((a) + (b) - 1) / (b) * (b))
 #endif
 
 #define MAX_RESP_DATA_SIZE 64
