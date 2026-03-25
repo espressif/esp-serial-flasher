@@ -160,8 +160,8 @@ int main(int argc, char *argv[])
 
     if (gpio_mode == LINUX_GPIO_GPIOD) {
         port.gpio_chip_path    = "/dev/gpiochip0";
-        port.reset_trigger_pin = 2;   /* RPi GPIO2 → ESP RESET */
-        port.gpio0_trigger_pin = 3;   /* RPi GPIO3 → ESP IO0/BOOT */
+        port.reset_pin         = 2;   /* RPi GPIO2 → ESP RESET */
+        port.boot_pin          = 3;   /* RPi GPIO3 → ESP BOOT */
     }
 
     if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {

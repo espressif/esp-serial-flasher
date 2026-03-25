@@ -57,8 +57,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define TARGET_IO0_Pin GPIO_PIN_12
-#define TARGET_IO0_GPIO_Port GPIOB
+#define TARGET_BOOT_Pin GPIO_PIN_12
+#define TARGET_BOOT_GPIO_Port GPIOB
 #define TARGET_RESET_Pin GPIO_PIN_13
 #define TARGET_RESET_GPIO_Port GPIOB
 

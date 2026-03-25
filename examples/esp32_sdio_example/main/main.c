@@ -70,7 +70,7 @@ void app_main(void)
         .port.ops          = &esp32_sdio_ops,
         .slot              = SDMMC_HOST_SLOT_1,
         .max_freq_khz      = SDMMC_FREQ_DEFAULT,
-        .reset_trigger_pin = GPIO_NUM_54,
+        .reset_pin         = GPIO_NUM_54,
         .boot_pin          = GPIO_NUM_53,
         .bus_width         = SDIO_4BIT,
         .sdio_d0_pin       = GPIO_NUM_50,

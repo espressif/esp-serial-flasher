@@ -40,7 +40,7 @@ typedef enum {
  *       .port.ops              = &esp32_sdio_ops,
  *       .slot                  = SDMMC_HOST_SLOT_1,
  *       .max_freq_khz          = SDMMC_FREQ_DEFAULT,
- *       .reset_trigger_pin     = GPIO_NUM_54,
+ *       .reset_pin             = GPIO_NUM_54,
  *       .boot_pin              = GPIO_NUM_53,
  *       .bus_width             = SDIO_4BIT,
  *   };
@@ -60,7 +60,7 @@ typedef struct {
     uint8_t          sdio_d2_pin;
     uint8_t          sdio_d3_pin;
     uint8_t          sdio_cmd_pin;
-    uint8_t          reset_trigger_pin;
+    uint8_t          reset_pin;
     uint8_t          boot_pin;
     bool             dont_initialize_host_driver;
     sdio_bus_width_t bus_width;
