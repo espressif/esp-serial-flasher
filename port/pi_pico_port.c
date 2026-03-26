@@ -86,11 +86,11 @@ static void pi_pico_port_deinit(esp_loader_port_t *port)
 static esp_loader_error_t pi_pico_uart_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
     pi_pico_port_t *p = container_of(port, pi_pico_port_t, port);
-    const uint32_t deadline_ms = to_ms_since_boot(get_absolute_time()) + timeout;
+    const uint32_t start_ms = to_ms_since_boot(get_absolute_time());
 
     size_t pos = 0;
     while (pos < size) {
-        if (to_ms_since_boot(get_absolute_time()) > deadline_ms) {
+        if (to_ms_since_boot(get_absolute_time()) - start_ms > timeout) {
             break;
         }
 
@@ -110,11 +110,11 @@ static esp_loader_error_t pi_pico_uart_write(esp_loader_port_t *port, const uint
 static esp_loader_error_t pi_pico_uart_read(esp_loader_port_t *port, uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
     pi_pico_port_t *p = container_of(port, pi_pico_port_t, port);
-    const uint32_t deadline_ms = to_ms_since_boot(get_absolute_time()) + timeout;
+    const uint32_t start_ms = to_ms_since_boot(get_absolute_time());
 
     size_t pos = 0;
     while (pos < size) {
-        if (to_ms_since_boot(get_absolute_time()) > deadline_ms) {
+        if (to_ms_since_boot(get_absolute_time()) - start_ms > timeout) {
             break;
         }
 
