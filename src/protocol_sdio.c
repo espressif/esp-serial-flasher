@@ -457,9 +457,8 @@ static esp_loader_error_t sdio_initialize_conn(esp_loader_t *loader, esp_loader_
     return ESP_LOADER_SUCCESS;
 }
 
-static esp_loader_error_t sdio_check_response(esp_loader_t *loader, const send_cmd_config *config)
+static esp_loader_error_t sdio_check_response(esp_loader_t *loader, const send_cmd_config *config, uint8_t *block_buf)
 {
-    uint8_t block_buf[SD_BLOCK_SIZE];
     uint32_t reg __attribute__((aligned(4))) = 0;
     do {
         RETURN_ON_ERROR(loader->_port->ops->sdio_read(loader->_port, 1, STUB_INT_ST_REG, (uint8_t *)&reg, sizeof(reg), port_remaining_time(loader)));
@@ -568,7 +567,7 @@ static esp_loader_error_t sdio_send_cmd(esp_loader_t *loader, const send_cmd_con
         }
     }
 
-    return sdio_check_response(loader, config);
+    return sdio_check_response(loader, config, block_buf);
 }
 
 

@@ -170,7 +170,7 @@ static void esp32_sdio_delay_ms(esp_loader_port_t *port, uint32_t ms)
 static void esp32_sdio_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
     esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
-    p->_time_end = esp_timer_get_time() + ms * 1000;
+    p->_time_end = esp_timer_get_time() + (int64_t)ms * 1000;
 }
 
 static uint32_t esp32_sdio_remaining_time(esp_loader_port_t *port)

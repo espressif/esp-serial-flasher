@@ -239,13 +239,13 @@ static void esp32_usb_reset_target(esp_loader_port_t *port)
 static void esp32_usb_start_timer(esp_loader_port_t *port, uint32_t ms)
 {
     esp32_usb_cdc_acm_port_t *p = container_of(port, esp32_usb_cdc_acm_port_t, port);
-    p->_time_end = esp_timer_get_time() + ms * 1000;
+    p->_time_end = esp_timer_get_time() + (int64_t)ms * 1000;
 }
 
 static uint32_t esp32_usb_remaining_time(esp_loader_port_t *port)
 {
     esp32_usb_cdc_acm_port_t *p = container_of(port, esp32_usb_cdc_acm_port_t, port);
-    int64_t remaining = ((int64_t)p->_time_end - esp_timer_get_time()) / 1000;
+    int64_t remaining = (p->_time_end - esp_timer_get_time()) / 1000;
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 

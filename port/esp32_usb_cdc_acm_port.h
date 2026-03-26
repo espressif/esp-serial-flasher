@@ -83,7 +83,7 @@ typedef struct {
     cdc_acm_dev_hdl_t    _acm_device;
     StreamBufferHandle_t _rx_stream_buffer;
     bool                 _is_usb_serial_jtag;
-    uint32_t             _time_end;
+    int64_t              _time_end;
 } esp32_usb_cdc_acm_port_t;
 
 /** Port operations vtable for the ESP32 USB CDC-ACM port. */
