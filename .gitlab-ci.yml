@@ -13,13 +13,11 @@ workflow:
     - if: "$CI_COMMIT_BRANCH"
 
 variables:
-  STM32_CUBE_H7_REPO: https://github.com/STMicroelectronics/STM32CubeH7
-  STM32_CUBE_H7_REPO_TAG: v1.11.1
-  ARM_TOOLCHAIN_URL: https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz?rev=e434b9ea4afc4ed7998329566b764309&hash=CA590209F5774EE1C96E6450E14A3E26
   ZEPHYR_REPO: https://github.com/zephyrproject-rtos/zephyr.git
   ZEPHYR_REPO_REV: v4.0.0
   ZEPHYR_TOOLCHAIN: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.0/toolchain_linux-x86_64_xtensa-espressif_esp32_zephyr-elf.tar.xz
   ZEPHYR_SDK: https://github.com/zephyrproject-rtos/sdk-ng/releases/download/v0.17.0/zephyr-sdk-0.17.0_linux-aarch64_minimal.tar.xz
+  ARM_TOOLCHAIN_URL: https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi.tar.xz?rev=e434b9ea4afc4ed7998329566b764309&hash=CA590209F5774EE1C96E6450E14A3E26
   PI_PICO_SDK_REV: 1.5.1
   PI_PICO_SDK: https://github.com/raspberrypi/pico-sdk
   PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
@@ -53,7 +51,7 @@ build_target_example:
     matrix:
       - TARGET_CHIP: esp32
         BUILD_TYPE: flash
-        PATHS: "stm32_example:zephyr_example:pi_pico_example:linux_example"
+        PATHS: "zephyr_example:pi_pico_example:linux_example"
       - TARGET_CHIP: esp32c3
         BUILD_TYPE: flash
         PATHS: "esp32_usb_cdc_acm_example"
@@ -195,34 +193,6 @@ build_host_idf_master:
     expire_in: 3 days
   extends: .build_host_template
   allow_failure: true
-
-build_host_stm32:
-  stage: build_host_examples
-  image: debian:latest
-  needs:
-    - build_target_example
-  before_script:
-    - apt-get update
-    - apt-get install -y git wget cmake ninja-build xz-utils
-  artifacts:
-    paths:
-      - "**/build*/*.bin"
-    when: always
-    expire_in: 3 days
-  tags:
-    - build
-    - internet
-  script:
-    - cd $CI_PROJECT_DIR
-    - git submodule update --init
-    - git clone --depth=1 -b ${STM32_CUBE_H7_REPO_TAG} ${STM32_CUBE_H7_REPO}
-    - wget --no-verbose -O gcc-arm-none-eabi.tar.xz ${ARM_TOOLCHAIN_URL}
-    - tar xf gcc-arm-none-eabi.tar.xz
-    - mv arm-gnu-toolchain-* gcc-arm-none-eabi
-    - mkdir $CI_PROJECT_DIR/examples/stm32_example/build
-    - cd $CI_PROJECT_DIR/examples/stm32_example/build
-    - cmake -DSTM32_TOOLCHAIN_PATH=$CI_PROJECT_DIR/gcc-arm-none-eabi -DSTM32_CUBE_H7_PATH=$CI_PROJECT_DIR/STM32CubeH7 -G Ninja ..
-    - cmake --build .
 
 build_host_zephyr:
   stage: build_host_examples
@@ -396,15 +366,6 @@ test_zephyr:
   script:
     - cd $CI_PROJECT_DIR
     - pytest --target=zephyr --port=/dev/serial_ports/ESP32_ESP32
-
-test_stm32:
-  extends: .test_template
-  tags:
-    - ESF-RPI-03
-  needs:
-    - build_host_stm32
-  script:
-    - pytest --target=stm32 --port=/dev/serial_ports/STM32_ESP32
 
 test_pi_pico:
   extends: .test_template

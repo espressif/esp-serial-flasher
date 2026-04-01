@@ -13,12 +13,6 @@
 
 ### Prerequisites and Environment Setup
 
-**Always run the following first for any STM32-related builds:**
-
-```bash
-git submodule update --init
-```
-
 **Always install pre-commit hooks before making changes:**
 
 ```bash
@@ -55,27 +49,7 @@ idf.py build
 
 ### STM32 Build
 
-**Required environment variables:**
-
-- `STM32_TOOLCHAIN_PATH`: Path to ARM GCC toolchain
-- `STM32_CUBE_H7_PATH`: Path to STM32Cube libraries
-- `STM32_CHIP`: Target chip (e.g., STM32H743VI)
-- `CORE_USED`: Core for multicore devices (M7/M4)
-
-```bash
-cd examples/stm32_example
-mkdir build && cd build
-cmake -DSTM32_TOOLCHAIN_PATH="path_to_toolchain" \
-      -DSTM32_CUBE_H7_PATH="path_to_cube_libraries" \
-      -DSTM32_CHIP="STM32H743VI" \
-      -DCORE_USED=M7 \
-      -DPORT="STM32" \
-      ..
-cmake --build .
-```
-
-**Time required**: 3-10 minutes
-**Common errors**: Missing toolchain path, missing STM32Cube libraries
+No pre-built example project is provided for STM32. See [examples/stm32_example/README.md](../examples/stm32_example/README.md) for a guide on generating a CubeMX project for your MCU and integrating esp-serial-flasher.
 
 ### Zephyr Build
 
@@ -144,7 +118,6 @@ pip install -r test/requirements_test.txt
 # Run tests for specific target
 pytest --target=esp32 --port=/dev/ttyUSB0
 pytest --target=esp32s3 --port=/dev/ttyUSB1
-pytest --target=stm32 --port=/dev/ttyACM0
 pytest --target=pi_pico --port=/dev/ttyACM1
 pytest --target=zephyr --port=/dev/ttyUSB2
 ```
@@ -251,7 +224,7 @@ examples/
 ├── esp32_spi_load_ram_example/ # SPI RAM loading
 ├── esp32_usb_cdc_acm_example/  # USB CDC ACM flashing
 ├── esp32_sdio_example/         # SDIO flashing (experimental)
-├── stm32_example/              # STM32 host implementation
+├── stm32_example/              # STM32 setup guide (no pre-built project; generate with CubeMX)
 ├── pi_pico_example/            # Pi Pico host
 ├── zephyr_example/             # Zephyr RTOS integration
 ├── linux_example/              # Linux host (PC, SBC, Raspberry Pi)
@@ -276,7 +249,7 @@ examples/
 ### Integration Validation
 
 - **ESP-IDF compatibility**: Test with multiple ESP-IDF versions (v5.5+)
-- **Cross-platform builds**: Verify STM32, Zephyr, Pi Pico builds don't break
+- **Cross-platform builds**: Verify Zephyr, Pi Pico builds don't break
 - **Hardware testing**: Use pytest framework for hardware validation when possible
 
 ## Dependencies and Requirements
@@ -290,7 +263,6 @@ examples/
 ### Platform-Specific Dependencies
 
 - **ESP-IDF**: v5.5 or later for ESP32 builds
-- **STM32**: ARM GCC toolchain 13.2+, STM32Cube H7 v1.11.1+
 - **Zephyr**: Zephyr SDK v0.17.0+, west build tool
 - **Pi Pico**: Pico SDK v1.5.1+, ARM GCC toolchain
 - **Linux**: libgpiod ≥ 2.0 (for GPIO mode on SBCs)
@@ -299,7 +271,7 @@ examples/
 
 ```bash
 pip install -r test/requirements_test.txt
-# Includes: pytest, pytest-embedded, idf-build-apps, stm32loader
+# Includes: pytest, pytest-embedded, idf-build-apps
 ```
 
 ## Trust These Instructions
@@ -317,6 +289,5 @@ When in doubt, refer to example applications in the `examples/` directory as the
 
 - **CMake warnings**: project() and version warnings are expected in standalone builds - they don't affect functionality
 - **Pre-commit network timeouts**: Retry installation or skip if network connectivity is limited
-- **STM32 build failures**: Always verify toolchain paths and ensure submodules are initialized
 - **ESP32-S3 test interference**: Run SPI and USB CDC ACM tests separately
 - **Missing dependencies**: Each platform example README contains specific setup instructions

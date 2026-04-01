@@ -108,17 +108,8 @@ else()
     elseif(PORT STREQUAL "USER_DEFINED")
         # The user has to manually link their port with the flasher target
     elseif(PORT STREQUAL "STM32")
-        stm32_get_chip_info(${STM32_CHIP} FAMILY DEVICE_FAMILY DEVICE DEVICE_CODE)
-        if(DEFINED CORE_USED)
-            string(APPEND DEVICE_FAMILY ::${CORE_USED})
-            string(APPEND DEVICE_CODE ::${CORE_USED})
-        endif()
-        target_link_libraries(flasher PRIVATE
-            HAL::STM32::${DEVICE_FAMILY}::GPIO
-            HAL::STM32::${DEVICE_FAMILY}::UART
-            CMSIS::STM32::${DEVICE_CODE}
-        )
         target_sources(flasher PRIVATE port/stm32_port.c)
+        target_link_libraries(flasher PUBLIC stm32cubemx)
     elseif(PORT STREQUAL "PI_PICO")
         target_link_libraries(flasher PUBLIC pico_stdlib)
         target_sources(flasher PRIVATE port/pi_pico_port.c)

@@ -6,4 +6,3 @@ pytest-embedded-idf>=1.10.3
 pytest-embedded-serial>=1.10.3
 pytest-embedded-serial-esp>=1.10.3
 pexpect>=4.8.0
-stm32loader>=0.7.1
