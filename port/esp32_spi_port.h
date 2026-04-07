@@ -16,6 +16,7 @@
 #pragma once
 
 #include "esp_loader_io.h"
+#include "driver/gpio.h"
 #include "driver/spi_master.h"
 
 #ifdef __cplusplus
@@ -49,17 +50,17 @@ typedef struct {
     /* Configuration — fill before calling esp_loader_init_spi() */
     spi_host_device_t spi_bus;
     uint32_t          frequency;
-    uint32_t          spi_clk_pin;
-    uint32_t          spi_miso_pin;
-    uint32_t          spi_mosi_pin;
-    uint32_t          spi_cs_pin;
-    uint32_t          spi_quadwp_pin;
-    uint32_t          spi_quadhd_pin;
-    uint32_t          reset_pin;
-    uint32_t          strap_bit0_pin;
-    uint32_t          strap_bit1_pin;
-    uint32_t          strap_bit2_pin;
-    uint32_t          strap_bit3_pin;
+    gpio_num_t        spi_clk_pin;
+    gpio_num_t        spi_miso_pin;
+    gpio_num_t        spi_mosi_pin;
+    gpio_num_t        spi_cs_pin;
+    gpio_num_t        spi_quadwp_pin;
+    gpio_num_t        spi_quadhd_pin;
+    gpio_num_t        reset_pin;
+    gpio_num_t        strap_bit0_pin;
+    gpio_num_t        strap_bit1_pin;
+    gpio_num_t        strap_bit2_pin;
+    gpio_num_t        strap_bit3_pin;
     bool              dont_initialize_bus;  /*!< Set if bus already initialised externally */
 
     /* Private runtime state — do not access directly */

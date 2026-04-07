@@ -16,6 +16,7 @@
 #pragma once
 
 #include "esp_loader_io.h"
+#include "driver/gpio.h"
 #include "driver/sdmmc_host.h"
 #include "sdmmc_cmd.h"
 
@@ -54,14 +55,14 @@ typedef struct {
     /* Configuration — fill before calling esp_loader_init_sdio() */
     int              slot;
     uint32_t         max_freq_khz;
-    uint8_t          sdio_clk_pin;
-    uint8_t          sdio_d0_pin;
-    uint8_t          sdio_d1_pin;
-    uint8_t          sdio_d2_pin;
-    uint8_t          sdio_d3_pin;
-    uint8_t          sdio_cmd_pin;
-    uint8_t          reset_pin;
-    uint8_t          boot_pin;
+    gpio_num_t       sdio_clk_pin;
+    gpio_num_t       sdio_d0_pin;
+    gpio_num_t       sdio_d1_pin;
+    gpio_num_t       sdio_d2_pin;
+    gpio_num_t       sdio_d3_pin;
+    gpio_num_t       sdio_cmd_pin;
+    gpio_num_t       reset_pin;
+    gpio_num_t       boot_pin;
     bool             dont_initialize_host_driver;
     sdio_bus_width_t bus_width;
 
