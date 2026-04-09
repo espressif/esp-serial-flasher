@@ -16,6 +16,7 @@
 #pragma once
 
 #include "esp_loader_io.h"
+#include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
@@ -53,10 +54,10 @@ typedef struct {
     /* Configuration — fill before calling esp_loader_init_uart() */
     uint32_t      baud_rate;             /*!< Initial baud rate */
     uint32_t      uart_port;             /*!< UART peripheral number (e.g. UART_NUM_1) */
-    uint32_t      uart_rx_pin;           /*!< GPIO number for UART RX */
-    uint32_t      uart_tx_pin;           /*!< GPIO number for UART TX */
-    uint32_t      reset_pin;             /*!< GPIO used to reset the target */
-    uint32_t      boot_pin;              /*!< GPIO used to control target BOOT pin */
+    gpio_num_t    uart_rx_pin;           /*!< GPIO number for UART RX */
+    gpio_num_t    uart_tx_pin;           /*!< GPIO number for UART TX */
+    gpio_num_t    reset_pin;             /*!< GPIO used to reset the target */
+    gpio_num_t    boot_pin;              /*!< GPIO used to control target BOOT pin */
     uint32_t      rx_buffer_size;        /*!< UART RX buffer size; 0 = use default (400) */
     uint32_t      tx_buffer_size;        /*!< UART TX buffer size; 0 = use default (400) */
     uint32_t      queue_size;            /*!< UART event queue depth; 0 = no queue */

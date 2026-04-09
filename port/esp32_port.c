@@ -62,7 +62,7 @@ static esp_loader_error_t esp32_port_init(esp_loader_port_t *port)
 
         // Sets pin current strength to 40 mA, because some pins default to 10 mA,
         // which is not enough when USB-UART is also present on the UART lines (at least 20 mA should be sufficient).
-        if (gpio_set_drive_capability((gpio_num_t)p->uart_tx_pin, GPIO_DRIVE_CAP_3) != ESP_OK) {
+        if (gpio_set_drive_capability(p->uart_tx_pin, GPIO_DRIVE_CAP_3) != ESP_OK) {
             return ESP_LOADER_ERROR_FAIL;
         }
         if (uart_param_config((uart_port_t)p->uart_port, &uart_config) != ESP_OK) {
@@ -80,13 +80,13 @@ static esp_loader_error_t esp32_port_init(esp_loader_port_t *port)
         p->_peripheral_needs_deinit = true;
     }
 
-    gpio_reset_pin((gpio_num_t)p->reset_pin);
-    gpio_set_pull_mode((gpio_num_t)p->reset_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction((gpio_num_t)p->reset_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->reset_pin);
+    gpio_set_pull_mode(p->reset_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->reset_pin, GPIO_MODE_OUTPUT);
 
-    gpio_reset_pin((gpio_num_t)p->boot_pin);
-    gpio_set_pull_mode((gpio_num_t)p->boot_pin, GPIO_PULLUP_ONLY);
-    gpio_set_direction((gpio_num_t)p->boot_pin, GPIO_MODE_OUTPUT);
+    gpio_reset_pin(p->boot_pin);
+    gpio_set_pull_mode(p->boot_pin, GPIO_PULLUP_ONLY);
+    gpio_set_direction(p->boot_pin, GPIO_MODE_OUTPUT);
 
     return ESP_LOADER_SUCCESS;
 }
@@ -170,21 +170,21 @@ static uint32_t esp32_uart_remaining_time(esp_loader_port_t *port)
 static void esp32_uart_reset_target(esp_loader_port_t *port)
 {
     esp32_port_t *p = container_of(port, esp32_port_t, port);
-    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    gpio_set_level(p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_set_level(p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
 }
 
 
 static void esp32_uart_enter_bootloader(esp_loader_port_t *port)
 {
     esp32_port_t *p = container_of(port, esp32_port_t, port);
-    gpio_set_level((gpio_num_t)p->boot_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
-    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
+    gpio_set_level(p->boot_pin, SERIAL_FLASHER_BOOT_INVERT ? 1 : 0);
+    gpio_set_level(p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 1 : 0);
     usleep(SERIAL_FLASHER_RESET_HOLD_TIME_MS * 1000);
-    gpio_set_level((gpio_num_t)p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
+    gpio_set_level(p->reset_pin, SERIAL_FLASHER_RESET_INVERT ? 0 : 1);
     usleep(SERIAL_FLASHER_BOOT_HOLD_TIME_MS * 1000);
-    gpio_set_level((gpio_num_t)p->boot_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
+    gpio_set_level(p->boot_pin, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
 }
 
 
