@@ -17,7 +17,6 @@
 #include "protocol_prv.h"
 #include "esp_loader.h"
 #include "esp_loader_protocol.h"
-#include "esp_stubs.h"
 #include "esp_targets.h"
 #include "md5_hash.h"
 #include "slip.h"
@@ -192,25 +191,15 @@ static esp_loader_error_t uart_flash_read_stub(esp_loader_t *loader, uint8_t *de
 }
 
 
-// Temporary put here as stub is for now used only for UART and USB,
-// should be unified with the new esp-flasher-stub.
 static esp_loader_error_t uart_mem_begin_cmd(esp_loader_t *loader, uint32_t offset,
         uint32_t size, uint32_t blocks_to_write,
         uint32_t block_size)
 {
     if (loader->_stub_running) {
-        const esp_stub_t *stub = &esp_stub[loader->_target];
-        const uint32_t load_end = offset + size;
-        for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
-            const uint32_t stub_start = stub->segments[seg].addr;
-            const uint32_t stub_end   = stub->segments[seg].addr + stub->segments[seg].size;
-            if (offset < stub_end && load_end > stub_start) {
-                if (loader->_port->ops->debug_print != NULL) {
-                    loader->_port->ops->debug_print(loader->_port, "Software loader is resident at the requested address, can't load binary at overlapping address range");
-                }
-                return ESP_LOADER_ERROR_INVALID_PARAM;
-            }
-        }
+        esp_loader_connect_args_t connect_args = ESP_LOADER_CONNECT_DEFAULT();
+        loader->_port->ops->enter_bootloader(loader->_port);
+        RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, &connect_args));
+        loader->_stub_running = false;
     }
 
     uint32_t seq = 0;
