@@ -101,6 +101,14 @@ esp_loader_error_t esp_loader_init_sdio(esp_loader_t *loader, esp_loader_port_t 
     return loader_init_common(loader, ESP_LOADER_PROTOCOL_SDIO, esp_loader_get_sdio_ops(), port);
 }
 
+void esp_loader_deinit(esp_loader_t *loader)
+{
+    if (loader->_port && loader->_port->ops->deinit) {
+        loader->_port->ops->deinit(loader->_port);
+    }
+    memset(loader, 0, sizeof(*loader));
+}
+
 /*
  * Attaches the SPI flash to the ROM bootloader targets if not already attached.
  * Must be called before any flash operation (handled via init_flash_params).

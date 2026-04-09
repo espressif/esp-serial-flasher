@@ -270,6 +270,19 @@ esp_loader_error_t esp_loader_init_spi(esp_loader_t *loader, esp_loader_port_t *
 esp_loader_error_t esp_loader_init_sdio(esp_loader_t *loader, esp_loader_port_t *port);
 
 /**
+  * @brief Deinitializes the loader and releases hardware resources.
+  *
+  * Calls the port's @c ops->deinit() callback (if non-NULL), which tears down
+  * any peripheral drivers that were initialised by @c esp_loader_init_*(). Safe
+  * to call even if @c ops->deinit is NULL — it is a no-op in that case.
+  *
+  * After this call the @p loader instance must not be used until re-initialized.
+  *
+  * @param loader[in] Pointer to an initialized loader context.
+  */
+void esp_loader_deinit(esp_loader_t *loader);
+
+/**
   * @brief Connects to the target
   *
   * @param loader[in]       Pointer to initialized loader context.
