@@ -172,7 +172,7 @@ if (err != ESP_LOADER_SUCCESS) return err;
 For complete implementation examples, see the [examples](examples/) directory:
 
 - [ESP32 Example](examples/esp32_example/) - ESP32 family as host
-- [STM32 Example](examples/stm32_example/) - STM32 as host
+- [STM32 Example](examples/stm32_example/) - STM32 setup guide
 - [Linux Example](examples/linux_example/) - Linux host (PC or SBC such as Raspberry Pi)
 - [Zephyr Example](examples/zephyr_example/) - Zephyr OS integration
 - [Raspberry Pi Pico Example](examples/pi_pico_example/) - RP2040 as host

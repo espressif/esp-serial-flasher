@@ -18,28 +18,53 @@
 #include <stdint.h>
 #include "esp_loader_io.h"
 
-#if defined STM32C0
-#include "stm32c0xx_hal.h"
-#elif defined STM32F0
-#include "stm32f0xx_hal.h"
-#elif defined STM32F1
-#include "stm32f1xx_hal.h"
-#elif defined STM32F2
-#include "stm32f2xx_hal.h"
-#elif defined STM32F3
-#include "stm32f3xx_hal.h"
-#elif defined STM32F4
-#include "stm32f4xx_hal.h"
-#elif defined STM32F7
-#include "stm32f7xx_hal.h"
-#elif defined STM32G0
-#include "stm32g0xx_hal.h"
-#elif defined STM32G4
-#include "stm32g4xx_hal.h"
-#elif defined STM32H5
-#include "stm32h5xx_hal.h"
-#elif defined STM32H7
-#include "stm32h7xx_hal.h"
+/* Select the STM32 HAL header by probing which family header is reachable on
+ * the current include path.  This works both with the community stm32-cmake
+ * toolchain (which defines a family-level macro such as STM32H7) and with the
+ * STM32CubeMX CMake generator (which only defines a device-level macro such as
+ * STM32H743xx).  __has_include is a GCC/Clang extension supported by all
+ * arm-none-eabi-gcc versions in common use. */
+#if   __has_include("stm32c0xx_hal.h")
+#  include "stm32c0xx_hal.h"
+#elif __has_include("stm32f0xx_hal.h")
+#  include "stm32f0xx_hal.h"
+#elif __has_include("stm32f1xx_hal.h")
+#  include "stm32f1xx_hal.h"
+#elif __has_include("stm32f2xx_hal.h")
+#  include "stm32f2xx_hal.h"
+#elif __has_include("stm32f3xx_hal.h")
+#  include "stm32f3xx_hal.h"
+#elif __has_include("stm32f4xx_hal.h")
+#  include "stm32f4xx_hal.h"
+#elif __has_include("stm32f7xx_hal.h")
+#  include "stm32f7xx_hal.h"
+#elif __has_include("stm32g0xx_hal.h")
+#  include "stm32g0xx_hal.h"
+#elif __has_include("stm32g4xx_hal.h")
+#  include "stm32g4xx_hal.h"
+#elif __has_include("stm32h5xx_hal.h")
+#  include "stm32h5xx_hal.h"
+#elif __has_include("stm32h7xx_hal.h")
+#  include "stm32h7xx_hal.h"
+#elif __has_include("stm32l0xx_hal.h")
+#  include "stm32l0xx_hal.h"
+#elif __has_include("stm32l1xx_hal.h")
+#  include "stm32l1xx_hal.h"
+#elif __has_include("stm32l4xx_hal.h")
+#  include "stm32l4xx_hal.h"
+#elif __has_include("stm32l5xx_hal.h")
+#  include "stm32l5xx_hal.h"
+#elif __has_include("stm32u0xx_hal.h")
+#  include "stm32u0xx_hal.h"
+#elif __has_include("stm32u5xx_hal.h")
+#  include "stm32u5xx_hal.h"
+#elif __has_include("stm32wbxx_hal.h")
+#  include "stm32wbxx_hal.h"
+#elif __has_include("stm32wlxx_hal.h")
+#  include "stm32wlxx_hal.h"
+#else
+#  error "No STM32 HAL header found in the include path. " \
+"Ensure the STM32 HAL Drivers include directory is passed to the compiler."
 #endif
 
 #ifdef __cplusplus
