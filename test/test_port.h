@@ -32,9 +32,6 @@ struct test_tcp_port_t {
     int sock;
     std::ofstream file;
     std::chrono::time_point<std::chrono::steady_clock> time_end;
-#if SERIAL_FLASHER_DEBUG_TRACE
-    bool write_prev;
-#endif
 };
 
 extern test_tcp_port_t test_tcp_port;

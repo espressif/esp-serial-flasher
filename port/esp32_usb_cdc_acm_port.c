@@ -12,24 +12,11 @@
 #include "usb/vcp_cp210x.h"
 #include "usb/vcp_ch34x.h"
 #include "esp32_usb_cdc_acm_port.h"
+#include "loader_port_stdio_log.h"
 
 static const char *TAG = "usb_cdc_acm_port";
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, const uint16_t size, const bool write)
-{
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printf("%02x ", data[i]);
-    }
-}
-#endif
+LOADER_PORT_STDIO_LOG_CALLBACK(esp32_usb_log, "esf-usb");
 
 /* ─── internal deinit (shared by ops->deinit and the disconnect handler) ─── */
 
@@ -245,12 +232,6 @@ static uint32_t esp32_usb_remaining_time(esp_loader_port_t *port)
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
-static void esp32_usb_debug_print(esp_loader_port_t *port, const char *str)
-{
-    (void)port;
-    printf("DEBUG: %s\n", str);
-}
-
 static esp_loader_error_t esp32_usb_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size,
         const uint32_t timeout)
 {
@@ -262,9 +243,6 @@ static esp_loader_error_t esp32_usb_write(esp_loader_port_t *port, const uint8_t
                     (uint8_t *)data, size, timeout);
 
     if (err == ESP_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, size, true);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == ESP_ERR_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -282,9 +260,6 @@ static esp_loader_error_t esp32_usb_read(esp_loader_port_t *port, uint8_t *data,
     size_t received = xStreamBufferReceive(p->_rx_stream_buffer, data, size, pdMS_TO_TICKS(timeout));
 
     if (received == size) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, size, false);
-#endif
         return ESP_LOADER_SUCCESS;
     } else {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -318,7 +293,8 @@ const esp_loader_port_ops_t esp32_usb_cdc_acm_ops = {
     .start_timer              = esp32_usb_start_timer,
     .remaining_time           = esp32_usb_remaining_time,
     .delay_ms                 = esp32_usb_delay_ms,
-    .debug_print              = esp32_usb_debug_print,
+    .log                      = esp32_usb_log,
+    .log_hex                  = loader_port_stdio_log_hex,
     .change_transmission_rate = esp32_usb_change_rate,
     .write                    = esp32_usb_write,
     .read                     = esp32_usb_read,

@@ -11,13 +11,11 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/console/tty.h>
+#include <zephyr/sys/printk.h>
 
 #include <zephyr_port.h>
 #include <esp_loader.h>
 #include <esp_loader_io.h>
-
-#include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(esf, LOG_LEVEL_ERR);
 
 struct esp_loader_dev_config {
     esp_loader_config_t config;
@@ -29,27 +27,32 @@ struct esp_loader_dev_data {
     esp_loader_t loader;
 };
 
-#ifdef CONFIG_SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, ssize_t size, bool write)
+static const char *const s_log_level_str[] = { "", "E", "W", "I", "D" };
+
+static void zephyr_log(esp_loader_port_t *port, esp_loader_log_level_t level,
+                       const char *fmt, va_list args)
 {
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printf("%02x ", data[i]);
-    }
+    (void)port;
+    printk("[%s] esf: ", s_log_level_str[level]);
+    vprintk(fmt, args);
+    printk("\n");
 }
-#endif
 
-static void zephyr_debug_print(esp_loader_port_t *port, const char *str)
+static void zephyr_log_hex(esp_loader_port_t *port, esp_loader_log_level_t level,
+                           const char *label, const uint8_t *data, size_t size)
 {
-    ARG_UNUSED(port);
-
-    printf("DEBUG: %s\n", str);
+    (void)port;
+    printk("[%s] esf: %s (%zu bytes):\n", s_log_level_str[level],
+           label ? label : "hex", size);
+    for (size_t i = 0; i < size; i++) {
+        printk("%02x ", data[i]);
+        if ((i + 1) % 16 == 0) {
+            printk("\n");
+        }
+    }
+    if (size % 16 != 0) {
+        printk("\n");
+    }
 }
 
 static esp_loader_error_t configure_tty(zephyr_port_t *p)
@@ -68,26 +71,26 @@ static esp_loader_error_t zephyr_port_init(esp_loader_port_t *port)
     const esp_loader_config_t *c = p->config;
 
     if (!device_is_ready(c->uart_dev)) {
-        LOG_ERR("ESP UART not ready");
+        printk("[E] esf: ESP UART not ready\n");
         return ESP_LOADER_ERROR_FAIL;
     }
 
     if (!device_is_ready(c->boot_spec.port)) {
-        LOG_ERR("ESP boot GPIO not ready");
+        printk("[E] esf: ESP boot GPIO not ready\n");
         return ESP_LOADER_ERROR_FAIL;
     }
 
     if (!device_is_ready(c->enable_spec.port)) {
-        LOG_ERR("ESP reset GPIO not ready");
+        printk("[E] esf: ESP reset GPIO not ready\n");
         return ESP_LOADER_ERROR_FAIL;
     }
 
     if (gpio_pin_configure_dt(&c->boot_spec, GPIO_OUTPUT_INACTIVE) < 0) {
-        LOG_ERR("Failed to configure ESP boot GPIO");
+        printk("[E] esf: Failed to configure ESP boot GPIO\n");
         return ESP_LOADER_ERROR_FAIL;
     }
     if (gpio_pin_configure_dt(&c->enable_spec, GPIO_OUTPUT_INACTIVE) < 0) {
-        LOG_ERR("Failed to configure ESP reset GPIO");
+        printk("[E] esf: Failed to configure ESP reset GPIO\n");
         return ESP_LOADER_ERROR_FAIL;
     }
 
@@ -129,10 +132,6 @@ static esp_loader_error_t zephyr_uart_read(esp_loader_port_t *port, uint8_t *dat
         total_read += read;
         remaining -= read;
     }
-#ifdef CONFIG_SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(data, total_read, false);
-#endif
-
     return ESP_LOADER_SUCCESS;
 }
 
@@ -159,10 +158,6 @@ static esp_loader_error_t zephyr_uart_write(esp_loader_port_t *port, const uint8
         total_written += written;
         remaining -= written;
     }
-#if CONFIG_SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(data, total_written, true);
-#endif
-
     return ESP_LOADER_SUCCESS;
 }
 
@@ -248,7 +243,8 @@ static const esp_loader_port_ops_t zephyr_uart_ops = {
     .start_timer              = zephyr_uart_start_timer,
     .remaining_time           = zephyr_uart_remaining_time,
     .delay_ms                 = zephyr_uart_delay_ms,
-    .debug_print              = zephyr_debug_print,
+    .log                      = zephyr_log,
+    .log_hex                  = zephyr_log_hex,
     .change_transmission_rate = zephyr_uart_change_rate,
     .write                    = zephyr_uart_write,
     .read                     = zephyr_uart_read,

@@ -7,6 +7,7 @@
 #include "linux_port.h"
 #include "esp_loader_io.h"
 #include "esp_loader.h"
+#include "loader_port_stdio_log.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -17,7 +18,6 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <stdarg.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/types.h>
@@ -41,24 +41,6 @@ static int64_t time_now_ms(void)
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (int64_t)ts.tv_sec * 1000LL + (int64_t)ts.tv_nsec / 1000000LL;
 }
-
-/* ─── debug trace ────────────────────────────────────────────────────────── */
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
-{
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printf("%02x ", data[i]);
-    }
-}
-#endif
 
 /* ─── UART helpers ───────────────────────────────────────────────────────── */
 
@@ -445,15 +427,9 @@ static esp_loader_error_t linux_uart_write(esp_loader_port_t *port, const uint8_
     if (written < 0) {
         return ESP_LOADER_ERROR_FAIL;
     } else if ((uint16_t)written < size) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, (uint16_t)written, true);
-#endif
         return ESP_LOADER_ERROR_TIMEOUT;
     }
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(data, size, true);
-#endif
     return ESP_LOADER_SUCCESS;
 }
 
@@ -463,9 +439,6 @@ static esp_loader_error_t linux_uart_read(esp_loader_port_t *port, uint8_t *data
     (void)timeout;
     RETURN_ON_ERROR(read_data(p, data, size));
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(data, size, false);
-#endif
     return ESP_LOADER_SUCCESS;
 }
 
@@ -493,11 +466,6 @@ static uint32_t linux_remaining_time(esp_loader_port_t *port)
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
-static void linux_debug_print(esp_loader_port_t *port, const char *str)
-{
-    (void)port;
-    printf("DEBUG: %s\n", str);
-}
 
 static esp_loader_error_t linux_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
@@ -638,7 +606,8 @@ const esp_loader_port_ops_t linux_uart_ops = {
     .start_timer              = linux_start_timer,
     .remaining_time           = linux_remaining_time,
     .delay_ms                 = linux_delay_ms,
-    .debug_print              = linux_debug_print,
+    .log                      = loader_port_stdio_log,
+    .log_hex                  = loader_port_stdio_log_hex,
     .change_transmission_rate = linux_change_rate,
     .write                    = linux_uart_write,
     .read                     = linux_uart_read,

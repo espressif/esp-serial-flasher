@@ -9,12 +9,29 @@
 #include "esp_loader.h"
 #include "esp_loader_protocol.h"
 #include "esp_targets.h"
+#include "loader_log.h"
 #include <stddef.h>
 #include <assert.h>
 
 static inline uint32_t port_remaining_time(const esp_loader_t *loader)
 {
     return loader->_port->ops->remaining_time(loader->_port);
+}
+
+static esp_loader_error_t spi_write(esp_loader_t *loader, const uint8_t *data, uint16_t size)
+{
+    LOADER_LOG_HEX(loader, "SPI TX", data, size);
+    return loader->_port->ops->write(loader->_port, data, size, port_remaining_time(loader));
+}
+
+static esp_loader_error_t spi_read(esp_loader_t *loader, uint8_t *data, uint16_t size)
+{
+    esp_loader_error_t err =
+        loader->_port->ops->read(loader->_port, data, size, port_remaining_time(loader));
+    if (err == ESP_LOADER_SUCCESS) {
+        LOADER_LOG_HEX(loader, "SPI RX", data, size);
+    }
+    return err;
 }
 
 typedef struct __attribute__((packed))
@@ -82,9 +99,7 @@ static esp_loader_error_t spi_initialize_conn(esp_loader_t *loader, esp_loader_c
                                        sizeof(slave_ready_flag)));
 
         if (slave_ready_flag != SLAVE_CMD_IDLE) {
-            if (loader->_port->ops->debug_print != NULL) {
-                loader->_port->ops->debug_print(loader->_port, "Waiting for Slave to be idle...");
-            }
+            LOADER_LOGW(loader, "Waiting for SPI slave to be idle...");
             loader->_port->ops->delay_ms(loader->_port, 100);
         } else {
             break;
@@ -100,9 +115,7 @@ static esp_loader_error_t spi_initialize_conn(esp_loader_t *loader, esp_loader_c
                                        sizeof(slave_ready_flag)));
 
         if (slave_ready_flag != SLAVE_CMD_READY) {
-            if (loader->_port->ops->debug_print != NULL) {
-                loader->_port->ops->debug_print(loader->_port, "Waiting for Slave to be ready...");
-            }
+            LOADER_LOGW(loader, "Waiting for SPI slave to be ready...");
             loader->_port->ops->delay_ms(loader->_port, 100);
         } else {
             break;
@@ -114,6 +127,8 @@ static esp_loader_error_t spi_initialize_conn(esp_loader_t *loader, esp_loader_c
 
 static esp_loader_error_t spi_send_cmd(esp_loader_t *loader, const send_cmd_config *config)
 {
+    command_t command = ((const command_common_t *)config->cmd)->command;
+    LOADER_LOGD(loader, "CMD -> %s (0x%02x)", loader_command_name(command), (unsigned)command);
 
     if (config->resp_data != NULL) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
@@ -133,13 +148,10 @@ static esp_loader_error_t spi_send_cmd(esp_loader_t *loader, const send_cmd_conf
     transaction_preamble_t preamble = {.cmd = TRANS_CMD_WRDMA};
 
     loader->_port->ops->spi_set_cs(loader->_port, 0);
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)&preamble, sizeof(preamble),
-                    port_remaining_time(loader)));
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)config->cmd, config->cmd_size,
-                    port_remaining_time(loader)));
+    RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)&preamble, sizeof(preamble)));
+    RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)config->cmd, config->cmd_size));
     if (config->data != NULL && config->data_size != 0) {
-        RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)config->data, config->data_size,
-                        port_remaining_time(loader)));
+        RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)config->data, config->data_size));
     }
 
     loader->_port->ops->spi_set_cs(loader->_port, 1);
@@ -147,11 +159,9 @@ static esp_loader_error_t spi_send_cmd(esp_loader_t *loader, const send_cmd_conf
     /* Terminate the write */
     loader->_port->ops->spi_set_cs(loader->_port, 0);
     preamble.cmd = TRANS_CMD_WR_DONE;
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)&preamble, sizeof(preamble),
-                    port_remaining_time(loader)));
+    RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)&preamble, sizeof(preamble)));
     loader->_port->ops->spi_set_cs(loader->_port, 1);
 
-    command_t command = ((const command_common_t *)config->cmd)->command;
     return spi_check_response(loader, command, config->reg_value);
 }
 
@@ -165,9 +175,8 @@ static esp_loader_error_t read_slave_reg(esp_loader_t *loader, uint8_t *out_data
     };
 
     loader->_port->ops->spi_set_cs(loader->_port, 0);
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)&preamble, sizeof(preamble),
-                    port_remaining_time(loader)));
-    RETURN_ON_ERROR(loader->_port->ops->read(loader->_port, out_data, size, port_remaining_time(loader)));
+    RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)&preamble, sizeof(preamble)));
+    RETURN_ON_ERROR(spi_read(loader, out_data, size));
     loader->_port->ops->spi_set_cs(loader->_port, 1);
 
     return ESP_LOADER_SUCCESS;
@@ -183,9 +192,8 @@ static esp_loader_error_t write_slave_reg(esp_loader_t *loader, const uint8_t *d
     };
 
     loader->_port->ops->spi_set_cs(loader->_port, 0);
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)&preamble, sizeof(preamble),
-                    port_remaining_time(loader)));
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, data, size, port_remaining_time(loader)));
+    RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)&preamble, sizeof(preamble)));
+    RETURN_ON_ERROR(spi_write(loader, data, size));
     loader->_port->ops->spi_set_cs(loader->_port, 1);
 
     return ESP_LOADER_SUCCESS;
@@ -249,18 +257,15 @@ static esp_loader_error_t spi_check_response(esp_loader_t *loader, const command
     };
 
     loader->_port->ops->spi_set_cs(loader->_port, 0);
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)&preamble, sizeof(preamble),
-                    port_remaining_time(loader)));
-    RETURN_ON_ERROR(loader->_port->ops->read(loader->_port, buf, sizeof(buf),
-                    port_remaining_time(loader)));
+    RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)&preamble, sizeof(preamble)));
+    RETURN_ON_ERROR(spi_read(loader, buf, sizeof(buf)));
 
     loader->_port->ops->spi_set_cs(loader->_port, 1);
 
     /* Terminate the read */
     loader->_port->ops->spi_set_cs(loader->_port, 0);
     preamble.cmd = TRANS_CMD_CMD8;
-    RETURN_ON_ERROR(loader->_port->ops->write(loader->_port, (const uint8_t *)&preamble, sizeof(preamble),
-                    port_remaining_time(loader)));
+    RETURN_ON_ERROR(spi_write(loader, (const uint8_t *)&preamble, sizeof(preamble)));
     loader->_port->ops->spi_set_cs(loader->_port, 1);
 
     common_response_t *common = (common_response_t *)&buf[0];
@@ -273,6 +278,7 @@ static esp_loader_error_t spi_check_response(esp_loader_t *loader, const command
         log_loader_internal_error(loader, status->error);
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
+    LOADER_LOGD(loader, "CMD <- %s OK", loader_command_name(cmd));
 
     if (reg_value != NULL) {
         *reg_value = common->value;

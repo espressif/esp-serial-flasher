@@ -5,28 +5,13 @@
  */
 
 #include "esp32_port.h"
+#include "loader_port_stdio_log.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
-#include "esp_log.h"
 #include "esp_idf_version.h"
+#include <stdio.h>
 #include <unistd.h>
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
-{
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printf("%02x ", data[i]);
-    }
-}
-#endif
 
 static esp_loader_error_t esp32_port_init(esp_loader_port_t *port)
 {
@@ -102,9 +87,6 @@ static esp_loader_error_t esp32_uart_write(esp_loader_port_t *port, const uint8_
     esp_err_t err = uart_wait_tx_done((uart_port_t)p->uart_port, pdMS_TO_TICKS(timeout));
 
     if (err == ESP_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, size, true);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == ESP_ERR_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -123,14 +105,8 @@ static esp_loader_error_t esp32_uart_read(esp_loader_port_t *port, uint8_t *data
     if (read < 0) {
         return ESP_LOADER_ERROR_FAIL;
     } else if (read < size) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, read, false);
-#endif
         return ESP_LOADER_ERROR_TIMEOUT;
     } else {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, read, false);
-#endif
         return ESP_LOADER_SUCCESS;
     }
 }
@@ -179,13 +155,6 @@ static void esp32_uart_enter_bootloader(esp_loader_port_t *port)
 }
 
 
-static void esp32_uart_debug_print(esp_loader_port_t *port, const char *str)
-{
-    (void)port;
-    printf("DEBUG: %s\n", str);
-}
-
-
 static esp_loader_error_t esp32_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
     esp32_port_t *p = container_of(port, esp32_port_t, port);
@@ -202,7 +171,8 @@ const esp_loader_port_ops_t esp32_uart_ops = {
     .start_timer              = esp32_uart_start_timer,
     .remaining_time           = esp32_uart_remaining_time,
     .delay_ms                 = esp32_uart_delay_ms,
-    .debug_print              = esp32_uart_debug_print,
+    .log                      = loader_port_stdio_log,
+    .log_hex                  = loader_port_stdio_log_hex,
     .change_transmission_rate = esp32_uart_change_rate,
     .write                    = esp32_uart_write,
     .read                     = esp32_uart_read,

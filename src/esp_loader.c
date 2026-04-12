@@ -11,8 +11,33 @@
 #include "esp_targets.h"
 #include "md5_hash.h"
 #include "slip.h"
+#include "loader_log.h"
 #include <string.h>
 #include <assert.h>
+#include <inttypes.h>
+
+#if SERIAL_FLASHER_LOG_LEVEL >= ESP_LOADER_LOG_INFO
+static const char *target_chip_name(target_chip_t chip)
+{
+    static const char *const names[ESP_MAX_CHIP] = {
+        [ESP8266_CHIP] = "ESP8266",
+        [ESP32_CHIP] = "ESP32",
+        [ESP32S2_CHIP] = "ESP32-S2",
+        [ESP32C3_CHIP] = "ESP32-C3",
+        [ESP32S3_CHIP] = "ESP32-S3",
+        [ESP32C2_CHIP] = "ESP32-C2",
+        [ESP32C5_CHIP] = "ESP32-C5",
+        [ESP32H2_CHIP] = "ESP32-H2",
+        [ESP32C6_CHIP] = "ESP32-C6",
+        [ESP32P4_CHIP] = "ESP32-P4",
+        [ESP32C61_CHIP] = "ESP32-C61",
+    };
+    if ((unsigned)chip < sizeof(names) / sizeof(names[0])) {
+        return names[chip];
+    }
+    return "UNKNOWN";
+}
+#endif
 
 #ifndef SERIAL_FLASHER_WRITE_BLOCK_RETRIES
 #define SERIAL_FLASHER_WRITE_BLOCK_RETRIES 3
@@ -134,6 +159,8 @@ esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_a
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
 
+    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
+
     return ESP_LOADER_SUCCESS;
 }
 
@@ -171,6 +198,8 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
             return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
         }
     }
+
+    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
 
     esp_loader_mem_cfg_t mem_cfg = {0};
 
@@ -234,6 +263,8 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
 
     loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
     RETURN_ON_ERROR(loader->_protocol->spi_attach(loader, 0));
+
+    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
 
     /* Mark as attached so loader_ensure_spi_attached() does not repeat the call.
      * spi_config is 0 here because efuse registers are not readable in secure
@@ -422,10 +453,11 @@ static esp_loader_error_t init_flash_params(esp_loader_t *loader)
     /* Flash size will be known in advance if we're in secure download mode or we already read it*/
     if (loader->_target_flash_size == 0) {
         if (esp_loader_flash_detect_size(loader, &loader->_target_flash_size) != ESP_LOADER_SUCCESS) {
-            if (loader->_port->ops->debug_print != NULL) {
-                loader->_port->ops->debug_print(loader->_port, "Flash size detection failed, falling back to default");
-            }
+            LOADER_LOGW(loader, "Flash size detection failed, falling back to default");
             loader->_target_flash_size = DEFAULT_FLASH_SIZE;
+        } else {
+            LOADER_LOGI(loader, "Flash size: %" PRIu32 " MB",
+                        loader->_target_flash_size / (1024u * 1024u));
         }
     }
 
@@ -454,6 +486,9 @@ esp_loader_error_t esp_loader_flash_start(esp_loader_t *loader, esp_loader_flash
     if (!loader->_stub_running && cfg->offset >= MAX_ROM_FLASH_SIZE) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
+
+    LOADER_LOGI(loader, "Flash write start - offset: 0x%08" PRIx32 "  size: %" PRIu32 " bytes",
+                cfg->offset, cfg->image_size);
 
     RETURN_ON_ERROR(init_flash_params(loader));
     if (cfg->image_size + cfg->offset > loader->_target_flash_size) {
@@ -507,6 +542,10 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
         loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
         result = loader_flash_data_cmd(loader, &cfg->_state._sequence_number, (uint8_t *)payload, cfg->block_size);
         attempt++;
+        if (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES) {
+            LOADER_LOGW(loader, "Flash write failed (attempt %u/%u), retrying",
+                        attempt, (unsigned)SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
+        }
     } while (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
 
     return result;
@@ -564,6 +603,10 @@ esp_loader_error_t esp_loader_flash_deflate_start(esp_loader_t *loader, esp_load
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
+    LOADER_LOGI(loader,
+                "Compressed flash write start - offset: 0x%08" PRIx32 "  size: %" PRIu32 " bytes  compressed: %" PRIu32 " bytes",
+                cfg->offset, cfg->image_size, cfg->compressed_size);
+
     RETURN_ON_ERROR(init_flash_params(loader));
     if (cfg->image_size + cfg->offset > loader->_target_flash_size) {
         return ESP_LOADER_ERROR_IMAGE_SIZE;
@@ -597,6 +640,10 @@ esp_loader_error_t esp_loader_flash_deflate_write(esp_loader_t *loader, esp_load
         loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
         result = loader_flash_deflate_data_cmd(loader, &cfg->_state._sequence_number, payload, size);
         attempt++;
+        if (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES) {
+            LOADER_LOGW(loader, "Compressed flash write failed (attempt %u/%u), retrying",
+                        attempt, (unsigned)SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
+        }
     } while (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
 
     return result;
@@ -625,6 +672,8 @@ esp_loader_error_t esp_loader_flash_erase(esp_loader_t *loader)
     if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
+
+    LOADER_LOGI(loader, "Flash erase start");
 
     if (loader->_stub_running) {
         RETURN_ON_ERROR(init_flash_params(loader));
@@ -655,6 +704,9 @@ esp_loader_error_t esp_loader_flash_erase_region(esp_loader_t *loader, uint32_t 
     if (offset % FLASH_SECTOR_SIZE != 0 || size % FLASH_SECTOR_SIZE != 0) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
+
+    LOADER_LOGI(loader, "Flash erase region start - offset: 0x%08" PRIx32 "  size: %" PRIu32 " bytes",
+                offset, size);
 
     if (loader->_stub_running) {
         RETURN_ON_ERROR(init_flash_params(loader));
@@ -869,6 +921,10 @@ esp_loader_error_t esp_loader_mem_write(esp_loader_t *loader, esp_loader_mem_cfg
             result = loader_mem_data_cmd(loader, &cfg->_state._sequence_number, data, size);
         }
         attempt++;
+        if (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES) {
+            LOADER_LOGW(loader, "RAM write failed (attempt %u/%u), retrying",
+                        attempt, (unsigned)SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
+        }
     } while (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES);
 
     return result;
@@ -1017,14 +1073,9 @@ esp_loader_error_t esp_loader_flash_verify_known_md5(esp_loader_t *loader,
 
     bool md5_match = memcmp(expected_md5, received_md5, MD5_SIZE_ROM) == 0;
     if (!md5_match) {
-        if (loader->_port->ops->debug_print != NULL) {
-            loader->_port->ops->debug_print(loader->_port, "Error: MD5 checksum does not match");
-            loader->_port->ops->debug_print(loader->_port, "Expected:");
-            loader->_port->ops->debug_print(loader->_port, (char *)expected_md5);
-            loader->_port->ops->debug_print(loader->_port, "Actual:");
-            loader->_port->ops->debug_print(loader->_port, (char *)received_md5);
-        }
-
+        LOADER_LOGE(loader, "MD5 mismatch - expected: %.*s  actual: %.*s",
+                    (int)MD5_SIZE_ROM, (const char *)expected_md5,
+                    (int)MD5_SIZE_ROM, (const char *)received_md5);
         return ESP_LOADER_ERROR_INVALID_MD5;
     }
 

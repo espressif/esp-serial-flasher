@@ -5,26 +5,13 @@
  */
 
 #include "esp32_sdio_port.h"
+#include "loader_port_stdio_log.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
 #include <stdlib.h>
 #include <unistd.h>
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
-{
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printf("%02x ", data[i]);
-    }
-}
-#endif
+LOADER_PORT_STDIO_LOG_CALLBACK(esp32_sdio_log, "esf-sdio");
 
 static esp_loader_error_t esp32_sdio_port_init(esp_loader_port_t *port)
 {
@@ -99,9 +86,6 @@ static esp_loader_error_t esp32_sdio_write(esp_loader_port_t *port, uint32_t fun
     esp_err_t err = sdmmc_io_write_bytes(&p->_card, function, addr, data, (size_t)size);
 
     if (err == ESP_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, size, true);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == ESP_ERR_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -123,9 +107,6 @@ static esp_loader_error_t esp32_sdio_read(esp_loader_port_t *port, uint32_t func
     esp_err_t err = sdmmc_io_read_bytes(&p->_card, function, addr, data, (size_t)size);
 
     if (err == ESP_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, size, false);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == ESP_ERR_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -186,12 +167,6 @@ static void esp32_sdio_enter_bootloader(esp_loader_port_t *port)
     gpio_set_level(p->boot_pin, 1);
 }
 
-static void esp32_sdio_debug_print(esp_loader_port_t *port, const char *str)
-{
-    (void)port;
-    printf("DEBUG: %s\n", str);
-}
-
 esp_loader_error_t loader_port_wait_int(esp32_sdio_port_t *port, uint32_t timeout)
 {
     if (sdmmc_io_wait_int(&port->_card, timeout) == ESP_OK) {
@@ -209,7 +184,8 @@ const esp_loader_port_ops_t esp32_sdio_ops = {
     .start_timer              = esp32_sdio_start_timer,
     .remaining_time           = esp32_sdio_remaining_time,
     .delay_ms                 = esp32_sdio_delay_ms,
-    .debug_print              = esp32_sdio_debug_print,
+    .log                      = esp32_sdio_log,
+    .log_hex                  = loader_port_stdio_log_hex,
     .change_transmission_rate = NULL,
     .sdio_write               = esp32_sdio_write,
     .sdio_read                = esp32_sdio_read,

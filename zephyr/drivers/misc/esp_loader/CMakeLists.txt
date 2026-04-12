@@ -12,6 +12,10 @@ if (CONFIG_ESP_SERIAL_FLASHER)
         SERIAL_FLASHER_WRITE_BLOCK_RETRIES=${CONFIG_SERIAL_FLASHER_WRITE_BLOCK_RETRIES}
     )
 
+    zephyr_compile_definitions(
+        SERIAL_FLASHER_LOG_LEVEL=${CONFIG_SERIAL_FLASHER_LOG_LEVEL}
+    )
+
     zephyr_include_directories(
         ${ZEPHYR_CURRENT_MODULE_DIR}/include
         ${ZEPHYR_CURRENT_MODULE_DIR}/port

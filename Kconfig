@@ -7,9 +7,29 @@ menu "ESP serial flasher"
         int "Time for which the boot pin is asserted when doing a hard reset"
         default 50
 
-    config SERIAL_FLASHER_DEBUG_TRACE
-        bool "Enable debug tracing output (only transfer data tracing is supported at the time)"
-        default n
+    choice SERIAL_FLASHER_LOG_LEVEL_CHOICE
+        prompt "Compile-time minimum log level"
+        default SERIAL_FLASHER_LOG_LEVEL_WARN
+
+        config SERIAL_FLASHER_LOG_LEVEL_NONE
+            bool "None — no logging compiled in (zero binary cost)"
+        config SERIAL_FLASHER_LOG_LEVEL_ERROR
+            bool "Error — protocol errors only"
+        config SERIAL_FLASHER_LOG_LEVEL_WARN
+            bool "Warn — errors + unexpected-but-non-fatal events (recommended)"
+        config SERIAL_FLASHER_LOG_LEVEL_INFO
+            bool "Info — + connection, chip detection, flash size, write progress"
+        config SERIAL_FLASHER_LOG_LEVEL_DEBUG
+            bool "Debug — + per-command trace and transfer hex dumps"
+    endchoice
+
+    config SERIAL_FLASHER_LOG_LEVEL
+        int
+        default 0 if SERIAL_FLASHER_LOG_LEVEL_NONE
+        default 1 if SERIAL_FLASHER_LOG_LEVEL_ERROR
+        default 2 if SERIAL_FLASHER_LOG_LEVEL_WARN
+        default 3 if SERIAL_FLASHER_LOG_LEVEL_INFO
+        default 4 if SERIAL_FLASHER_LOG_LEVEL_DEBUG
 
     config SERIAL_FLASHER_WRITE_BLOCK_RETRIES
         int "Number of retries when writing blocks either to target flash or RAM"

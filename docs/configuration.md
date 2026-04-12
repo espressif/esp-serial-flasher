@@ -4,17 +4,33 @@ This document provides a comprehensive reference for all configuration options a
 
 ## Configuration Types
 
-ESP Serial Flasher supports various configuration options that can be set as **CMake cache variables**. These options control the behavior and features of the library.
+ESP Serial Flasher supports configuration through **CMake cache variables** in regular CMake builds and **Kconfig** in ESP-IDF or Zephyr builds. These options control the behavior and features of the library.
 
 ## Configuration Options
 
 ### Debug and Diagnostics
 
-#### `SERIAL_FLASHER_DEBUG_TRACE`
+#### `SERIAL_FLASHER_LOG_LEVEL`
 
-- **Type**: CMake cache variable / Kconfig (`CONFIG_SERIAL_FLASHER_DEBUG_TRACE`)
-- **Default**: Disabled
-- **Description**: Enables debug tracing output (transfer data tracing).
+- **Type**: CMake cache variable (`NONE`, `ERROR`, `WARN`, `INFO`, `DEBUG`, or `0..4`) / Kconfig choice (`CONFIG_SERIAL_FLASHER_LOG_LEVEL_*`)
+- **Default**: `2` (WARN)
+- **Description**: Sets the minimum log level compiled into the library. Messages below this level are compiled out, including their format strings.
+
+| Value | Level | Includes                                                              |
+| ----- | ----- | --------------------------------------------------------------------- |
+| `0`   | None  | No library logging                                                    |
+| `1`   | Error | Protocol errors and failed target responses                           |
+| `2`   | Warn  | Errors plus unexpected but recoverable events                         |
+| `3`   | Info  | Connection, target, flash size, write start, and erase start messages |
+| `4`   | Debug | Per-command traces and transfer hex dumps                             |
+
+For CMake builds, pass the level name or numeric value directly:
+
+```bash
+cmake -DSERIAL_FLASHER_LOG_LEVEL=DEBUG ..
+```
+
+For ESP-IDF and Zephyr builds, select one of the `CONFIG_SERIAL_FLASHER_LOG_LEVEL_*` Kconfig choices. Kconfig derives the internal numeric `CONFIG_SERIAL_FLASHER_LOG_LEVEL` value used by the C code. `SERIAL_FLASHER_DEBUG_TRACE` / `CONFIG_SERIAL_FLASHER_DEBUG_TRACE` has been removed.
 
 ### Protocol / Interface Selection
 
@@ -124,7 +140,7 @@ cmake \
 
 When using ESP-IDF or Zephyr, configuration options can be set using **Kconfig** instead of CMake flags. Many options have corresponding Kconfig names with the `CONFIG_` prefix:
 
-- `SERIAL_FLASHER_DEBUG_TRACE` → `CONFIG_SERIAL_FLASHER_DEBUG_TRACE`
+- `SERIAL_FLASHER_LOG_LEVEL` → `CONFIG_SERIAL_FLASHER_LOG_LEVEL_*` Kconfig choice
 - Port compilation → `CONFIG_SERIAL_FLASHER_PORT_UART`, `CONFIG_SERIAL_FLASHER_PORT_SPI`, etc.
 
 You can configure these options using:
@@ -145,7 +161,7 @@ Alternatively, you can set them directly in your `sdkconfig` (ESP-IDF) or `prj.c
 
 ```ini
 # ESP-IDF sdkconfig or Zephyr prj.conf
-CONFIG_SERIAL_FLASHER_DEBUG_TRACE=y
+CONFIG_SERIAL_FLASHER_LOG_LEVEL_DEBUG=y
 CONFIG_SERIAL_FLASHER_PORT_UART=y
 CONFIG_SERIAL_FLASHER_PORT_SPI=y
 ```

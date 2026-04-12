@@ -11,10 +11,12 @@
 #include "esp_targets.h"
 #include "esp_stubs.h"
 #include "sip.h"
+#include "loader_log.h"
 #include <stddef.h>
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
+#include <inttypes.h>
 
 static inline uint32_t port_remaining_time(const esp_loader_t *loader)
 {
@@ -24,14 +26,23 @@ static inline uint32_t port_remaining_time(const esp_loader_t *loader)
 static inline esp_loader_error_t sdio_read_bytes(esp_loader_t *loader, uint32_t function,
         uint32_t addr, void *data, uint16_t size)
 {
-    return loader->_port->ops->sdio_read(loader->_port, function, addr,
-                                         (uint8_t *)data, size,
-                                         port_remaining_time(loader));
+    esp_loader_error_t err = loader->_port->ops->sdio_read(loader->_port, function, addr,
+                             (uint8_t *)data, size,
+                             port_remaining_time(loader));
+    if (err == ESP_LOADER_SUCCESS) {
+        LOADER_LOGD(loader, "SDIO R fn=%" PRIu32 " addr=0x%04" PRIx32 " size=%u",
+                    function, addr, (unsigned)size);
+        LOADER_LOG_HEX(loader, "SDIO RX", data, size);
+    }
+    return err;
 }
 
 static inline esp_loader_error_t sdio_write_bytes(esp_loader_t *loader, uint32_t function,
         uint32_t addr, const void *data, uint16_t size)
 {
+    LOADER_LOGD(loader, "SDIO W fn=%" PRIu32 " addr=0x%04" PRIx32 " size=%u",
+                function, addr, (unsigned)size);
+    LOADER_LOG_HEX(loader, "SDIO TX", data, size);
     return loader->_port->ops->sdio_write(loader->_port, function, addr,
                                           (const uint8_t *)data, size,
                                           port_remaining_time(loader));
@@ -218,9 +229,7 @@ static esp_loader_error_t slave_init_card(esp_loader_t *loader, esp_loader_conne
         loader->_port->ops->start_timer(loader->_port, connect_args->sync_timeout);
 
         if (loader->_port->ops->sdio_card_init(loader->_port) != ESP_LOADER_SUCCESS) {
-            if (loader->_port->ops->debug_print != NULL) {
-                loader->_port->ops->debug_print(loader->_port, "Retrying card connection...");
-            }
+            LOADER_LOGW(loader, "Retrying SDIO card connection...");
             loader->_port->ops->delay_ms(loader->_port, 100);
         } else {
             return ESP_LOADER_SUCCESS;
@@ -566,6 +575,7 @@ static esp_loader_error_t sdio_check_response(esp_loader_t *loader, const send_c
         log_loader_internal_error(loader, status->error);
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
+    LOADER_LOGD(loader, "CMD <- %s OK", loader_command_name(command));
 
     if (config->reg_value != NULL) {
         *config->reg_value = response->value;
@@ -589,6 +599,10 @@ static esp_loader_error_t sdio_check_response(esp_loader_t *loader, const send_c
 static esp_loader_error_t sdio_send_cmd(esp_loader_t *loader, const send_cmd_config *config)
 {
     const uint32_t total_len = config->cmd_size + config->data_size;
+    LOADER_LOGD(loader, "CMD -> %s (0x%02x)",
+                loader_command_name(((const command_common_t *)config->cmd)->command),
+                (unsigned)((const command_common_t *)config->cmd)->command);
+
     if (total_len > STUB_MAX_TRANSACTION_SIZE) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }

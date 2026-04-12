@@ -11,22 +11,7 @@
 #include <sys/param.h>
 #include <stdio.h>
 #include "stm32_port.h"
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
-{
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printf("%02x ", data[i]);
-    }
-}
-#endif
+#include "loader_port_stdio_log.h"
 
 static esp_loader_error_t stm32_port_init(esp_loader_port_t *port)
 {
@@ -42,9 +27,6 @@ static esp_loader_error_t stm32_uart_write(esp_loader_port_t *port, const uint8_
     HAL_StatusTypeDef err = HAL_UART_Transmit(p->huart, (uint8_t *)data, size, timeout);
 
     if (err == HAL_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, size, true);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == HAL_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -59,9 +41,6 @@ static esp_loader_error_t stm32_uart_read(esp_loader_port_t *port, uint8_t *data
     HAL_StatusTypeDef err = HAL_UART_Receive(p->huart, data, size, timeout);
 
     if (err == HAL_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, size, false);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == HAL_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -108,12 +87,6 @@ static void stm32_uart_enter_bootloader(esp_loader_port_t *port)
     HAL_GPIO_WritePin(p->port_boot, p->pin_num_boot, SERIAL_FLASHER_BOOT_INVERT ? GPIO_PIN_RESET : GPIO_PIN_SET);
 }
 
-static void stm32_uart_debug_print(esp_loader_port_t *port, const char *str)
-{
-    (void)port;
-    printf("DEBUG: %s\n", str);
-}
-
 static esp_loader_error_t stm32_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
     stm32_port_t *p = container_of(port, stm32_port_t, port);
@@ -135,7 +108,8 @@ const esp_loader_port_ops_t stm32_uart_ops = {
     .start_timer              = stm32_uart_start_timer,
     .remaining_time           = stm32_uart_remaining_time,
     .delay_ms                 = stm32_uart_delay_ms,
-    .debug_print              = stm32_uart_debug_print,
+    .log                      = loader_port_stdio_log,
+    .log_hex                  = loader_port_stdio_log_hex,
     .change_transmission_rate = stm32_uart_change_rate,
     .write                    = stm32_uart_write,
     .read                     = stm32_uart_read,
