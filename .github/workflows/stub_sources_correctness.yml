@@ -21,4 +21,4 @@ jobs:
             .
 
       - name: Run git diff to check if the sources in the repo match the generated ones
-        run: git diff --exit-code
+        run: git diff -I 'SPDX-FileCopyrightText' --exit-code  # ignore annual copyright year updates

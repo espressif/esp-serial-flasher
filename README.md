@@ -71,7 +71,7 @@ This library enables you to program Espressif SoCs from various host platforms u
 **Legend**: ✅ Supported | ❌ Not supported | 🔶 Requires connecting with stub (`esp_loader_connect_with_stub()`)
 
 > [!TIP]
-> When flash size on the host is not a concern, connecting with stub (`esp_loader_connect_with_stub()`) is recommended over the plain ROM bootloader connection. The stub unlocks faster flashing speeds (higher baud rates), flash sizes larger than 2 MB, compressed writes (deflate), and fast flash read. All supported chips now have a bundled stub.
+> Connecting with stub (`esp_loader_connect_with_stub()`) is recommended over the plain ROM bootloader connection when flash size on the host is not a limiting constraint. The stub unlocks faster flashing speeds (higher baud rates), flash sizes larger than 2 MB, compressed writes (deflate), and fast flash read. All supported chips now have a bundled stub. See [Flash Size Footprint](#flash-size-footprint) for the flash overhead introduced by the bundled stubs.
 
 ### Public API
 
@@ -197,6 +197,28 @@ cmake -DSERIAL_FLASHER_WRITE_BLOCK_RETRIES=5 ..
 ```
 
 For complete configuration reference, see [Configuration Documentation](docs/configuration.md).
+
+## Flash Size Footprint
+
+The library bundles pre-built stub binaries for all supported chips directly in the host firmware. The table below shows the approximate flash rodata overhead from those stubs.
+
+| Connection mode                                    | Flash overhead | How                                                                      |
+| :------------------------------------------------- | :------------: | :----------------------------------------------------------------------- |
+| ROM bootloader only (`esp_loader_connect()`)       |     ~0 KB      | Stubs stripped by linker GC — none of the stub binary data is referenced |
+| With stub (`esp_loader_connect_with_stub()`)       |  **+~87 KB**   | All 11 per-chip stub binaries are pulled into flash rodata               |
+| SDIO interface (`CONFIG_SERIAL_FLASHER_PORT_SDIO`) |  **+~268 KB**  | SDIO-specific stubs for ESP32-C5 and ESP32-C6 are included               |
+
+> [!NOTE]
+> The SDIO stubs are a **temporary solution** built from a custom, non-public stub. They will be replaced by the standard general-purpose stub once SDIO support is integrated into [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub), which is expected to reduce the SDIO overhead significantly.
+
+### Reducing Stub Flash Usage
+
+When using ESP-IDF or Zephyr, stub data is automatically removed by the linker's dead-code elimination (`--gc-sections`) unless actively referenced:
+
+- **Not using stubs at all** — call only `esp_loader_connect()` and never `esp_loader_connect_with_stub()`. The entire ~87 KB of stub rodata is stripped automatically; no extra configuration is needed.
+- **SDIO stubs** — the SDIO stub data is only compiled when `CONFIG_SERIAL_FLASHER_PORT_SDIO=y` (Kconfig) is set. Leave the option disabled for non-SDIO builds.
+
+For plain CMake builds with linker GC disabled (e.g. static libraries without `--gc-sections`), or when targeting a host where every byte counts, you can exclude the stub sources at the CMake level by removing the stub `.c` files from the sources list when integrating the library as a subdirectory or submodule.
 
 ## Hardware Connections
 
