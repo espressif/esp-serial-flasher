@@ -430,6 +430,7 @@ void app_main(void)
 
     esp_loader_flash_finish(&loader, &flash_cfg);
     esp_loader_reset_target(&loader);
+    esp_loader_deinit(&loader);
 }
 ```
 

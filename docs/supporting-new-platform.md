@@ -65,7 +65,7 @@ void               (*deinit)(esp_loader_port_t *port);
 
 `init` is called automatically by `esp_loader_init_uart()` / `esp_loader_init_spi()` / etc. before the connection phase. Use it to open the serial port, configure GPIO, install peripheral drivers, etc.
 
-`deinit` is the caller's responsibility to invoke when the port is no longer needed — the library never calls it automatically. Call it directly: `port.port.ops->deinit(&port.port)`. Set both to `NULL` if the peripheral is already configured before the port struct is created (e.g. STM32 with CubeMX-generated HAL code) or if teardown is not needed.
+`deinit` is invoked by calling `esp_loader_deinit(&loader)` when the loader is no longer needed. This tears down the peripheral and zeroes the loader context. Set `deinit` to `NULL` if the peripheral is already configured before the port struct is created (e.g. STM32 with CubeMX-generated HAL code) or if teardown is not needed — `esp_loader_deinit()` is a no-op when the callback is NULL.
 
 ---
 

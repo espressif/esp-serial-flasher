@@ -201,6 +201,7 @@ int main(int argc, char *argv[])
 
     printf("\nAll done! Resetting target...\n");
     esp_loader_reset_target(&loader);
+    esp_loader_deinit(&loader);
 
     return 0;
 }
