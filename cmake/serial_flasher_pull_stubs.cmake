@@ -9,9 +9,9 @@ macro(serial_flasher_pull_stubs)
         return()
     endif()
 
-    # By default use the esp-flasher-stub project stubs
+    # By default use the espressif/esp-flasher-stub project stubs
     if (NOT DEFINED FLASHER_STUB_SOURCE)
-        set(FLASHER_STUB_SOURCE "https://github.com/esp-rs/esp-flasher-stub/releases/download")
+        set(FLASHER_STUB_SOURCE "https://github.com/espressif/esp-flasher-stub/releases/download")
     endif()
 
     execute_process(

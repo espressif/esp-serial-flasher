@@ -50,9 +50,6 @@ This library enables you to program Espressif SoCs from various host platforms u
 
 **Legend**: ✅ Supported | ❌ Not supported | 🚧 Under development
 
-> [!NOTE]
-> **Stub support**: ESP8266, ESP32-C5, and ESP32-P4 stub support is under development
-
 ### Feature Support by Interface
 
 |             Feature              | UART | USB CDC ACM | SPI | SDIO |
@@ -72,6 +69,9 @@ This library enables you to program Espressif SoCs from various host platforms u
 |     Change baud / clock rate     |  ✅  |     ✅      | ❌  |  ❌  |
 
 **Legend**: ✅ Supported | ❌ Not supported | 🔶 Requires connecting with stub (`esp_loader_connect_with_stub()`)
+
+> [!TIP]
+> When flash size on the host is not a concern, connecting with stub (`esp_loader_connect_with_stub()`) is recommended over the plain ROM bootloader connection. The stub unlocks faster flashing speeds (higher baud rates), flash sizes larger than 2 MB, compressed writes (deflate), and fast flash read. All supported chips now have a bundled stub.
 
 ### Public API
 
@@ -215,6 +215,8 @@ If you want to add support for a new host platform, see [Supporting New Host Pla
 ## License
 
 This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+
+This repository includes precompiled stub binaries from [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub), which are licensed under the Apache 2.0 OR MIT license.
 
 ## Known Limitations
 

@@ -35,6 +35,9 @@ typedef struct target_registers_t {
  * only the register table is looked up and GET_SECURITY_INFO is skipped.
  * Otherwise the full UART/SPI detection sequence is used.
  */
+// ESP32-P4 chip revision v3.0 corresponds to ECO5; earlier silicon needs the rev1 stub.
+#define ESP32P4_ECO_REV3_MIN 5
+
 esp_loader_error_t loader_detect_chip(esp_loader_t *loader);
 esp_loader_error_t loader_read_mac(esp_loader_t *loader, target_chip_t target_code, uint8_t *mac);
 bool encryption_in_begin_flash_cmd(target_chip_t target);

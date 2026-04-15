@@ -353,7 +353,9 @@ esp_loader_error_t loader_spi_attach_cmd(esp_loader_t *loader, uint32_t config)
         .common = {
             .direction = WRITE_DIRECTION,
             .command = SPI_ATTACH,
-            .size = CMD_SIZE(attach_cmd),
+            .size = loader->_stub_running
+            ? CMD_SIZE(attach_cmd) - sizeof(attach_cmd.zero)
+            : CMD_SIZE(attach_cmd),
             .checksum = 0
         },
         .configuration = config,

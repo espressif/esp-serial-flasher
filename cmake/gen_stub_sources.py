@@ -1,50 +1,79 @@
+# SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
+# SPDX-License-Identifier: Apache-2.0
+"""
+Generate per-chip stub source files and a lookup-table from esp-flasher-stub release JSON files.
+
+Usage:
+    gen_stub_sources.py <version> <base_url> <repo_root> [override_path]
+
+Each chip gets its own C file in <repo_root>/src/stubs/.
+A lookup-table file and the private header are also written/updated.
+
+JSON format (espressif/esp-flasher-stub):
+    { "entry": <uint32>, "text": "<base64>", "text_start": <uint32>,
+      "data": "<base64>", "data_start": <uint32>, "bss_start": <uint32> }
+"""
+
 import base64
 import json
 import os
 import sys
 import urllib.request
 from datetime import datetime
-from textwrap import dedent, indent
+from string import Template
 
-"""
-This python module generates esp_stubs.c/h files from a given version and url, with
-<stub_download_url>/v<stub_version>/esp32xx.json as the required format.
 
-It is also possible to override stub generation to use a local folder for testing purposes.
-"""
+# ---------------------------------------------------------------------------
+# Configuration — order MUST match target_chip_t enumeration in include/esp_loader.h
+# Each name derives: enum = NAME.upper()+"_CHIP", json = name+".json", c_var = "esp_stub_"+name
+# ---------------------------------------------------------------------------
+def _chip(name: str):
+    return (name.upper() + "_CHIP", f"{name}.json", f"esp_stub_{name}")
 
-# Paths
-stub_version = sys.argv[1]
-stub_download_url = sys.argv[2]
-root_path = sys.argv[3]
-stub_override_path = sys.argv[4] if len(sys.argv) == 5 else None
 
-template_path = os.path.join(root_path, "cmake")
-priv_inc_path = os.path.join(root_path, "private_include")
-src_path = os.path.join(root_path, "src")
-h_template_path = os.path.join(template_path, "esp_stubs.h.template")
-c_template_path = os.path.join(template_path, "esp_stubs.c.template")
-hfile_path = os.path.join(priv_inc_path, "esp_stubs.h")
-cfile_path = os.path.join(src_path, "esp_stubs.c")
-current_year = datetime.now().year
-
-# Matches order of target_chip_t enumeration
-files_to_download = [
-    None,  # ESP8266_CHIP
-    "esp32.json",  # ESP32_CHIP
-    "esp32s2.json",  # ESP32S2_CHIP
-    "esp32c3.json",  # ESP32C3_CHIP
-    "esp32s3.json",  # ESP32S3_CHIP
-    "esp32c2.json",  # ESP32C2_CHIP
-    None,  # ESP32C5_CHIP (stub not included for now)
-    "esp32h2.json",  # ESP32H2_CHIP
-    "esp32c6.json",  # ESP32C6_CHIP
-    None,  # ESP32P4_CHIP (stub not included for now)
+CHIPS = [
+    _chip(n)
+    for n in [
+        "esp8266",
+        "esp32",
+        "esp32s2",
+        "esp32c3",
+        "esp32s3",
+        "esp32c2",
+        "esp32c5",
+        "esp32h2",
+        "esp32c6",
+        "esp32p4",
+    ]
 ]
 
+# Extra stubs: own source file, NOT in esp_stub[] table, referenced by extern name.
+# Tuple: (json_filename, c_var_name)  — json names may differ from the standard pattern.
+EXTRA_STUBS = [
+    # ESP32-P4 ECO5-6 (chip revision v1.x / v2.x) — selected at runtime based on
+    # eco_version from GET_SECURITY_INFO when loader->_target == ESP32P4_CHIP.
+    ("esp32p4-rev1.json", "esp_stub_esp32p4rev1"),
+]
 
-def read_stub_json(json_file):
-    stub = json.load(json_file)
+LICENSE_HEADER = """\
+// SPDX-FileCopyrightText: 2025-{year} Espressif Systems (Shanghai) CO LTD
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+"""
+
+
+def hex_array(data: bytes, indent: int = 4) -> str:
+    """Format raw bytes as a C hex initialiser list."""
+    pad = " " * indent
+    per_line = 16
+    lines = []
+    for i in range(0, len(data), per_line):
+        chunk = data[i : i + per_line]
+        lines.append(pad + ", ".join(f"0x{b:02x}" for b in chunk))
+    return ",\n".join(lines)
+
+
+def load_stub_json(file_obj):
+    stub = json.load(file_obj)
     entry = stub["entry"]
     text = base64.b64decode(stub["text"])
     text_start = stub["text_start"]
@@ -52,80 +81,217 @@ def read_stub_json(json_file):
         data = base64.b64decode(stub["data"])
         data_start = stub["data_start"]
     except KeyError:
-        data = None
-        data_start = None
+        data = b""
+        data_start = 0
+    return entry, text, text_start, data, data_start
 
-    text_str = ", ".join([hex(b) for b in text])
-    text_size = len(text)
-    data_str = "" if data is None else ", ".join([hex(b) for b in data])
-    data_size = 0 if data is None else len(data)
-    data_start = 0 if data_start is None else data_start
 
-    stub_data = f"""    // {file_to_download}
-    {{
-        .header = {{
-            .entrypoint = {entry},
-        }},
-        .segments = {{
-            {{
-                .addr = {text_start},
-                .size = {text_size},
-                .data = (const uint8_t[]){{{text_str}}},
-            }},
-            {{
-                .addr = {data_start},
-                .size = {data_size},
-                .data = (const uint8_t[]){{{data_str}}},
-            }},
-        }},
-    }},
+_CHIP_FILE_TEMPLATE = Template("""\
+$license_header
+// auto-generated from esp-flasher-stub v$version — $json_name
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v$version
 
+#include "esp_stubs.h"
+
+static const uint8_t ${c_var}_text[] = {
+$text_hex
+};
+
+${data_array}\
+const esp_stub_t $c_var = {
+    .header = {
+        .entrypoint = $entrypoint,
+    },
+    .segments = {
+        {
+            .addr = $text_start,
+            .size = sizeof(${c_var}_text),
+            .data = ${c_var}_text,
+        },
+        {
+            .addr = $data_start,
+            .size = $data_size,
+            .data = $data_ptr,
+        },
+    },
+};
+""")
+
+
+def write_chip_file(
+    path: str,
+    version: str,
+    year: int,
+    json_name: str,
+    c_var: str,
+    entry: int,
+    text: bytes,
+    text_start: int,
+    data: bytes,
+    data_start: int,
+) -> None:
+    data_array = (
+        f"static const uint8_t {c_var}_data[] = {{\n{hex_array(data)}\n}};\n\n"
+        if data
+        else ""
+    )
+    content = _CHIP_FILE_TEMPLATE.substitute(
+        license_header=LICENSE_HEADER.format(year=year),
+        version=version,
+        json_name=json_name,
+        c_var=c_var,
+        text_hex=hex_array(text) if text else "",
+        data_array=data_array,
+        entrypoint=f"0x{entry:08x}",
+        text_start=f"0x{text_start:08x}",
+        data_start=f"0x{data_start:08x}",
+        data_size=len(data),
+        data_ptr=f"{c_var}_data" if data else "NULL",
+    )
+    with open(path, "w", newline="\n") as f:
+        f.write(content)
+
+
+def write_table_file(path: str, version: str, year: int, chips) -> None:
+    lines = [
+        LICENSE_HEADER.format(year=year),
+        f"// auto-generated from esp-flasher-stub v{version}",
+        f"// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v{version}",
+        "",
+        '#include "esp_stubs.h"',
+        "",
+    ]
+
+    # Static asserts to catch enum reordering
+    lines.append("#if __STDC_VERSION__ >= 201112L")
+    for idx, (enum_name, _json, _cvar) in enumerate(chips):
+        lines.append(
+            f'_Static_assert({enum_name} == {idx}, "Stub table order matches target_chip_t enumeration");'
+        )
+    lines.append(
+        f'_Static_assert(ESP_MAX_CHIP == {len(chips)}, "Stub table order matches target_chip_t enumeration");'
+    )
+    lines.append("#endif")
+    lines.append("")
+
+    # Forward declarations
+    for _enum, _json, c_var in chips:
+        lines.append(f"extern const esp_stub_t {c_var};")
+    lines.append("")
+
+    # Lookup table
+    lines.append("const esp_stub_t *const esp_stub[ESP_MAX_CHIP] = {")
+    for enum_name, _json, c_var in chips:
+        lines.append(f"    [{enum_name}] = &{c_var},")
+    lines.append("};")
+    lines.append("")
+
+    with open(path, "w", newline="\n") as f:
+        f.write("\n".join(lines))
+
+
+def write_header_file(path: str, version: str, year: int, extra_stubs) -> None:
+    extra_externs = "".join(
+        f"\nextern const esp_stub_t {c_var};" for _json, c_var in extra_stubs
+    )
+    content = (
+        LICENSE_HEADER.format(year=year)
+        + f"""\
+// auto-generated from esp-flasher-stub v{version}
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v{version}
+
+#pragma once
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "esp_loader.h"
+
+#ifdef __cplusplus
+extern "C" {{
+#endif
+
+typedef struct {{
+    esp_loader_bin_header_t header;
+    esp_loader_bin_segment_t segments[2];
+}} esp_stub_t;
+
+typedef struct {{
+    esp_loader_bin_header_t header;
+    esp_loader_bin_segment_t segments[3];
+}} sdio_esp_stub_t;
+
+extern const esp_stub_t *const esp_stub[ESP_MAX_CHIP];
+extern const sdio_esp_stub_t esp_stub_sdio[ESP_MAX_CHIP];
+
+// Extra stubs not in the lookup table — selected at runtime by application code.{extra_externs}
+
+#ifdef __cplusplus
+}}
+#endif
 """
-    return stub_data
+    )
+    with open(path, "w", newline="\n") as f:
+        f.write(content)
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 if __name__ == "__main__":
-    # .h and .c file templates
-    with (
-        open(h_template_path, "r") as h_template_file,
-        open(c_template_path, "r") as c_template_file,
-    ):
-        h_template = h_template_file.read()
-        c_template = c_template_file.read()
+    if len(sys.argv) < 4:
+        print(f"Usage: {sys.argv[0]} <version> <base_url> <repo_root> [override_path]")
+        sys.exit(1)
 
-    # .h and .c file to generate
-    with open(hfile_path, "w") as hfile, open(cfile_path, "w") as cfile:
-        hfile.write(
-            h_template.format(
-                current_year=current_year,
-                stub_version=stub_version,
-            )
+    version = sys.argv[1]
+    base_url = sys.argv[2]
+    repo_root = sys.argv[3]
+    override_path = sys.argv[4] if len(sys.argv) >= 5 else None
+
+    year = datetime.now().year
+    stubs_src = os.path.join(repo_root, "src", "stubs")
+    priv_inc = os.path.join(repo_root, "private_include")
+
+    os.makedirs(stubs_src, exist_ok=True)
+
+    def fetch_and_write(json_name, c_var):
+        print(f"  Processing {json_name} → {c_var}.c ...")
+        if override_path:
+            json_path = os.path.join(override_path, json_name)
+            with open(json_path) as fh:
+                entry, text, text_start, data, data_start = load_stub_json(fh)
+        else:
+            url = f"{base_url}/v{version}/{json_name}"
+            with urllib.request.urlopen(url) as resp:
+                entry, text, text_start, data, data_start = load_stub_json(resp)
+        out_path = os.path.join(stubs_src, f"{c_var}.c")
+        write_chip_file(
+            out_path,
+            version,
+            year,
+            json_name,
+            c_var,
+            entry,
+            text,
+            text_start,
+            data,
+            data_start,
         )
 
-        cfile.write(
-            c_template.format(
-                current_year=current_year,
-                stub_version=stub_version,
-                max_chip_number=len(files_to_download),
-            )
-        )
+    for _enum, json_name, c_var in CHIPS:
+        fetch_and_write(json_name, c_var)
 
-        for file_to_download in files_to_download:
-            if file_to_download is None:
-                placeholder_text = dedent("""\
-                    // placeholder
-                    {},
+    for json_name, c_var in EXTRA_STUBS:
+        fetch_and_write(json_name, c_var)
 
-                    """)
-                cfile.write(indent(placeholder_text, " " * 4))
-            else:
-                if stub_override_path:
-                    with open(f"{stub_override_path}/{file_to_download}") as file_path:
-                        cfile.write(read_stub_json(file_path))
-                else:
-                    with urllib.request.urlopen(
-                        f"{stub_download_url}/v{stub_version}/{file_to_download}"
-                    ) as url:
-                        cfile.write(read_stub_json(url))
+    table_path = os.path.join(stubs_src, "esp_stubs_table.c")
+    print(f"  Writing {table_path} ...")
+    write_table_file(table_path, version, year, CHIPS)
 
-        cfile.write("};\n")
+    header_path = os.path.join(priv_inc, "esp_stubs.h")
+    print(f"  Writing {header_path} ...")
+    write_header_file(header_path, version, year, EXTRA_STUBS)
+
+    total = len(CHIPS) + len(EXTRA_STUBS)
+    print(
+        f"Done — {total} stub files generated from v{version} ({len(CHIPS)} in table, {len(EXTRA_STUBS)} extra)."
+    )

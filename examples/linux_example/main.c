@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
@@ -30,6 +31,7 @@ static void print_usage(const char *prog)
             "  -p, --port <device>   Serial device (default: %s)\n"
             "  -b, --baud <rate>     Baud rate     (default: %d)\n"
             "  -m, --mode <mode>     GPIO mode: dtr-rts | gpio | none (default: dtr-rts)\n"
+            "  -n, --no-stub         Use ROM bootloader instead of stub (stub is default)\n"
             "  -h, --help\n"
             "\n"
             "Note: USB JTAG Serial devices (ESP32-C3/S3/C6/H2/P4 native USB,\n"
@@ -38,8 +40,9 @@ static void print_usage(const char *prog)
             "Examples:\n"
             "  %s 0x1000 bootloader.bin 0x8000 partition-table.bin 0x10000 app.bin\n"
             "  %s -p /dev/ttyACM0 0x1000 bootloader.bin 0x8000 partition-table.bin 0x10000 app.bin\n"
-            "  %s -p /dev/ttyUSB0 -b 115200 -m dtr-rts 0x1000 bl.bin\n",
-            prog, DEFAULT_SERIAL_DEVICE, DEFAULT_BAUD_RATE, prog, prog, prog);
+            "  %s -p /dev/ttyUSB0 -b 115200 -m dtr-rts 0x1000 bl.bin\n"
+            "  %s -p /dev/ttyACM0 --no-stub 0x10000 app.bin\n",
+            prog, DEFAULT_SERIAL_DEVICE, DEFAULT_BAUD_RATE, prog, prog, prog, prog);
 }
 
 static uint8_t *read_file(const char *path, size_t *out_size)
@@ -84,17 +87,19 @@ int main(int argc, char *argv[])
     const char       *device    = DEFAULT_SERIAL_DEVICE;
     uint32_t          baud_rate = DEFAULT_BAUD_RATE;
     linux_gpio_mode_t gpio_mode = LINUX_GPIO_DTR_RTS;
+    bool              use_stub  = true;
 
     static const struct option long_opts[] = {
-        { "port",  required_argument, NULL, 'p' },
-        { "baud",  required_argument, NULL, 'b' },
-        { "mode",  required_argument, NULL, 'm' },
-        { "help",  no_argument,       NULL, 'h' },
+        { "port",     required_argument, NULL, 'p' },
+        { "baud",     required_argument, NULL, 'b' },
+        { "mode",     required_argument, NULL, 'm' },
+        { "no-stub",  no_argument,       NULL, 'n' },
+        { "help",     no_argument,       NULL, 'h' },
         { NULL, 0, NULL, 0 }
     };
 
     int opt;
-    while ((opt = getopt_long(argc, argv, "p:b:m:h", long_opts, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "p:b:m:nh", long_opts, NULL)) != -1) {
         switch (opt) {
         case 'p':
             device = optarg;
@@ -117,6 +122,9 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "Unknown mode '%s'. Use: dtr-rts | gpio | none\n", optarg);
                 return 1;
             }
+            break;
+        case 'n':
+            use_stub = false;
             break;
         case 'h':
             print_usage(argv[0]);
@@ -148,6 +156,7 @@ int main(int argc, char *argv[])
     printf("GPIO mode     : %s\n",
            gpio_mode == LINUX_GPIO_DTR_RTS ? "dtr-rts" :
            gpio_mode == LINUX_GPIO_GPIOD ? "gpio" : "none");
+    printf("Connect mode  : %s\n", use_stub ? "stub" : "ROM bootloader");
 
     esp_loader_t loader;
 
@@ -168,7 +177,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    if (connect_to_target(&loader, HIGHER_BAUD_RATE) != ESP_LOADER_SUCCESS) {
+    esp_loader_error_t conn_err;
+    if (use_stub) {
+        conn_err = connect_to_target_with_stub(&loader, baud_rate, HIGHER_BAUD_RATE);
+    } else {
+        conn_err = connect_to_target(&loader, HIGHER_BAUD_RATE);
+    }
+    if (conn_err != ESP_LOADER_SUCCESS) {
         return 1;
     }
 

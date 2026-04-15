@@ -36,6 +36,7 @@
 #define ROM_FLASH_BLOCK_SIZE 1024
 
 #define DEFAULT_FLASH_SIZE (2 * 1024 * 1024)
+#define MAX_ROM_FLASH_SIZE (16 * 1024 * 1024)
 
 typedef enum {
     SPI_FLASH_READ_ID = 0x9F
@@ -165,14 +166,28 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
 
-    if (loader->_target == ESP32P4_CHIP || loader->_target == ESP32C5_CHIP) {
-        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    const esp_stub_t *stub;
+    if (loader->_target == ESP32P4_CHIP) {
+        esp_loader_target_security_info_t info;
+        bool got_info = (esp_loader_get_security_info(loader, &info) == ESP_LOADER_SUCCESS);
+        if (got_info && info.eco_version >= ESP32P4_ECO_REV3_MIN) {
+            stub = esp_stub[ESP32P4_CHIP];   // ECO5+
+        } else {
+            stub = &esp_stub_esp32p4rev1;    // ECO < 5 or revision unknown
+        }
+    } else {
+        stub = esp_stub[loader->_target];
+        if (stub == NULL) {
+            return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+        }
     }
 
-    const esp_stub_t *stub = &esp_stub[loader->_target];
     esp_loader_mem_cfg_t mem_cfg = {0};
 
     for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+        if (stub->segments[seg].size == 0) {
+            continue;
+        }
         mem_cfg = (esp_loader_mem_cfg_t) {
             .offset = stub->segments[seg].addr,
             .size = stub->segments[seg].size,
@@ -442,6 +457,12 @@ esp_loader_error_t esp_loader_flash_start(esp_loader_t *loader, esp_loader_flash
 
     if (cfg->offset % 4 != 0 || cfg->image_size % 4 != 0) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    /* ROM bootloader uses 24-bit SPI addressing — addresses >= 16 MB silently
+     * wrap around to 0. Reject such writes early to prevent silent corruption. */
+    if (!loader->_stub_running && cfg->offset >= MAX_ROM_FLASH_SIZE) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
     RETURN_ON_ERROR(init_flash_params(loader));
