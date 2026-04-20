@@ -23,6 +23,11 @@ repos:
       - id: mixed-line-ending
         args: ['-f=lf']
         exclude: *excludes
+  - repo: https://github.com/espressif/check-copyright/
+    rev: v1.1.2
+    hooks:
+      - id: check-copyright
+        args: ['--config', '.check_copyright_config.yaml', '--replace']
   - repo: https://github.com/espressif/astyle_py.git
     rev: v1.1.0
     hooks:

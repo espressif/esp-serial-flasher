@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Unlicense OR CC0-1.0
+ */
 /* Example of loading the program into RAM
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
