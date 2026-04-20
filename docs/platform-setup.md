@@ -95,15 +95,18 @@ Please refer to the Zephyr example [README.md](../examples/zephyr_example/README
 
 See [examples/zephyr_example](../examples/zephyr_example) for a complete implementation with build instructions.
 
-## Raspberry Pi Pico Setup
+## Raspberry Pi Pico and Pico 2 Setup
 
-**Testing Status**: Regularly tested with Raspberry Pi Pico SDK v1.5.1 and arm-gnu-toolchain-13.2.
+**Testing Status**: Regularly tested with Raspberry Pi Pico SDK v2.2.0 and arm-gnu-toolchain-15.2.
+
+The **original Pico (RP2040)** only needs the **ARM embedded** toolchain. **Pico 2 (RP2350)** can run your app on either the **ARM** core or the **RISC-V** core; the Pico SDK selects that with `PICO_PLATFORM`, and each option needs the matching cross-compiler (they are not interchangeable in a single build).
 
 ### Prerequisites
 
 - **[Git](https://git-scm.com/)** - For cloning repositories
 - **[Raspberry Pi Pico SDK](https://github.com/raspberrypi/pico-sdk)** - Development framework
-- **[ARM GCC toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)** - Cross-compilation toolchain
+- **[ARM GCC toolchain](https://developer.arm.com/Tools%20and%20Software/GNU%20Toolchain)** - Cross-compilation toolchain for ARM core
+- **[RISC-V GCC toolchain](https://github.com/raspberrypi/pico-sdk-tools/releases)** - Cross-compilation toolchain for RISC-V core
 
 ### Setup
 
@@ -118,6 +121,15 @@ See [examples/zephyr_example](../examples/zephyr_example) for a complete impleme
 
    - Either set `PICO_SDK_PATH` environment variable
    - Or place the Pico SDK in a standard location
+
+3. **Pick board and platform**
+
+   - Set `PICO_BOARD` and `PICO_PLATFORM` to match your hardware and whether you want ARM or RISC-V on RP2350; use the matching GCC toolchain.
+
+4. **Set toolchain path**
+
+   - Either set `PICO_TOOLCHAIN_PATH` to ARM GCC toolchain folder
+   - Or to RISC-V toolchain folder
 
 ### Example Code
 
