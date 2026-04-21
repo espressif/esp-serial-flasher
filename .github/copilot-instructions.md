@@ -157,7 +157,10 @@ src/                    # Core library implementation
 ├── protocol_spi.c    # SPI communication protocol
 ├── protocol_sdio.c   # SDIO communication protocol
 ├── esp_targets.c     # Target chip definitions
-├── esp_stubs.c       # Flash stub binaries
+├── stubs/            # Per-chip flash stub binaries (auto-generated)
+│   ├── esp_stub_esp32.c
+│   ├── esp_stub_esp32c2.c
+│   └── ...           # one file per supported chip + esp_stubs_table.c
 └── md5_hash.c        # Optional MD5 verification
 
 include/               # Public API headers

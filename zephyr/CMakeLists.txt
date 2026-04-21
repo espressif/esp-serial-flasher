@@ -14,7 +14,18 @@ if (CONFIG_ESP_SERIAL_FLASHER)
     zephyr_library_sources(
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_loader.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_targets.c
-                ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_stubs.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stubs_table.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp8266.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32s2.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32c3.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32s3.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32c2.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32c5.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32h2.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32c6.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32p4.c
+                ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32p4rev1.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_sdio_stubs.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/protocol_serial.c
                 ${ZEPHYR_CURRENT_MODULE_DIR}/src/protocol_uart.c

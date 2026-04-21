@@ -5,7 +5,18 @@ add_executable( ${PROJECT_NAME}
 	test_main.cpp
 	../src/esp_loader.c
 	../src/esp_targets.c
-	../src/esp_stubs.c
+	../src/stubs/esp_stubs_table.c
+	../src/stubs/esp_stub_esp8266.c
+	../src/stubs/esp_stub_esp32.c
+	../src/stubs/esp_stub_esp32s2.c
+	../src/stubs/esp_stub_esp32c3.c
+	../src/stubs/esp_stub_esp32s3.c
+	../src/stubs/esp_stub_esp32c2.c
+	../src/stubs/esp_stub_esp32c5.c
+	../src/stubs/esp_stub_esp32h2.c
+	../src/stubs/esp_stub_esp32c6.c
+	../src/stubs/esp_stub_esp32p4.c
+	../src/stubs/esp_stub_esp32p4rev1.c
 	../src/esp_sdio_stubs.c
 	../src/md5_hash.c
 	../src/protocol_serial.c

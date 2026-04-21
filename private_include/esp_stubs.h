@@ -1,19 +1,7 @@
-/* Copyright 2020-2026 Espressif Systems (Shanghai) CO LTD
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-// auto-generated stubs from esp-flasher-stub v0.3.0
+// SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+// auto-generated from esp-flasher-stub v0.5.1
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v0.5.1
 
 #pragma once
 
@@ -35,8 +23,11 @@ typedef struct {
     esp_loader_bin_segment_t segments[3];
 } sdio_esp_stub_t;
 
-extern const esp_stub_t esp_stub[ESP_MAX_CHIP];
+extern const esp_stub_t *const esp_stub[ESP_MAX_CHIP];
 extern const sdio_esp_stub_t esp_stub_sdio[ESP_MAX_CHIP];
+
+// Extra stubs not in the lookup table — selected at runtime by application code.
+extern const esp_stub_t esp_stub_esp32p4rev1;
 
 #ifdef __cplusplus
 }

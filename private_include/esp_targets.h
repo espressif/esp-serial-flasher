@@ -1,16 +1,7 @@
-/* Copyright 2020 Espressif Systems (Shanghai) PTE LTD
+/*
+ * SPDX-FileCopyrightText: 2020-2026 Espressif Systems (Shanghai) CO LTD
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
@@ -35,6 +26,9 @@ typedef struct target_registers_t {
  * only the register table is looked up and GET_SECURITY_INFO is skipped.
  * Otherwise the full UART/SPI detection sequence is used.
  */
+// ESP32-P4 chip revision v3.0 corresponds to ECO5; earlier silicon needs the rev1 stub.
+#define ESP32P4_ECO_REV3_MIN 5
+
 esp_loader_error_t loader_detect_chip(esp_loader_t *loader);
 esp_loader_error_t loader_read_mac(esp_loader_t *loader, target_chip_t target_code, uint8_t *mac);
 bool encryption_in_begin_flash_cmd(target_chip_t target);

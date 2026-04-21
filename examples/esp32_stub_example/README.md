@@ -59,9 +59,9 @@ Binaries to be flashed are placed in a separate folder (binaries.c) for each pos
 
 ## Pulling Newer Stub Binaries
 
-The stub binaries are embedded into `esp_stubs.c` from a fixed release of [esp-flasher-stub](https://github.com/esp-rs/esp-flasher-stub).
+The stub binaries are embedded into the per-chip source files under `src/stubs/` from a fixed release of [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub).
 
-If a new [esp-flasher-stub](https://github.com/esp-rs/esp-flasher-stub) version is available, you can obtain binaries by passing a CMake cache variable to `idf.py` like so:
+If a new [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub) version is available, you can obtain binaries by passing a CMake cache variable to `idf.py` like so:
 
 ```bash
 idf.py -DSERIAL_FLASHER_STUB_PULL_VERSION=<version> build

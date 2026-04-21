@@ -92,13 +92,17 @@ run_pre_commit:
 
 check_stub_source_correctness:
   stage: pre_check
-  image: espressif/idf:release-v5.5
+  image: python:3-slim
   tags:
     - internet
   script:
-    - cd $CI_PROJECT_DIR/examples/esp32_stub_example
-    - idf.py reconfigure -DSERIAL_FLASHER_STUB_PULL_VERSION='0.3.0'
-    - git diff --exit-code
+    - apt-get update
+    - apt-get install -y git
+    - python3 cmake/gen_stub_sources.py
+        '0.5.1'
+        'https://github.com/espressif/esp-flasher-stub/releases/download'
+        .
+    - git diff -I 'SPDX-FileCopyrightText' --exit-code  # ignore annual copyright year updates
 
 .build_host_template:
   stage: build_host_examples
