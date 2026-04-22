@@ -51,7 +51,7 @@ No pre-built example project is provided for STM32, as STM32 projects are chip-s
 
 ## Zephyr Setup
 
-**Testing Status**: Regularly tested with Zephyr RTOS v4.3.0 and Zephyr SDK v0.17.0.
+**Testing Status**: Regularly tested with Zephyr RTOS v4.4.0 and Zephyr SDK v1.0.1.
 
 ### Prerequisites
 

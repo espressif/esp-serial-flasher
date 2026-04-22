@@ -13,7 +13,7 @@ BIN_FILE = "/zephyr/zephyr.bin"
 # It is used by conftest.py to find the app path to build directory.
 @pytest.fixture
 def app_path() -> str:
-    return "zephyrproject-rtos/zephyr/"
+    return "zephyrproject-rtos/"
 
 
 @pytest.fixture(autouse=True)
