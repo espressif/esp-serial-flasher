@@ -44,6 +44,7 @@ CHIPS = [
         "esp32h2",
         "esp32c6",
         "esp32p4",
+        "esp32c61",
     ]
 ]
 
