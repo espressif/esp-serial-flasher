@@ -113,51 +113,27 @@ static esp_loader_error_t uart_check_response(esp_loader_t *loader, const send_c
 
 static esp_loader_error_t uart_flash_read_stub(esp_loader_t *loader, uint8_t *dest, uint32_t address, uint32_t length)
 {
-    uint8_t buf[256];
-    size_t recv_size = 0;
     struct MD5Context md5_context;
     MD5Init(&md5_context);
 
-    const uint32_t seek_back_len = address % 4;
-    address -= seek_back_len;
-    length += seek_back_len;
-
-    const uint32_t overread_len = ROUNDUP(length, 4) - length;
-    length += overread_len;
+    // 4096 is the maximum data payload the stub will place in a single READ_FLASH_STUB response packet.
+    const uint32_t packet_size = MIN(length, 4096u);
 
     loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
-    RETURN_ON_ERROR(loader_flash_read_stub_cmd(loader, address, length, sizeof(buf)));
+    RETURN_ON_ERROR(loader_flash_read_stub_cmd(loader, address, length, packet_size));
 
-    uint32_t copy_dest_start = 0;
     int32_t remaining = length;
     while (remaining > 0) {
         loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
-        const uint32_t to_receive = MIN(remaining, sizeof(buf));
-        RETURN_ON_ERROR(SLIP_receive_packet(loader, buf, to_receive, &recv_size));
+        const uint32_t to_receive = MIN((uint32_t)remaining, packet_size);
+        size_t recv_size = 0;
+        RETURN_ON_ERROR(SLIP_receive_packet(loader, &dest[length - remaining], to_receive, &recv_size));
 
         if (recv_size != to_receive) {
             return ESP_LOADER_ERROR_INVALID_RESPONSE;
         }
 
-        MD5Update(&md5_context, buf, recv_size);
-
-        uint32_t copy_start = 0;
-        uint32_t copy_length = recv_size;
-
-        const bool first_read = remaining == (int32_t)length;
-        if (first_read) {
-            copy_start += seek_back_len;
-            copy_length -= seek_back_len;
-        }
-
-        const bool last_read = remaining - (int32_t)recv_size <= 0;
-        if (last_read) {
-            copy_length -= overread_len;
-        }
-
-        memcpy(&dest[copy_dest_start], &buf[copy_start], copy_length);
-        copy_dest_start += copy_length;
-
+        MD5Update(&md5_context, &dest[length - remaining], recv_size);
         remaining -= recv_size;
 
         const uint32_t bytes_recv = length - remaining;
@@ -172,6 +148,7 @@ static esp_loader_error_t uart_flash_read_stub(esp_loader_t *loader, uint8_t *de
 
     loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
     uint8_t md5_recv[16];
+    size_t recv_size = 0;
     RETURN_ON_ERROR(SLIP_receive_packet(loader, md5_recv, sizeof(md5_recv), &recv_size));
 
     if (recv_size != sizeof(md5_recv) || memcmp(md5_calc, md5_recv, sizeof(md5_calc))) {
