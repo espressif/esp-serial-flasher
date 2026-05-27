@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-// auto-generated from esp-flasher-stub v0.5.1
-// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v0.5.1
+// auto-generated from esp-flasher-stub v0.8.0
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v0.8.0
 
 #pragma once
 
@@ -18,13 +18,7 @@ typedef struct {
     esp_loader_bin_segment_t segments[2];
 } esp_stub_t;
 
-typedef struct {
-    esp_loader_bin_header_t header;
-    esp_loader_bin_segment_t segments[3];
-} sdio_esp_stub_t;
-
 extern const esp_stub_t *const esp_stub[ESP_MAX_CHIP];
-extern const sdio_esp_stub_t esp_stub_sdio[ESP_MAX_CHIP];
 
 // Extra stubs not in the lookup table — selected at runtime by application code.
 extern const esp_stub_t esp_stub_esp32p4rev1;

@@ -57,7 +57,7 @@ For ESP-IDF builds, you choose which port implementations to compile into the li
 
 - **Type**: Kconfig (`bool`)
 - **Default**: Disabled
-- **Description**: Compile the ESP32 SDIO port (`esp32_sdio_port.c`). Exposes `esp32_sdio_ops`. Experimental; only available on targets with SDIO host support.
+- **Description**: Compile the ESP32 SDIO port (`esp32_sdio_port.c`). Exposes `esp32_sdio_ops`. Experimental; only available on targets with SDIO host support. SDIO uploads `esp-flasher-stub` during connection and supports the full stub command protocol.
 
 #### `CONFIG_SERIAL_FLASHER_PORT_USB_CDC_ACM`
 

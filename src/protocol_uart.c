@@ -9,12 +9,9 @@
 #include "esp_loader.h"
 #include "esp_loader_protocol.h"
 #include "esp_targets.h"
-#include "md5_hash.h"
 #include "slip.h"
 #include <stddef.h>
 #include <string.h>
-
-#define UART_DEFAULT_TIMEOUT 1000
 
 static esp_loader_error_t uart_check_response(esp_loader_t *loader, const send_cmd_config *config);
 
@@ -111,50 +108,17 @@ static esp_loader_error_t uart_check_response(esp_loader_t *loader, const send_c
     return ESP_LOADER_SUCCESS;
 }
 
-static esp_loader_error_t uart_flash_read_stub(esp_loader_t *loader, uint8_t *dest, uint32_t address, uint32_t length)
+static esp_loader_error_t uart_recv_stub_packet(esp_loader_t *loader, uint8_t *dest,
+        size_t max_size, size_t *recv_size)
 {
-    struct MD5Context md5_context;
-    MD5Init(&md5_context);
+    return SLIP_receive_packet(loader, dest, max_size, recv_size);
+}
 
-    // 4096 is the maximum data payload the stub will place in a single READ_FLASH_STUB response packet.
-    const uint32_t packet_size = MIN(length, 4096u);
-
-    loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
-    RETURN_ON_ERROR(loader_flash_read_stub_cmd(loader, address, length, packet_size));
-
-    int32_t remaining = length;
-    while (remaining > 0) {
-        loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
-        const uint32_t to_receive = MIN((uint32_t)remaining, packet_size);
-        size_t recv_size = 0;
-        RETURN_ON_ERROR(SLIP_receive_packet(loader, &dest[length - remaining], to_receive, &recv_size));
-
-        if (recv_size != to_receive) {
-            return ESP_LOADER_ERROR_INVALID_RESPONSE;
-        }
-
-        MD5Update(&md5_context, &dest[length - remaining], recv_size);
-        remaining -= recv_size;
-
-        const uint32_t bytes_recv = length - remaining;
-        loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
-        RETURN_ON_ERROR(SLIP_send_delimiter(loader));
-        RETURN_ON_ERROR(SLIP_send(loader, (const uint8_t *)&bytes_recv, sizeof(bytes_recv)));
-        RETURN_ON_ERROR(SLIP_send_delimiter(loader));
-    }
-
-    uint8_t md5_calc[16];
-    MD5Final(md5_calc, &md5_context);
-
-    loader->_port->ops->start_timer(loader->_port, UART_DEFAULT_TIMEOUT);
-    uint8_t md5_recv[16];
-    size_t recv_size = 0;
-    RETURN_ON_ERROR(SLIP_receive_packet(loader, md5_recv, sizeof(md5_recv), &recv_size));
-
-    if (recv_size != sizeof(md5_recv) || memcmp(md5_calc, md5_recv, sizeof(md5_calc))) {
-        return ESP_LOADER_ERROR_INVALID_MD5;
-    }
-
+static esp_loader_error_t uart_send_stub_ack(esp_loader_t *loader, uint32_t bytes_recv)
+{
+    RETURN_ON_ERROR(SLIP_send_delimiter(loader));
+    RETURN_ON_ERROR(SLIP_send(loader, (const uint8_t *)&bytes_recv, sizeof(bytes_recv)));
+    RETURN_ON_ERROR(SLIP_send_delimiter(loader));
     return ESP_LOADER_SUCCESS;
 }
 
@@ -175,13 +139,14 @@ static esp_loader_error_t uart_mem_begin_cmd(esp_loader_t *loader, uint32_t offs
 }
 
 const esp_loader_protocol_ops_t uart_protocol_ops = {
-    .initialize_conn = uart_initialize_conn,
-    .send_cmd        = uart_send_cmd,
-    .spi_attach      = uart_spi_attach,
-    .flash_read_stub = uart_flash_read_stub,
-    .mem_begin_cmd   = uart_mem_begin_cmd,
-    .mem_data_cmd    = NULL,
-    .mem_end_cmd     = NULL,
+    .initialize_conn   = uart_initialize_conn,
+    .send_cmd          = uart_send_cmd,
+    .spi_attach        = uart_spi_attach,
+    .recv_stub_packet  = uart_recv_stub_packet,
+    .send_stub_ack     = uart_send_stub_ack,
+    .mem_begin_cmd     = uart_mem_begin_cmd,
+    .mem_data_cmd      = NULL,
+    .mem_end_cmd       = NULL,
 };
 
 const esp_loader_protocol_ops_t *esp_loader_get_uart_ops(void)

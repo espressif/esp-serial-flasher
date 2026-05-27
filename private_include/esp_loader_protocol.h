@@ -33,9 +33,10 @@ typedef struct esp_loader_protocol_ops_s {
 
     esp_loader_error_t (*spi_attach)(esp_loader_t *loader, uint32_t config);
 
-    /* Flash read via stub (SLIP-based, UART/USB only; NULL = unsupported) */
-    esp_loader_error_t (*flash_read_stub)(esp_loader_t *loader, uint8_t *dest,
-                                          uint32_t address, uint32_t length);
+    /* Raw stub packet transport used by shared flash-read stub logic. */
+    esp_loader_error_t (*recv_stub_packet)(esp_loader_t *loader, uint8_t *dest,
+                                           size_t max_size, size_t *recv_size);
+    esp_loader_error_t (*send_stub_ack)(esp_loader_t *loader, uint32_t bytes_recv);
 
     /* SDIO overrides (NULL = use shared default from protocol_serial.c) */
     esp_loader_error_t (*mem_begin_cmd)(esp_loader_t *loader, uint32_t offset,
