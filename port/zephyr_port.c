@@ -1,41 +1,60 @@
 /*
- * Copyright (c) 2022 KT-Elektronik, Klaucke und Partner GmbH
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "zephyr_port.h"
-#include <zephyr/drivers/uart.h>
+#define DT_DRV_COMPAT espressif_esp_loader
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
+#include <zephyr/device.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/uart.h>
+#include <zephyr/drivers/pinctrl.h>
+#include <zephyr/console/tty.h>
+
+#include <zephyr_port.h>
+#include <esp_loader.h>
+#include <esp_loader_io.h>
+
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(esf, LOG_LEVEL_ERR);
+
+struct esp_loader_dev_config {
+    esp_loader_config_t config;
+    esp_loader_connect_args_t connect_args;
+};
+
+struct esp_loader_dev_data {
+    zephyr_port_t interface;
+    esp_loader_t loader;
+};
+
+#ifdef CONFIG_SERIAL_FLASHER_DEBUG_TRACE
+static void transfer_debug_print(const uint8_t *data, ssize_t size, bool write)
 {
     static bool write_prev = false;
 
     if (write_prev != write) {
         write_prev = write;
-        printk("\n--- %s ---\n", write ? "WRITE" : "READ");
+        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
     }
 
     for (uint32_t i = 0; i < size; i++) {
-        printk("%02x ", data[i]);
+        printf("%02x ", data[i]);
     }
 }
 #endif
 
+static void zephyr_debug_print(esp_loader_port_t *port, const char *str)
+{
+    ARG_UNUSED(port);
+
+    printf("DEBUG: %s\n", str);
+}
+
 static esp_loader_error_t configure_tty(zephyr_port_t *p)
 {
-    if (tty_init(&p->_tty, p->uart_dev) < 0 ||
+    if (tty_init(&p->_tty, p->config->uart_dev) < 0 ||
             tty_set_rx_buf(&p->_tty, p->_tty_rx_buf, sizeof(p->_tty_rx_buf)) < 0 ||
             tty_set_tx_buf(&p->_tty, p->_tty_tx_buf, sizeof(p->_tty_tx_buf)) < 0) {
         return ESP_LOADER_ERROR_FAIL;
@@ -46,14 +65,53 @@ static esp_loader_error_t configure_tty(zephyr_port_t *p)
 static esp_loader_error_t zephyr_port_init(esp_loader_port_t *port)
 {
     zephyr_port_t *p = container_of(port, zephyr_port_t, port);
+    const esp_loader_config_t *c = p->config;
+
+    if (!device_is_ready(c->uart_dev)) {
+        LOG_ERR("ESP UART not ready");
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
+    if (!device_is_ready(c->boot_spec.port)) {
+        LOG_ERR("ESP boot GPIO not ready");
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
+    if (!device_is_ready(c->enable_spec.port)) {
+        LOG_ERR("ESP reset GPIO not ready");
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
+    if (gpio_pin_configure_dt(&c->boot_spec, GPIO_OUTPUT_INACTIVE) < 0) {
+        LOG_ERR("Failed to configure ESP boot GPIO");
+        return ESP_LOADER_ERROR_FAIL;
+    }
+    if (gpio_pin_configure_dt(&c->enable_spec, GPIO_OUTPUT_INACTIVE) < 0) {
+        LOG_ERR("Failed to configure ESP reset GPIO");
+        return ESP_LOADER_ERROR_FAIL;
+    }
+
     return configure_tty(p);
+}
+
+static void zephyr_port_deinit(esp_loader_port_t *port)
+{
+    zephyr_port_t *p = container_of(port, zephyr_port_t, port);
+    const esp_loader_config_t *c = p->config;
+
+    /* Disabling UART interrupts allows target to reset properly */
+    uart_irq_tx_disable(c->uart_dev);
+    uart_irq_rx_disable(c->uart_dev);
+    gpio_pin_configure_dt(&c->boot_spec, GPIO_DISCONNECTED);
+    gpio_pin_configure_dt(&c->enable_spec, GPIO_DISCONNECTED);
 }
 
 static esp_loader_error_t zephyr_uart_read(esp_loader_port_t *port, uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
     zephyr_port_t *p = container_of(port, zephyr_port_t, port);
+    const esp_loader_config_t *c = p->config;
 
-    if (!device_is_ready(p->uart_dev) || data == NULL || size == 0) {
+    if (!device_is_ready(c->uart_dev) || data == NULL || size == 0) {
         return ESP_LOADER_ERROR_FAIL;
     }
 
@@ -68,12 +126,12 @@ static esp_loader_error_t zephyr_uart_read(esp_loader_port_t *port, uint8_t *dat
         if (read < 0) {
             return ESP_LOADER_ERROR_TIMEOUT;
         }
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, read, false);
-#endif
         total_read += read;
         remaining -= read;
     }
+#ifdef CONFIG_SERIAL_FLASHER_DEBUG_TRACE
+    transfer_debug_print(data, total_read, false);
+#endif
 
     return ESP_LOADER_SUCCESS;
 }
@@ -81,8 +139,9 @@ static esp_loader_error_t zephyr_uart_read(esp_loader_port_t *port, uint8_t *dat
 static esp_loader_error_t zephyr_uart_write(esp_loader_port_t *port, const uint8_t *data, const uint16_t size, const uint32_t timeout)
 {
     zephyr_port_t *p = container_of(port, zephyr_port_t, port);
+    const esp_loader_config_t *c = p->config;
 
-    if (!device_is_ready(p->uart_dev) || data == NULL || size == 0) {
+    if (!device_is_ready(c->uart_dev) || data == NULL || size == 0) {
         return ESP_LOADER_ERROR_FAIL;
     }
 
@@ -97,12 +156,12 @@ static esp_loader_error_t zephyr_uart_write(esp_loader_port_t *port, const uint8
         if (written < 0) {
             return ESP_LOADER_ERROR_TIMEOUT;
         }
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(data, written, true);
-#endif
         total_written += written;
         remaining -= written;
     }
+#if CONFIG_SERIAL_FLASHER_DEBUG_TRACE
+    transfer_debug_print(data, total_written, true);
+#endif
 
     return ESP_LOADER_SUCCESS;
 }
@@ -123,60 +182,127 @@ static uint32_t zephyr_uart_remaining_time(esp_loader_port_t *port)
 {
     zephyr_port_t *p = container_of(port, zephyr_port_t, port);
     int64_t remaining = k_ticks_to_ms_floor64(p->_time_end - k_uptime_ticks());
+
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
 static void zephyr_uart_reset_target(esp_loader_port_t *port)
 {
     zephyr_port_t *p = container_of(port, zephyr_port_t, port);
-    gpio_pin_set_dt(&p->enable_spec, SERIAL_FLASHER_RESET_INVERT ? true : false);
+    const esp_loader_config_t *c = p->config;
+
+    gpio_pin_set_dt(&c->boot_spec, false);
+    gpio_pin_set_dt(&c->enable_spec, true);
     k_msleep(CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_pin_set_dt(&p->enable_spec, SERIAL_FLASHER_RESET_INVERT ? false : true);
+    gpio_pin_set_dt(&c->enable_spec, false);
 }
 
 static void zephyr_uart_enter_bootloader(esp_loader_port_t *port)
 {
     zephyr_port_t *p = container_of(port, zephyr_port_t, port);
-    gpio_pin_set_dt(&p->boot_spec, SERIAL_FLASHER_BOOT_INVERT ? true : false);
-    gpio_pin_set_dt(&p->enable_spec, SERIAL_FLASHER_RESET_INVERT ? true : false);
+    const esp_loader_config_t *c = p->config;
+
+    gpio_pin_set_dt(&c->boot_spec, true);
+    gpio_pin_set_dt(&c->enable_spec, true);
     k_msleep(CONFIG_SERIAL_FLASHER_RESET_HOLD_TIME_MS);
-    gpio_pin_set_dt(&p->enable_spec, SERIAL_FLASHER_RESET_INVERT ? false : true);
+    gpio_pin_set_dt(&c->enable_spec, false);
     k_msleep(CONFIG_SERIAL_FLASHER_BOOT_HOLD_TIME_MS);
-    gpio_pin_set_dt(&p->boot_spec, SERIAL_FLASHER_BOOT_INVERT ? false : true);
+    gpio_pin_set_dt(&c->boot_spec, false);
 }
 
 static esp_loader_error_t zephyr_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
     zephyr_port_t *p = container_of(port, zephyr_port_t, port);
+    const esp_loader_config_t *c = p->config;
     struct uart_config uart_config;
 
-    if (!device_is_ready(p->uart_dev)) {
-        return ESP_LOADER_ERROR_FAIL;
-    }
-
-    if (uart_config_get(p->uart_dev, &uart_config) != 0) {
+    if (uart_config_get(c->uart_dev, &uart_config) != 0) {
         return ESP_LOADER_ERROR_FAIL;
     }
     uart_config.baudrate = baudrate;
 
-    if (uart_configure(p->uart_dev, &uart_config) != 0) {
+    if (uart_configure(c->uart_dev, &uart_config) != 0) {
         return ESP_LOADER_ERROR_FAIL;
     }
-
     /* bitrate-change can require tty re-configuration */
     return configure_tty(p);
 }
 
-const esp_loader_port_ops_t zephyr_uart_ops = {
+static int esp_loader_dev_init(const struct device *dev)
+{
+    struct esp_loader_dev_data *data = dev->data;
+
+    if (esp_loader_init_uart(&data->loader, (esp_loader_port_t *) &data->interface.port) != ESP_LOADER_SUCCESS) {
+        return -EIO;
+    }
+
+    return 0;
+}
+
+/* clang-format off */
+static const esp_loader_port_ops_t zephyr_uart_ops = {
     .init                     = zephyr_port_init,
-    .deinit                   = NULL,
+    .deinit                   = zephyr_port_deinit,
     .enter_bootloader         = zephyr_uart_enter_bootloader,
     .reset_target             = zephyr_uart_reset_target,
     .start_timer              = zephyr_uart_start_timer,
     .remaining_time           = zephyr_uart_remaining_time,
     .delay_ms                 = zephyr_uart_delay_ms,
-    .debug_print              = NULL,
+    .debug_print              = zephyr_debug_print,
     .change_transmission_rate = zephyr_uart_change_rate,
     .write                    = zephyr_uart_write,
     .read                     = zephyr_uart_read,
 };
+
+#define ESP_LOADER_DEFINE(inst)                                                \
+    static const struct esp_loader_dev_config esp_loader_dev_config_##inst = { \
+        .config = {                                                            \
+            .uart_dev = DEVICE_DT_GET(DT_INST_PHANDLE(inst, uart)),            \
+            .enable_spec = GPIO_DT_SPEC_GET(DT_DRV_INST(inst), reset_gpios),   \
+            .boot_spec = GPIO_DT_SPEC_GET(DT_DRV_INST(inst), boot_gpios),      \
+            .baud_rate = DT_INST_PROP(inst, default_baudrate),                 \
+            .baud_rate_high = DT_INST_PROP(inst, higher_baudrate),             \
+        },                                                                     \
+        .connect_args = {                                                      \
+            .sync_timeout = DT_INST_PROP(inst, sync_timeout_ms),               \
+            .trials = DT_INST_PROP(inst, num_trials),                          \
+        }                                                                      \
+    };                                                                         \
+    static struct esp_loader_dev_data esp_loader_dev_data_##inst = {           \
+        .interface = {                                                         \
+            .port.ops = &zephyr_uart_ops,                                      \
+            .config = &esp_loader_dev_config_##inst.config,                    \
+        }                                                                      \
+    };                                                                         \
+    DEVICE_DT_INST_DEFINE(inst, esp_loader_dev_init, NULL,                     \
+         &esp_loader_dev_data_##inst, &esp_loader_dev_config_##inst,           \
+         POST_KERNEL, CONFIG_KERNEL_INIT_PRIORITY_DEVICE, NULL);
+/* clang-format on */
+
+DT_INST_FOREACH_STATUS_OKAY(ESP_LOADER_DEFINE)
+
+esp_loader_t *esp_loader_from_device(const struct device *dev)
+{
+    struct esp_loader_dev_data *data = dev->data;
+    return (esp_loader_t *)&data->loader;
+}
+
+const esp_loader_config_t *esp_loader_config_from_device(const struct device *dev)
+{
+    const struct esp_loader_dev_config *c = dev->config;
+    return (const esp_loader_config_t *)&c->config;
+}
+
+const esp_loader_connect_args_t *esp_loader_connect_args_from_device(const struct device *dev)
+{
+    const struct esp_loader_dev_config *cfg = dev->config;
+    return (const esp_loader_connect_args_t *)&cfg->connect_args;
+}
+
+esp_loader_error_t esp_loader_host_baudrate(esp_loader_t *loader, uint32_t baudrate)
+{
+    if (!loader || !baudrate) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+    return zephyr_uart_change_rate(loader->_port, baudrate);
+}

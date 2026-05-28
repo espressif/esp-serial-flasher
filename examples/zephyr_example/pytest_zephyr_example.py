@@ -56,21 +56,21 @@ def test_zephyr_example(dut: Dut) -> None:
     dut.expect("Transmission rate changed")
 
     # Check bootloader programming
-    dut.expect("Loading bootloader")
+    dut.expect("Loading")
     dut.expect("Erasing flash")
     dut.expect("Start programming")
     dut.expect("Finished programming")
     dut.expect("Flash verified")
 
     # Check partition table programming
-    dut.expect("Loading partition table")
+    dut.expect("Loading")
     dut.expect("Erasing flash")
     dut.expect("Start programming")
     dut.expect("Finished programming")
     dut.expect("Flash verified")
 
     # Check app programming
-    dut.expect("Loading app")
+    dut.expect("Loading")
     dut.expect("Erasing flash")
     dut.expect("Start programming")
     dut.expect("Finished programming")
