@@ -63,7 +63,7 @@ esp_loader_error_t (*init)(esp_loader_port_t *port);
 void               (*deinit)(esp_loader_port_t *port);
 ```
 
-`init` is called automatically by `esp_loader_init_uart()` / `esp_loader_init_spi()` / etc. before the connection phase. Use it to open the serial port, configure GPIO, install peripheral drivers, etc.
+`init` is called automatically by `esp_loader_init_serial()` / `esp_loader_init_spi()` / etc. before the connection phase. Use it to open the serial port, configure GPIO, install peripheral drivers, etc.
 
 `deinit` is invoked by calling `esp_loader_deinit(&loader)` when the loader is no longer needed. This tears down the peripheral and zeroes the loader context. Set `deinit` to `NULL` if the peripheral is already configured before the port struct is created (e.g. STM32 with CubeMX-generated HAL code) or if teardown is not needed — `esp_loader_deinit()` is a no-op when the callback is NULL.
 
@@ -364,7 +364,7 @@ int main(void)
     };
 
     esp_loader_t loader;
-    esp_loader_init_uart(&loader, &port.port);
+    esp_loader_init_serial(&loader, &port.port);
 
     esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
     esp_loader_connect(&loader, &args);

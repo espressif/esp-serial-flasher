@@ -48,8 +48,8 @@ typedef enum {
  * @brief Concrete Linux UART port instance.
  *
  * Declare one of these, fill the config fields, then pass &port.port to
- * esp_loader_init_uart(). Hardware initialisation is called automatically
- * inside esp_loader_init_uart() — no separate init step is needed.
+ * esp_loader_init_serial(). Hardware initialisation is called automatically
+ * inside esp_loader_init_serial() — no separate init step is needed.
  *
  * @code
  *   linux_port_t port = {
@@ -59,13 +59,13 @@ typedef enum {
  *       .gpio_mode         = LINUX_GPIO_DTR_RTS,
  *   };
  *   esp_loader_t loader;
- *   esp_loader_init_uart(&loader, &port.port);
+ *   esp_loader_init_serial(&loader, &port.port);
  * @endcode
  */
 typedef struct {
     esp_loader_port_t port;           /*!< Embedded port base — pass &port to esp_loader_init_* */
 
-    /* Configuration — fill before calling esp_loader_init_uart() */
+    /* Configuration — fill before calling esp_loader_init_serial() */
     const char       *device;         /*!< Serial device, e.g. "/dev/ttyUSB0" */
     uint32_t          baudrate;       /*!< Initial baud rate */
     linux_gpio_mode_t gpio_mode;      /*!< How RESET/BOOT GPIOs are driven */

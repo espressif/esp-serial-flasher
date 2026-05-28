@@ -66,8 +66,8 @@ extern "C" {
  * @brief Concrete STM32 UART port instance.
  *
  * Declare one of these, fill the config fields, then pass &port.port to
- * esp_loader_init_uart(). Hardware initialisation is called automatically
- * inside esp_loader_init_uart() — no separate init step is needed.
+ * esp_loader_init_serial(). Hardware initialisation is called automatically
+ * inside esp_loader_init_serial() — no separate init step is needed.
  *
  * @code
  *   stm32_port_t port = {
@@ -79,13 +79,13 @@ extern "C" {
  *       .pin_num_rst = TARGET_RESET_Pin,
  *   };
  *   esp_loader_t loader;
- *   esp_loader_init_uart(&loader, &port.port);
+ *   esp_loader_init_serial(&loader, &port.port);
  * @endcode
  */
 typedef struct {
     esp_loader_port_t   port;         /*!< Embedded port base */
 
-    /* Configuration — fill before calling esp_loader_init_uart() */
+    /* Configuration — fill before calling esp_loader_init_serial() */
     UART_HandleTypeDef *huart;
     GPIO_TypeDef       *port_boot;
     uint16_t            pin_num_boot;

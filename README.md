@@ -133,7 +133,7 @@ esp32_port_t port = {
 
 // 2. Initialize the loader context — binds the protocol and port vtable
 esp_loader_t loader;
-err = esp_loader_init_uart(&loader, &port.port);
+err = esp_loader_init_serial(&loader, &port.port);
 if (err != ESP_LOADER_SUCCESS) return err;
 
 // 3. Connect to the target chip

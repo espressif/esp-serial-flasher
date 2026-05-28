@@ -161,10 +161,9 @@ typedef struct {
  * are not available on SDIO; SPI does not support flash operations).
  */
 typedef enum {
-    ESP_LOADER_PROTOCOL_UART, /*!< UART */
-    ESP_LOADER_PROTOCOL_USB,  /*!< USB CDC-ACM */
-    ESP_LOADER_PROTOCOL_SPI,  /*!< SPI */
-    ESP_LOADER_PROTOCOL_SDIO, /*!< SDIO */
+    ESP_LOADER_PROTOCOL_SERIAL, /*!< SLIP over a byte stream (UART, USB CDC-ACM, …) */
+    ESP_LOADER_PROTOCOL_SPI,    /*!< SPI */
+    ESP_LOADER_PROTOCOL_SDIO,   /*!< SDIO */
 } esp_loader_protocol_t;
 
 /**
@@ -196,11 +195,12 @@ typedef struct esp_loader {
 } esp_loader_t;
 
 /**
-  * @brief Initialize the loader context for UART protocol.
+  * @brief Initialize the loader context for the serial (SLIP) protocol.
   *
-  * Hardware initialisation (UART driver install, GPIO setup) is performed
-  * automatically by calling @c port->ops->init(port) inside this function —
-  * no separate port init call is needed.
+  * Use with any byte-stream port: UART (@c esp32_uart_ops), USB CDC-ACM
+  * (@c esp32_usb_cdc_acm_ops), Linux @c /dev/tty*, etc.  Hardware initialisation
+  * is performed automatically by calling @c port->ops->init(port) inside this
+  * function — no separate port init call is needed.
   *
   * @code
   *   esp32_port_t port = {
@@ -213,14 +213,14 @@ typedef struct esp_loader {
   *       .boot_pin          = GPIO_NUM_26,
   *   };
   *   esp_loader_t loader;
-  *   esp_loader_init_uart(&loader, &port.port);
+  *   esp_loader_init_serial(&loader, &port.port);
   *   esp_loader_connect(&loader, &connect_args);
   *
-  *   // Two UART devices in parallel — just declare two port instances
+  *   // Two devices in parallel — declare two port instances
   *   esp32_port_t port_a = { .port.ops = &esp32_uart_ops, ... };
   *   esp32_port_t port_b = { .port.ops = &esp32_uart_ops, ... };
-  *   esp_loader_init_uart(&loader_a, &port_a.port);
-  *   esp_loader_init_uart(&loader_b, &port_b.port);
+  *   esp_loader_init_serial(&loader_a, &port_a.port);
+  *   esp_loader_init_serial(&loader_b, &port_b.port);
   * @endcode
   *
   * @param loader[in]  Pointer to a caller-allocated esp_loader_t instance.
@@ -228,17 +228,7 @@ typedef struct esp_loader {
   *
   * @return ESP_LOADER_SUCCESS on success, or the error returned by @c ops->init.
   */
-esp_loader_error_t esp_loader_init_uart(esp_loader_t *loader, esp_loader_port_t *port);
-
-/**
-  * @brief Initialize the loader context for USB CDC-ACM protocol.
-  *
-  * @param loader[in]  Pointer to a caller-allocated esp_loader_t instance.
-  * @param port[in]    Pointer to the port handle.
-  *
-  * @return ESP_LOADER_SUCCESS on success.
-  */
-esp_loader_error_t esp_loader_init_usb(esp_loader_t *loader, esp_loader_port_t *port);
+esp_loader_error_t esp_loader_init_serial(esp_loader_t *loader, esp_loader_port_t *port);
 
 /**
   * @brief Initialize the loader context for SPI protocol.
@@ -301,7 +291,7 @@ target_chip_t esp_loader_get_target(esp_loader_t *loader);
 /**
   * @brief Connects to the target while using the flasher stub
   *
-  * @note  Only supported on UART and USB interfaces.
+  * @note  Only supported on the serial (SLIP) interface.
   *
   * @param loader[in]       Pointer to initialized loader context.
   * @param connect_args[in] Timing parameters to be used for connecting to target.
@@ -317,7 +307,7 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
 /**
   * @brief Connects to the target running in secure download mode
   *
-  * @note  Only supported on UART interfaces.
+  * @note  Only supported on the serial (SLIP) interface.
   * @note  Not supported on ESP8266 and ESP32.
   *
   * @param loader[in]       Pointer to initialized loader context.
@@ -394,7 +384,7 @@ esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flas
 /**
   * @brief Initiates compressed flash operation (DEFLATE/zlib stream).
   *
-  * @note  Only supported on UART and USB interfaces.
+  * @note  Only supported on the serial (SLIP) interface.
   *
   * @note  The deflate path does not accumulate an MD5 digest internally (the compressed
   *        data stream cannot be hashed to match the plaintext MD5). Use
@@ -457,7 +447,7 @@ esp_loader_error_t esp_loader_flash_detect_size(esp_loader_t *loader, uint32_t *
 /**
   * @brief Reads from the target flash.
   *
-  * @note  Only supported on UART and USB interfaces.
+  * @note  Only supported on the serial (SLIP) interface.
   *
   * @param loader[in]  Pointer to initialized loader context.
   * @param buf[out] Buffer to read into
@@ -499,7 +489,7 @@ esp_loader_error_t esp_loader_flash_erase_region(esp_loader_t *loader, uint32_t 
 /**
   * @brief Change baud rate of the stub running on the target
   *
-  * @note  Only supported on UART and USB interfaces with stub running.
+  * @note  Only supported on the serial (SLIP) interface with stub running.
   *
   * @param loader[in]                Pointer to initialized loader context.
   * @param old_transmission_rate[in] The baudrate to be changed
@@ -517,7 +507,7 @@ esp_loader_error_t esp_loader_change_transmission_rate_stub(esp_loader_t *loader
 /**
   * @brief Get the security info of the target chip
   *
-  * @note  Only supported on UART and USB interfaces.
+  * @note  Only supported on the serial (SLIP) interface.
   *
   * @param loader[in]        Pointer to initialized loader context.
   * @param security_info[out] The security info structure

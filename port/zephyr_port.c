@@ -232,7 +232,7 @@ static int esp_loader_dev_init(const struct device *dev)
 {
     struct esp_loader_dev_data *data = dev->data;
 
-    if (esp_loader_init_uart(&data->loader, (esp_loader_port_t *) &data->interface.port) != ESP_LOADER_SUCCESS) {
+    if (esp_loader_init_serial(&data->loader, (esp_loader_port_t *) &data->interface.port) != ESP_LOADER_SUCCESS) {
         return -EIO;
     }
 

@@ -67,7 +67,7 @@ stm32_port_t port = {
     .pin_num_rst  = TARGET_RESET_Pin,
 };
 
-esp_loader_init_uart(&loader, &port.port);
+esp_loader_init_serial(&loader, &port.port);
 
 esp_loader_connect_args_t connect_cfg = ESP_LOADER_CONNECT_DEFAULT();
 if (esp_loader_connect(&loader, &connect_cfg) != ESP_LOADER_SUCCESS) {

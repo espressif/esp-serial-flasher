@@ -18,7 +18,7 @@ extern "C" {
 /**
  * @brief Protocol operations vtable.
  *
- * Each protocol implementation (UART, SPI, SDIO) provides a static const
+ * Each protocol implementation (serial/SLIP, SPI, SDIO) provides a static const
  * instance of this struct. The core dispatcher in esp_loader.c calls through
  * these function pointers instead of using compile-time selected global symbols.
  *
@@ -54,11 +54,9 @@ typedef struct esp_loader_protocol_ops_s {
  * static const protocol ops instance.  @c esp_loader_init() calls the
  * appropriate getter based on the @c esp_loader_protocol_t enum value.
  *
- * UART and USB share the same wire protocol (SLIP), so both getters return the
- * same ops table.
+ * Serial transports (UART, USB CDC-ACM, …) share the SLIP wire protocol.
  */
-const esp_loader_protocol_ops_t *esp_loader_get_uart_ops(void);
-const esp_loader_protocol_ops_t *esp_loader_get_usb_ops(void);
+const esp_loader_protocol_ops_t *esp_loader_get_serial_ops(void);
 const esp_loader_protocol_ops_t *esp_loader_get_spi_ops(void);
 const esp_loader_protocol_ops_t *esp_loader_get_sdio_ops(void);
 

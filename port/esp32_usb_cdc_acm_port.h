@@ -38,12 +38,12 @@ typedef void (*loader_port_esp32_usb_cdc_acm_callback_t)(void);
  * @brief Concrete ESP32 USB CDC-ACM port instance.
  *
  * Declare one of these (with static or longer lifetime than the loader),
- * fill the config fields, then pass &port.port to esp_loader_init_usb().
- * USB device open is called automatically inside esp_loader_init_usb() —
+ * fill the config fields, then pass &port.port to esp_loader_init_serial().
+ * USB device open is called automatically inside esp_loader_init_serial() —
  * no separate init step is needed.
  *
  * The port can be reused after a device disconnect: call
- * esp_loader_init_usb() again to reopen the device.
+ * esp_loader_init_serial() again to reopen the device.
  *
  * @code
  *   esp32_usb_cdc_acm_port_t port = {
@@ -55,13 +55,13 @@ typedef void (*loader_port_esp32_usb_cdc_acm_callback_t)(void);
  *       .device_disconnected_callback = my_disconnect_cb,
  *   };
  *   esp_loader_t loader;
- *   esp_loader_init_usb(&loader, &port.port);
+ *   esp_loader_init_serial(&loader, &port.port);
  * @endcode
  */
 typedef struct {
     esp_loader_port_t port;          /*!< Embedded port base */
 
-    /* Configuration — fill before calling esp_loader_init_usb() */
+    /* Configuration — fill before calling esp_loader_init_serial() */
     uint16_t device_vid;
     uint16_t device_pid;
     uint32_t connection_timeout_ms;

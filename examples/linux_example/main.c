@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
         port.boot_pin          = 3;   /* RPi GPIO3 → ESP BOOT */
     }
 
-    if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {
+    if (esp_loader_init_serial(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         return 1;
     }
 

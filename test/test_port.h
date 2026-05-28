@@ -19,12 +19,12 @@
  *
  * Embeds esp_loader_port_t as the first member so container_of() works.
  * Declare one globally, call esp_loader_port_test_init() to open the TCP
- * socket, then pass &port.port to esp_loader_init_uart().
+ * socket, then pass &port.port to esp_loader_init_serial().
  *
  * @code
  *   esp_loader_port_test_init(&test_tcp_port);
  *   esp_loader_t loader;
- *   esp_loader_init_uart(&loader, &test_tcp_port.port);
+ *   esp_loader_init_serial(&loader, &test_tcp_port.port);
  * @endcode
  */
 struct test_tcp_port_t {

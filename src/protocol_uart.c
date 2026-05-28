@@ -149,12 +149,7 @@ const esp_loader_protocol_ops_t uart_protocol_ops = {
     .mem_end_cmd       = NULL,
 };
 
-const esp_loader_protocol_ops_t *esp_loader_get_uart_ops(void)
-{
-    return &uart_protocol_ops;
-}
-
-const esp_loader_protocol_ops_t *esp_loader_get_usb_ops(void)
+const esp_loader_protocol_ops_t *esp_loader_get_serial_ops(void)
 {
     return &uart_protocol_ops;
 }

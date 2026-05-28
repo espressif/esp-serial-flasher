@@ -74,14 +74,9 @@ static esp_loader_error_t loader_init_common(esp_loader_t *loader,
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t esp_loader_init_uart(esp_loader_t *loader, esp_loader_port_t *port)
+esp_loader_error_t esp_loader_init_serial(esp_loader_t *loader, esp_loader_port_t *port)
 {
-    return loader_init_common(loader, ESP_LOADER_PROTOCOL_UART, esp_loader_get_uart_ops(), port);
-}
-
-esp_loader_error_t esp_loader_init_usb(esp_loader_t *loader, esp_loader_port_t *port)
-{
-    return loader_init_common(loader, ESP_LOADER_PROTOCOL_USB, esp_loader_get_usb_ops(), port);
+    return loader_init_common(loader, ESP_LOADER_PROTOCOL_SERIAL, esp_loader_get_serial_ops(), port);
 }
 
 esp_loader_error_t esp_loader_init_spi(esp_loader_t *loader, esp_loader_port_t *port)
@@ -145,8 +140,7 @@ target_chip_t esp_loader_get_target(esp_loader_t *loader)
 
 esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
 {
-    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_UART &&
-            loader->_protocol_type != ESP_LOADER_PROTOCOL_USB) {
+    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_SERIAL) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 

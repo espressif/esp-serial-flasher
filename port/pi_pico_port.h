@@ -17,8 +17,8 @@ extern "C" {
  * @brief Concrete Raspberry Pi Pico UART port instance.
  *
  * Declare one of these, fill the config fields, then pass &port.port to
- * esp_loader_init_uart(). Hardware initialisation is called automatically
- * inside esp_loader_init_uart() — no separate init step is needed.
+ * esp_loader_init_serial(). Hardware initialisation is called automatically
+ * inside esp_loader_init_serial() — no separate init step is needed.
  *
  * @code
  *   pi_pico_port_t port = {
@@ -31,13 +31,13 @@ extern "C" {
  *       .boot_pin_num         = 18,
  *   };
  *   esp_loader_t loader;
- *   esp_loader_init_uart(&loader, &port.port);
+ *   esp_loader_init_serial(&loader, &port.port);
  * @endcode
  */
 typedef struct {
     esp_loader_port_t port;              /*!< Embedded port base */
 
-    /* Configuration — fill before calling esp_loader_init_uart() */
+    /* Configuration — fill before calling esp_loader_init_serial() */
     uart_inst_t *uart_inst;
     uint          baudrate;
     uint          uart_rx_pin_num;

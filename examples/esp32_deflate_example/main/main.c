@@ -164,7 +164,7 @@ void app_main(void)
         .boot_pin          = GPIO_NUM_26,
     };
 
-    if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {
+    if (esp_loader_init_serial(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "serial initialization failed.");
         return;
     }
