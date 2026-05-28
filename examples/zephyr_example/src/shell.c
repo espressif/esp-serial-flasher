@@ -16,9 +16,7 @@
 static esp_loader_t *loader;
 static const esp_loader_config_t *conf;
 static const esp_loader_connect_args_t *carg;
-static bool stub;
 static bool connected;
-static uint32_t baudrate;
 
 /* Helper functions from the main module */
 const char *get_target_name(target_chip_t chip);
@@ -30,14 +28,11 @@ static int cmd_esf_connect_rom(const struct shell *sh, size_t argc, char **argv)
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
-    stub = false;
-
     if (esp_loader_connect(loader, (esp_loader_connect_args_t *)carg) != ESP_LOADER_SUCCESS) {
         shell_error(sh, "Failed to connect ROM");
         return -1;
     }
     connected = true;
-    baudrate = conf->baud_rate;
 
     shell_print(sh, "ROM connected at %d bps", conf->baud_rate);
 
@@ -49,14 +44,11 @@ static int cmd_esf_connect_stub(const struct shell *sh, size_t argc, char **argv
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
 
-    stub = true;
-
     if (esp_loader_connect_with_stub(loader, (esp_loader_connect_args_t *)carg) != ESP_LOADER_SUCCESS) {
         shell_error(sh, "Failed to connect STUB");
         return -1;
     }
     connected = true;
-    baudrate = conf->baud_rate;
 
     shell_print(sh, "STUB connected at %d", conf->baud_rate);
 
@@ -79,7 +71,6 @@ static int cmd_esf_reset(const struct shell *sh, size_t argc, char **argv)
     }
     esp_loader_reset_target(loader);
     connected = false;
-    baudrate = 0;
 
     shell_print(sh, "Target reset done");
 
@@ -325,17 +316,12 @@ static int cmd_esf_speed_default(const struct shell *sh, size_t argc, char **arg
         return -1;
     }
 
-    if (stub) {
-        err = esp_loader_change_transmission_rate_stub(loader, baudrate, conf->baud_rate);
-    } else {
-        err = esp_loader_change_transmission_rate(loader, conf->baud_rate);
-    }
+    err = esp_loader_change_transmission_rate(loader, conf->baud_rate);
     if (err != ESP_LOADER_SUCCESS) {
         shell_print(sh, "Failed to set transmission rate to %d", conf->baud_rate);
         return -1;
     }
     shell_print(sh, "Transmission rate set to %d", conf->baud_rate);
-    baudrate = conf->baud_rate;
 
     return 0;
 }
@@ -350,17 +336,16 @@ static int cmd_esf_speed_higher(const struct shell *sh, size_t argc, char **argv
         shell_print(sh, "Target not connected");
         return -1;
     }
-    if (stub) {
-        err = esp_loader_change_transmission_rate_stub(loader, baudrate, conf->baud_rate_high);
-    } else {
-        err = esp_loader_change_transmission_rate(loader, conf->baud_rate_high);
+    if (!conf->baud_rate_high) {
+        shell_print(sh, "Higher transmission rate not configured");
+        return -1;
     }
+    err = esp_loader_change_transmission_rate(loader, conf->baud_rate_high);
     if (err != ESP_LOADER_SUCCESS) {
         shell_print(sh, "Failed to set transmission rate to %d", conf->baud_rate_high);
         return -1;
     }
     shell_print(sh, "Transmission rate set to %d", conf->baud_rate_high);
-    baudrate = conf->baud_rate_high;
 
     return 0;
 }

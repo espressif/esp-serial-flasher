@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 
     esp_loader_error_t conn_err;
     if (use_stub) {
-        conn_err = connect_to_target_with_stub(&loader, baud_rate, HIGHER_BAUD_RATE);
+        conn_err = connect_to_target_with_stub(&loader, HIGHER_BAUD_RATE);
     } else {
         conn_err = connect_to_target(&loader, HIGHER_BAUD_RATE);
     }

@@ -35,6 +35,8 @@ extern const uint8_t app_bin_md5[];
 
 static const char *TAG = "serial_stub_flasher";
 
+#define HIGHER_BAUDRATE 230400
+
 // Max line size
 #define BUF_LEN 128
 static uint8_t buf[BUF_LEN] = {0};
@@ -72,7 +74,7 @@ void app_main(void)
         return;
     }
 
-    if (connect_to_target_with_stub(&loader, 115200, 230400) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target_with_stub(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
 
         // Not necessary, just to demonstrate the erase functions
         esp_loader_error_t err;

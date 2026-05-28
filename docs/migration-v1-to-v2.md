@@ -92,7 +92,7 @@ All public functions now take the loader context as their first argument.
 | `esp_loader_write_register(addr, val)`                       | `esp_loader_write_register(&loader, addr, val)`                                                                                                                     |
 | `esp_loader_read_register(addr, &val)`                       | `esp_loader_read_register(&loader, addr, &val)`                                                                                                                     |
 | `esp_loader_change_transmission_rate(rate)`                  | `esp_loader_change_transmission_rate(&loader, rate)`                                                                                                                |
-| `esp_loader_change_transmission_rate_stub(old, new)`         | `esp_loader_change_transmission_rate_stub(&loader, old, new)`                                                                                                       |
+| `esp_loader_change_transmission_rate_stub(old, new)`         | `esp_loader_change_transmission_rate(&loader, new)` — stub API removed; one function for ROM and stub                                                               |
 | `esp_loader_get_security_info(&info)`                        | `esp_loader_get_security_info(&loader, &info)`                                                                                                                      |
 | `esp_loader_reset_target()`                                  | `esp_loader_reset_target(&loader)`                                                                                                                                  |
 

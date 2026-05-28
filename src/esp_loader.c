@@ -678,29 +678,6 @@ esp_loader_error_t esp_loader_flash_erase_region(esp_loader_t *loader, uint32_t 
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t esp_loader_change_transmission_rate_stub(esp_loader_t *loader,
-        const uint32_t old_transmission_rate,
-        const uint32_t new_transmission_rate)
-{
-
-    if (loader->_target == ESP8266_CHIP || !loader->_stub_running || loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
-        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
-    }
-
-    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-
-    esp_loader_error_t err = loader_change_baudrate_cmd(loader, new_transmission_rate, old_transmission_rate);
-
-    if (err == ESP_LOADER_SUCCESS) {
-        loader->_port->ops->delay_ms(loader->_port, 25);
-        if (loader->_port->ops->change_transmission_rate != NULL) {
-            err = loader->_port->ops->change_transmission_rate(loader->_port, new_transmission_rate);
-        }
-    }
-
-    return err;
-}
-
 static uint32_t byte_popcnt(uint8_t byte)
 {
     uint32_t cnt = 0;
@@ -980,7 +957,7 @@ static esp_loader_error_t get_crystal_frequency_esp32c2(esp_loader_t *loader, ui
 esp_loader_error_t esp_loader_change_transmission_rate(esp_loader_t *loader, uint32_t transmission_rate)
 {
 
-    if (loader->_target == ESP8266_CHIP || loader->_stub_running || loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
+    if (loader->_target == ESP8266_CHIP || loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
     if (loader->_target == ESP32C2_CHIP) {
@@ -999,8 +976,13 @@ esp_loader_error_t esp_loader_change_transmission_rate(esp_loader_t *loader, uin
     loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
 
     esp_loader_error_t err = loader_change_baudrate_cmd(loader, transmission_rate, 0);
-    if (err == ESP_LOADER_SUCCESS && loader->_port->ops->change_transmission_rate != NULL) {
-        err = loader->_port->ops->change_transmission_rate(loader->_port, transmission_rate);
+    if (err == ESP_LOADER_SUCCESS) {
+        if (loader->_stub_running) {
+            loader->_port->ops->delay_ms(loader->_port, 25);
+        }
+        if (loader->_port->ops->change_transmission_rate != NULL) {
+            err = loader->_port->ops->change_transmission_rate(loader->_port, transmission_rate);
+        }
     }
     return err;
 }

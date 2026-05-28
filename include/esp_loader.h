@@ -487,24 +487,6 @@ esp_loader_error_t esp_loader_flash_erase(esp_loader_t *loader);
 esp_loader_error_t esp_loader_flash_erase_region(esp_loader_t *loader, uint32_t offset, uint32_t size);
 
 /**
-  * @brief Change baud rate of the stub running on the target
-  *
-  * @note  Only supported on the serial (SLIP) interface with stub running.
-  *
-  * @param loader[in]                Pointer to initialized loader context.
-  * @param old_transmission_rate[in] The baudrate to be changed
-  * @param new_transmission_rate[in] The new baud rate to be set.
-  *
-  * @return
-  *     - ESP_LOADER_SUCCESS Success
-  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
-  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol or stub not running
-  */
-esp_loader_error_t esp_loader_change_transmission_rate_stub(esp_loader_t *loader,
-        uint32_t old_transmission_rate,
-        uint32_t new_transmission_rate);
-
-/**
   * @brief Get the security info of the target chip
   *
   * @note  Only supported on the serial (SLIP) interface.
@@ -606,12 +588,16 @@ esp_loader_error_t esp_loader_write_register(esp_loader_t *loader, uint32_t addr
 esp_loader_error_t esp_loader_read_register(esp_loader_t *loader, uint32_t address, uint32_t *reg_value);
 
 /**
-  * @brief Change baud rate.
+  * @brief Change host and target transmission rate.
   *
-  * @note  Not supported on SDIO interface.
+  * Sends a change-baud command to the ROM bootloader or flasher stub, then updates
+  * the host port via @c change_transmission_rate. Works after @c esp_loader_connect()
+  * or @c esp_loader_connect_with_stub().
+  *
+  * @note  Only supported on the serial (SLIP) interface. Not supported on ESP8266 or SDIO.
   *
   * @param loader[in]              Pointer to initialized loader context.
-  * @param transmission_rate[in]   new baud rate to be set.
+  * @param transmission_rate[in]   New baud rate to set.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
