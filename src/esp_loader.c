@@ -14,6 +14,10 @@
 #include <string.h>
 #include <assert.h>
 
+#ifndef SERIAL_FLASHER_WRITE_BLOCK_RETRIES
+#define SERIAL_FLASHER_WRITE_BLOCK_RETRIES 3
+#endif
+
 #define SHORT_TIMEOUT 100
 #define DEFAULT_TIMEOUT 1000
 #define DEFAULT_FLASH_TIMEOUT 3000

@@ -69,8 +69,8 @@ For ESP-IDF builds, you choose which port implementations to compile into the li
 
 #### `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`
 
-- **Type**: CMake cache variable
-- **Default**: 3
+- **Type**: CMake cache variable / Kconfig (`CONFIG_SERIAL_FLASHER_WRITE_BLOCK_RETRIES`)
+- **Default**: 3 (used when the macro is not defined at compile time; the library falls back to 3 in `esp_loader.c`)
 - **Description**: Number of retry attempts for writing blocks to target flash or RAM.
 
 #### `SERIAL_FLASHER_RESET_HOLD_TIME_MS`
