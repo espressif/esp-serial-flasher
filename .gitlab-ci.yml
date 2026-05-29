@@ -99,7 +99,7 @@ check_stub_source_correctness:
     - apt-get update
     - apt-get install -y git
     - python3 cmake/gen_stub_sources.py
-        '0.5.1'
+        '0.8.0'
         'https://github.com/espressif/esp-flasher-stub/releases/download'
         .
     - git diff -I 'SPDX-FileCopyrightText' --exit-code  # ignore annual copyright year updates

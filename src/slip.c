@@ -39,18 +39,14 @@ esp_loader_error_t SLIP_receive_packet(esp_loader_t *loader, uint8_t *buff, cons
         RETURN_ON_ERROR( peripheral_read(loader, &ch, 1) );
     } while (ch == DELIMITER);
 
-    buff[0] = ch;
-
-    // Receive either until either delimiter or maximum receive size
-    for (size_t i = 1; i < max_size; i++) {
-        RETURN_ON_ERROR( peripheral_read(loader, &ch, 1) );
-
+    // Decode SLIP into buffer; ch already holds the first non-delimiter byte.
+    for (size_t i = 0; i < max_size; ) {
         if (ch == 0xDB) {
             RETURN_ON_ERROR( peripheral_read(loader, &ch, 1) );
             if (ch == 0xDC) {
-                buff[i] = 0xC0;
+                buff[i++] = 0xC0;
             } else if (ch == 0xDD) {
-                buff[i] = 0xDB;
+                buff[i++] = 0xDB;
             } else {
                 return ESP_LOADER_ERROR_INVALID_RESPONSE;
             }
@@ -58,12 +54,15 @@ esp_loader_error_t SLIP_receive_packet(esp_loader_t *loader, uint8_t *buff, cons
             *recv_size = i;
             return ESP_LOADER_SUCCESS;
         } else {
-            buff[i] = ch;
+            buff[i++] = ch;
+        }
+
+        if (i < max_size) {
+            RETURN_ON_ERROR( peripheral_read(loader, &ch, 1) );
         }
     }
 
-    // Wait for delimiter if we already reached max receive size
-    // This enables us to ignore unsupported or unnecessary packet data instead of failing
+    // Buffer full: drain to end delimiter so the next call sees a clean stream.
     do {
         RETURN_ON_ERROR( peripheral_read(loader, &ch, 1) );
     } while (ch != DELIMITER);

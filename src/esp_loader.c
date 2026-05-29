@@ -28,6 +28,7 @@
 
 #define DEFAULT_FLASH_SIZE (2 * 1024 * 1024)
 #define MAX_ROM_FLASH_SIZE (16 * 1024 * 1024)
+#define FLASH_READ_STUB_PACKET_SIZE 4096U
 
 typedef enum {
     SPI_FLASH_READ_ID = 0x9F
@@ -553,8 +554,7 @@ esp_loader_error_t esp_loader_flash_finish(esp_loader_t *loader, esp_loader_flas
 esp_loader_error_t esp_loader_flash_deflate_start(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg)
 {
 
-    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI ||
-            loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
+    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
@@ -583,8 +583,7 @@ esp_loader_error_t esp_loader_flash_deflate_start(esp_loader_t *loader, esp_load
 esp_loader_error_t esp_loader_flash_deflate_write(esp_loader_t *loader, esp_loader_flash_deflate_cfg_t *cfg, void *payload, uint32_t size)
 {
 
-    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI ||
-            loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
+    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
@@ -610,8 +609,7 @@ esp_loader_error_t esp_loader_flash_deflate_finish(esp_loader_t *loader, esp_loa
 {
     (void)cfg;
 
-    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI ||
-            loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
+    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
@@ -652,7 +650,7 @@ esp_loader_error_t esp_loader_flash_erase(esp_loader_t *loader)
 esp_loader_error_t esp_loader_flash_erase_region(esp_loader_t *loader, uint32_t offset, uint32_t size)
 {
 
-    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI || loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
+    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
@@ -720,7 +718,7 @@ esp_loader_error_t esp_loader_get_security_info(esp_loader_t *loader,
         esp_loader_target_security_info_t *security_info)
 {
 
-    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI || loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO) {
+    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
@@ -772,11 +770,60 @@ esp_loader_error_t esp_loader_get_security_info(esp_loader_t *loader,
     return ESP_LOADER_SUCCESS;
 }
 
+static esp_loader_error_t loader_flash_read_stub(esp_loader_t *loader, uint8_t *dest,
+        uint32_t address, uint32_t length)
+{
+    if (loader->_protocol->recv_stub_packet == NULL || loader->_protocol->send_stub_ack == NULL) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    }
+
+    struct MD5Context md5_context;
+    MD5Init(&md5_context);
+
+    const uint32_t packet_size = MIN(length, FLASH_READ_STUB_PACKET_SIZE);
+
+    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+    RETURN_ON_ERROR(loader_flash_read_stub_cmd(loader, address, length, packet_size));
+
+    uint32_t remaining = length;
+    while (remaining > 0) {
+        const uint32_t offset = length - remaining;
+        const uint32_t to_receive = MIN(remaining, packet_size);
+        size_t recv_size = 0;
+
+        loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+        RETURN_ON_ERROR(loader->_protocol->recv_stub_packet(loader, &dest[offset], to_receive, &recv_size));
+
+        if (recv_size != to_receive) {
+            return ESP_LOADER_ERROR_INVALID_RESPONSE;
+        }
+
+        MD5Update(&md5_context, &dest[offset], recv_size);
+        remaining -= recv_size;
+
+        loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+        RETURN_ON_ERROR(loader->_protocol->send_stub_ack(loader, length - remaining));
+    }
+
+    uint8_t md5_calc[16];
+    MD5Final(md5_calc, &md5_context);
+
+    uint8_t md5_recv[16];
+    size_t recv_size = 0;
+    loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
+    RETURN_ON_ERROR(loader->_protocol->recv_stub_packet(loader, md5_recv, sizeof(md5_recv), &recv_size));
+
+    if (recv_size != sizeof(md5_recv) || memcmp(md5_calc, md5_recv, sizeof(md5_calc))) {
+        return ESP_LOADER_ERROR_INVALID_MD5;
+    }
+
+    return ESP_LOADER_SUCCESS;
+}
+
 esp_loader_error_t esp_loader_flash_read(esp_loader_t *loader, uint8_t *dest, uint32_t address, uint32_t length)
 {
 
-    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SDIO ||
-            loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
+    if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
@@ -786,10 +833,7 @@ esp_loader_error_t esp_loader_flash_read(esp_loader_t *loader, uint8_t *dest, ui
     }
 
     if (loader->_stub_running) {
-        if (loader->_protocol->flash_read_stub == NULL) {
-            return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
-        }
-        RETURN_ON_ERROR(loader->_protocol->flash_read_stub(loader, dest, address, length));
+        RETURN_ON_ERROR(loader_flash_read_stub(loader, dest, address, length));
     } else {
         const uint32_t seek_back_len = address % READ_FLASH_ROM_DATA_SIZE;
         address -= seek_back_len;

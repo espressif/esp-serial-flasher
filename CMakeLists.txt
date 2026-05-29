@@ -5,7 +5,6 @@ set(srcs
     src/md5_hash.c
     src/esp_loader.c
     src/esp_targets.c
-    src/esp_sdio_stubs.c
     src/stubs/esp_stubs_table.c
     src/stubs/esp_stub_esp8266.c
     src/stubs/esp_stub_esp32.c

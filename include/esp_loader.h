@@ -186,7 +186,6 @@ typedef struct esp_loader {
     union {
         struct {
             uint32_t sip_seq_tx;
-            uint32_t got_bytes_latest;
             uint32_t mem_offset;
         } sdio;
         struct {
