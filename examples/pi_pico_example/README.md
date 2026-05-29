@@ -2,7 +2,7 @@
 
 ## Overview
 
-This example demonstrates how to flash an Espressif SoC (target) from a Raspberry Pi Pico Series MCU (host) using `esp_serial_flasher`.
+This example demonstrates how to flash an Espressif SoC (target) from a Raspberry Pi Pico (Pico 2) Series MCU (host) using `esp_serial_flasher`.
 `uart1` is dedicated for communication with the Espressif SoC, whereas, either `uart0` or USB can be used for debug output.
 
 The following steps are performed in order to re-program the targets memory:
@@ -18,7 +18,7 @@ This does not apply for the ESP8266, as its bootloader does not support this com
 
 ## Hardware Required
 
-- A Raspberry Pi Pico Board with 2MB of flash or more.
+- A Raspberry Pi Pico (or Raspberry Pi Pico 2 Board) Board with 2MB of flash or more.
 - A development board with an Espressif SoC (e.g. ESP-WROVER-KIT, ESP32-DevKitC, etc.).
 - Jumper cables to connect the boards.
 - One or two USB cables for power supply and programming.

@@ -30,7 +30,7 @@ This library enables you to program Espressif SoCs from various host platforms u
 - **STM32** microcontrollers
 - **ESP32 series** microcontrollers
 - **Zephyr OS** compatible devices
-- **Raspberry Pi Pico** (RP2040)
+- **Raspberry Pi Pico** (RP2040) and **Raspberry Pi Pico 2** (RP2350)
 - **Linux** (via UART or USB serial port, with optional GPIO control)
 
 ### Supported Target Devices (ESP device being flashed)
@@ -176,7 +176,7 @@ For complete implementation examples, see the [examples](examples/) directory:
 - [STM32 Example](examples/stm32_example/) - STM32 setup guide
 - [Linux Example](examples/linux_example/) - Linux host (PC or SBC such as Raspberry Pi)
 - [Zephyr Example](examples/zephyr_example/) - Zephyr OS integration
-- [Raspberry Pi Pico Example](examples/pi_pico_example/) - RP2040 as host
+- [Raspberry Pi Pico Example](examples/pi_pico_example/) - RP2040 or RP2350 as host
 - [ESF Demo](https://github.com/Dzarda7/esf-demo) - End-to-end demo flashing ESP targets from an embedded host (M5Stack Dial) over USB CDC ACM; includes SD card image selection and on-device progress UI
 
 ### Educational Resources
