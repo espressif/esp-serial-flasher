@@ -178,13 +178,13 @@ int main(int argc, char *argv[])
         port.boot_pin          = 3;   /* RPi GPIO3 → ESP BOOT */
     }
 
-    if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {
+    if (esp_loader_init_serial(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         return 1;
     }
 
     esp_loader_error_t conn_err;
     if (use_stub) {
-        conn_err = connect_to_target_with_stub(&loader, baud_rate, HIGHER_BAUD_RATE);
+        conn_err = connect_to_target_with_stub(&loader, HIGHER_BAUD_RATE);
     } else {
         conn_err = connect_to_target(&loader, HIGHER_BAUD_RATE);
     }

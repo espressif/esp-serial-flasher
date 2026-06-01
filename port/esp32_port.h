@@ -19,8 +19,8 @@ extern "C" {
  * @brief Concrete ESP32 UART port instance.
  *
  * Declare one of these per target device, fill in the config fields,
- * then pass &my_port.port to esp_loader_init_uart(). Hardware initialisation
- * is called automatically inside esp_loader_init_uart() — there is no
+ * then pass &my_port.port to esp_loader_init_serial(). Hardware initialisation
+ * is called automatically inside esp_loader_init_serial() — there is no
  * separate init step.
  *
  * Multiple independent instances can coexist:
@@ -36,13 +36,13 @@ extern "C" {
  *   };
  *
  *   esp_loader_t loader;
- *   esp_loader_init_uart(&loader, &port_a.port);
+ *   esp_loader_init_serial(&loader, &port_a.port);
  * @endcode
  */
 typedef struct {
     esp_loader_port_t port;              /*!< Embedded port base — pass &port to esp_loader_init_* */
 
-    /* Configuration — fill before calling esp_loader_init_uart() */
+    /* Configuration — fill before calling esp_loader_init_serial() */
     uint32_t      baud_rate;             /*!< Initial baud rate */
     uint32_t      uart_port;             /*!< UART peripheral number (e.g. UART_NUM_1) */
     gpio_num_t    uart_rx_pin;           /*!< GPIO number for UART RX */

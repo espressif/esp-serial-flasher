@@ -164,12 +164,12 @@ void app_main(void)
         .boot_pin          = GPIO_NUM_26,
     };
 
-    if (esp_loader_init_uart(&loader, &port.port) != ESP_LOADER_SUCCESS) {
+    if (esp_loader_init_serial(&loader, &port.port) != ESP_LOADER_SUCCESS) {
         ESP_LOGE(TAG, "serial initialization failed.");
         return;
     }
 
-    if (connect_to_target_with_stub(&loader, 115200, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
+    if (connect_to_target_with_stub(&loader, HIGHER_BAUDRATE) == ESP_LOADER_SUCCESS) {
         target_chip_t chip = esp_loader_get_target(&loader);
         uint32_t bootloader_addr = get_bootloader_address(chip);
         uint32_t partition_addr = PARTITION_TABLE_ADDRESS;

@@ -32,7 +32,7 @@ static esp_loader_error_t stm32_port_init(esp_loader_port_t *port)
 {
     (void)port;
     /* UART and GPIO peripherals are already initialised by STM32 HAL CubeMX code
-     * before esp_loader_init_uart() is called.  Nothing to do here. */
+     * before esp_loader_init_serial() is called.  Nothing to do here. */
     return ESP_LOADER_SUCCESS;
 }
 

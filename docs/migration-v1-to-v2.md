@@ -4,19 +4,19 @@ This guide describes the breaking changes introduced in v2 and explains how to u
 
 ## Overview of Breaking Changes
 
-| Area                        | v1                                                            | v2                                                                                                           |
-| --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Library state               | Global / static variables                                     | Caller-owned `esp_loader_t` context                                                                          |
-| Initialization              | Not required                                                  | `esp_loader_init_uart()` / `esp_loader_init_spi()` / etc. required                                           |
-| Function signatures         | No context parameter                                          | First parameter is `esp_loader_t *loader`                                                                    |
-| Flash / mem operation state | Stored inside `esp_loader_t`                                  | Separate `esp_loader_flash_cfg_t` / `esp_loader_flash_deflate_cfg_t` / `esp_loader_mem_cfg_t` contexts       |
-| Port layer                  | Free functions (`loader_port_write`, etc.)                    | `esp_loader_port_ops_t` vtable                                                                               |
-| Protocol selection          | Compile-time `SERIAL_FLASHER_INTERFACE_*`                     | Call `esp_loader_init_uart()` / `esp_loader_init_spi()` / `esp_loader_init_sdio()` / `esp_loader_init_usb()` |
-| Kconfig options             | `SERIAL_FLASHER_INTERFACE_*` choice                           | `SERIAL_FLASHER_PORT_*` booleans (multiple can be enabled)                                                   |
-| Error type header           | Defined in `esp_loader.h`                                     | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                              |
-| Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*` | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable                 |
-| `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues     | `reboot` parameter removed; **must now be called** — performs MD5 verification                               |
-| Raspberry Pi port           | Dedicated `port/raspberry_port.{c,h}` using pigpio            | Replaced by the generic `port/linux_port.{c,h}` (see below)                                                  |
+| Area                        | v1                                                            | v2                                                                                                     |
+| --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Library state               | Global / static variables                                     | Caller-owned `esp_loader_t` context                                                                    |
+| Initialization              | Not required                                                  | `esp_loader_init_serial()` / `esp_loader_init_spi()` / etc. required                                   |
+| Function signatures         | No context parameter                                          | First parameter is `esp_loader_t *loader`                                                              |
+| Flash / mem operation state | Stored inside `esp_loader_t`                                  | Separate `esp_loader_flash_cfg_t` / `esp_loader_flash_deflate_cfg_t` / `esp_loader_mem_cfg_t` contexts |
+| Port layer                  | Free functions (`loader_port_write`, etc.)                    | `esp_loader_port_ops_t` vtable                                                                         |
+| Protocol selection          | Compile-time `SERIAL_FLASHER_INTERFACE_*`                     | Call `esp_loader_init_serial()` / `esp_loader_init_spi()` / `esp_loader_init_sdio()`                   |
+| Kconfig options             | `SERIAL_FLASHER_INTERFACE_*` choice                           | `SERIAL_FLASHER_PORT_*` booleans (multiple can be enabled)                                             |
+| Error type header           | Defined in `esp_loader.h`                                     | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                        |
+| Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*` | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable           |
+| `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues     | `reboot` parameter removed; **must now be called** — performs MD5 verification                         |
+| Raspberry Pi port           | Dedicated `port/raspberry_port.{c,h}` using pigpio            | Replaced by the generic `port/linux_port.{c,h}` (see below)                                            |
 
 ---
 
@@ -47,14 +47,14 @@ esp32_port_t port = {
 };
 
 esp_loader_t loader;
-esp_loader_init_uart(&loader, &port.port);
+esp_loader_init_serial(&loader, &port.port);
 
 esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
 esp_loader_connect(&loader, &args);
 ```
 
-The per-protocol init functions (`esp_loader_init_uart`, `esp_loader_init_usb`,
-`esp_loader_init_spi`, `esp_loader_init_sdio`) bind the protocol and port vtable
+The per-protocol init functions (`esp_loader_init_serial`, `esp_loader_init_spi`,
+`esp_loader_init_sdio`) bind the protocol and port vtable
 to the context and call the port's `init` function automatically. Pass `&port.port`
 (the embedded `esp_loader_port_t` base) as the second argument.
 
@@ -92,7 +92,7 @@ All public functions now take the loader context as their first argument.
 | `esp_loader_write_register(addr, val)`                       | `esp_loader_write_register(&loader, addr, val)`                                                                                                                     |
 | `esp_loader_read_register(addr, &val)`                       | `esp_loader_read_register(&loader, addr, &val)`                                                                                                                     |
 | `esp_loader_change_transmission_rate(rate)`                  | `esp_loader_change_transmission_rate(&loader, rate)`                                                                                                                |
-| `esp_loader_change_transmission_rate_stub(old, new)`         | `esp_loader_change_transmission_rate_stub(&loader, old, new)`                                                                                                       |
+| `esp_loader_change_transmission_rate_stub(old, new)`         | `esp_loader_change_transmission_rate(&loader, new)` — stub API removed; one function for ROM and stub                                                               |
 | `esp_loader_get_security_info(&info)`                        | `esp_loader_get_security_info(&loader, &info)`                                                                                                                      |
 | `esp_loader_reset_target()`                                  | `esp_loader_reset_target(&loader)`                                                                                                                                  |
 
@@ -359,8 +359,8 @@ esp32_port_t port_b = {
 };
 
 esp_loader_t loader_a, loader_b;
-esp_loader_init_uart(&loader_a, &port_a.port);
-esp_loader_init_uart(&loader_b, &port_b.port);
+esp_loader_init_serial(&loader_a, &port_a.port);
+esp_loader_init_serial(&loader_b, &port_b.port);
 
 // Both loaders can now be used independently (e.g. from separate RTOS tasks).
 ```
@@ -409,7 +409,7 @@ void app_main(void)
     };
 
     esp_loader_t loader;
-    esp_loader_init_uart(&loader, &port.port);
+    esp_loader_init_serial(&loader, &port.port);
 
     esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
     if (esp_loader_connect(&loader, &args) != ESP_LOADER_SUCCESS) return;

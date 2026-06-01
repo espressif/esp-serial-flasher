@@ -106,7 +106,7 @@ void app_main(void)
 
     while (true) {
         ESP_LOGI(TAG, "Opening CDC ACM device 0x%04X:0x%04X...", port.device_vid, port.device_pid);
-        if (esp_loader_init_usb(&loader, &port.port) != ESP_LOADER_SUCCESS) {
+        if (esp_loader_init_serial(&loader, &port.port) != ESP_LOADER_SUCCESS) {
             continue;
         }
 

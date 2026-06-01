@@ -23,17 +23,16 @@ Starting from v2, the communication protocol is **selected at runtime** by calli
 ```c
 esp_loader_t loader;
 esp32_port_t port = { .port.ops = &esp32_uart_ops, /* ... */ };
-esp_loader_init_uart(&loader, &port.port);   // UART
+esp_loader_init_serial(&loader, &port.port);   // UART, USB CDC-ACM, …
 ```
 
-All four init functions accept an `esp_loader_port_t *` (the embedded base of a caller-owned port struct):
+All init functions accept an `esp_loader_port_t *` (the embedded base of a caller-owned port struct):
 
-| Init function            | Interface   | Notes                                  |
-| ------------------------ | ----------- | -------------------------------------- |
-| `esp_loader_init_uart()` | UART        | Default; full feature set              |
-| `esp_loader_init_usb()`  | USB CDC-ACM | Full feature set                       |
-| `esp_loader_init_spi()`  | SPI         | RAM download only                      |
-| `esp_loader_init_sdio()` | SDIO        | Experimental; limited platform support |
+| Init function              | Interface   | Notes                                          |
+| -------------------------- | ----------- | ---------------------------------------------- |
+| `esp_loader_init_serial()` | Serial SLIP | UART, USB CDC-ACM, Linux tty; full feature set |
+| `esp_loader_init_spi()`    | SPI         | RAM download only                              |
+| `esp_loader_init_sdio()`   | SDIO        | Experimental; limited platform support         |
 
 Functions not supported by a given protocol return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC`.
 
@@ -70,8 +69,8 @@ For ESP-IDF builds, you choose which port implementations to compile into the li
 
 #### `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`
 
-- **Type**: CMake cache variable
-- **Default**: 3
+- **Type**: CMake cache variable / Kconfig (`CONFIG_SERIAL_FLASHER_WRITE_BLOCK_RETRIES`)
+- **Default**: 3 (used when the macro is not defined at compile time; the library falls back to 3 in `esp_loader.c`)
 - **Description**: Number of retry attempts for writing blocks to target flash or RAM.
 
 #### `SERIAL_FLASHER_RESET_HOLD_TIME_MS`

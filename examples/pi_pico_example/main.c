@@ -41,7 +41,7 @@ int main(void)
         .boot_pin_num          = 18,
     };
 
-    esp_loader_init_uart(&loader, &port.port);
+    esp_loader_init_serial(&loader, &port.port);
 
     // delay for the test to have time to connect to the device
     sleep_ms(500);
