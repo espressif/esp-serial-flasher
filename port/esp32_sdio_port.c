@@ -7,9 +7,8 @@
 #include "esp32_sdio_port.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
+#include <stdlib.h>
 #include <unistd.h>
-
-#define WORD_ALIGNED(ptr) ((size_t)ptr % sizeof(size_t) == 0)
 
 #if SERIAL_FLASHER_DEBUG_TRACE
 static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
@@ -33,12 +32,9 @@ static esp_loader_error_t esp32_sdio_port_init(esp_loader_port_t *port)
 
     p->_card_config = (sdmmc_host_t)SDMMC_HOST_DEFAULT();
     p->_card_config.flags = p->bus_width == SDIO_1BIT ? SDMMC_HOST_FLAG_1BIT : SDMMC_HOST_FLAG_4BIT;
+    p->_card_config.flags |= SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
     p->_card_config.max_freq_khz = p->max_freq_khz;
     p->_card_config.slot = p->slot;
-
-#if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
-    p->_card_config.flags |= SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF;
-#endif
 
     if (!p->dont_initialize_host_driver) {
         if (sdmmc_host_init() != ESP_OK) {
@@ -79,10 +75,10 @@ static void esp32_sdio_port_deinit(esp_loader_port_t *port)
 {
     esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
 
+    free(p->_card.host.dma_aligned_buffer);
+    p->_card.host.dma_aligned_buffer = NULL;
+
     if (p->_host_driver_needs_deinit) {
-#if SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
-        free(p->_card.host.dma_aligned_buffer);
-#endif
         sdmmc_host_deinit();
         p->_host_driver_needs_deinit = false;
     }
@@ -96,7 +92,7 @@ static esp_loader_error_t esp32_sdio_write(esp_loader_port_t *port, uint32_t fun
     esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
     (void)timeout;
 
-    if (data == NULL || !WORD_ALIGNED(data)) {
+    if (data == NULL) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
@@ -120,7 +116,7 @@ static esp_loader_error_t esp32_sdio_read(esp_loader_port_t *port, uint32_t func
     esp32_sdio_port_t *p = container_of(port, esp32_sdio_port_t, port);
     (void)timeout;
 
-    if (data == NULL || !WORD_ALIGNED(data)) {
+    if (data == NULL) {
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
