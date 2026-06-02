@@ -64,7 +64,7 @@ static inline esp_loader_error_t sdio_write_bytes(esp_loader_t *loader, uint32_t
 #define STUB_BOOT_TIMEOUT 500
 #define STUB_DEFAULT_TIMEOUT 200
 
-#define WORD_ALIGNED(ptr) (((uintptr_t)(ptr) % sizeof(size_t)) == 0)
+#define SDIO_RESPONSE_MAX_SIZE (sizeof(common_response_t) + MAX_RESP_DATA_SIZE + sizeof(response_status_t))
 
 typedef enum {
     STUB_BUSY = 0,
@@ -169,7 +169,7 @@ static esp_loader_error_t slave_read_register(esp_loader_t *loader, const uint32
 {
     assert(addr >> 2 <= 0x7F);
 
-    uint8_t buf[4] __attribute__((aligned(4))) = {0};
+    uint8_t buf[4] = {0};
     buf[0] = (addr >> 2) & 0x7F;
     buf[1] = 0x80;
 
@@ -186,7 +186,7 @@ static esp_loader_error_t slave_write_register(esp_loader_t *loader, const uint3
 {
     assert(addr >> 2 <= 0x7F);
 
-    uint8_t buf[8] __attribute__((aligned(4))) = {0};
+    uint8_t buf[8] = {0};
     memcpy(buf, &reg_val, 4);
     buf[4] = (addr >> 2) & 0x7F;
     buf[5] = 0xC0;
@@ -198,7 +198,7 @@ static esp_loader_error_t slave_write_register(esp_loader_t *loader, const uint3
 
 static esp_loader_error_t slave_wait_ready(esp_loader_t *loader)
 {
-    uint8_t reg __attribute__((aligned(4))) = 0;
+    uint8_t reg = 0;
 
     while ((reg & SD_IO_CCR_FN_ENABLE_FUNC1_EN) == 0) {
         if (port_remaining_time(loader) == 0) {
@@ -236,8 +236,7 @@ static esp_loader_error_t slave_init_io(esp_loader_t *loader)
     RETURN_ON_ERROR(slave_wait_ready(loader));
 
     // Enable function 1, we will use it for upload
-    // The alignment requirement comes from the esp port DMA requirements
-    uint8_t reg __attribute__((aligned(4)));
+    uint8_t reg;
     RETURN_ON_ERROR(sdio_read_bytes(loader, 0, SD_IO_CCCR_FN_ENABLE, &reg, sizeof(reg)));
 
     reg |= SD_IO_CCR_FN_ENABLE_FUNC1_EN;
@@ -261,7 +260,7 @@ static esp_loader_error_t slave_detect_chip_internal(esp_loader_t *loader)
 
     // CIS region exist in 0x1000~0x17FFF of FUNC 0, get the start address of it
     // from CCCR register.
-    uint8_t cis[3] __attribute__((aligned(4)));
+    uint8_t cis[3];
     RETURN_ON_ERROR(sdio_read_bytes(loader, 0, SD_IO_CCCR_FN_ID, cis, sizeof(cis)));
     const uint32_t cis_ptr = cis[0] | (cis[1] << 8) | (cis[2] << 16);
 
@@ -272,13 +271,13 @@ static esp_loader_error_t slave_detect_chip_internal(esp_loader_t *loader)
     // which should be in the first
     const uint32_t max_addr = addr + SD_IO_CIS_MINIMUM_SIZE;
     while (addr < max_addr) {
-        uint8_t header[2] __attribute__((aligned(4)));
+        uint8_t header[2];
         RETURN_ON_ERROR(sdio_read_bytes(loader, 0, addr, header, sizeof(header)));
         addr += sizeof(header);
         const uint8_t tuple_code = header[0];
         const uint8_t tuple_size = header[1];
         if (tuple_code == SD_IO_TUPLE_CODE && tuple_size == SD_IO_TUPLE_SIZE) {
-            uint8_t ids[SD_IO_TUPLE_SIZE] __attribute__((aligned(4)));
+            uint8_t ids[SD_IO_TUPLE_SIZE];
             RETURN_ON_ERROR(sdio_read_bytes(loader, 0, addr, ids, sizeof(ids)));
             vendor_id = ids[0] | (ids[1] << 8);
             device_id = ids[2] | (ids[3] << 8);
@@ -337,7 +336,7 @@ static esp_loader_error_t sip_upload_ram_segment(esp_loader_t *loader, const uin
     loader->_port->ops->start_timer(loader->_port, STUB_DEFAULT_TIMEOUT);
     RETURN_ON_ERROR(slave_wait_ready(loader));
 
-    uint8_t block_buf[SD_BLOCK_SIZE] __attribute__((aligned(4)));
+    uint8_t packet[SIP_PACKET_SIZE];
     int32_t remaining = size;
     while (remaining > 0) {
         const uint32_t nondata_size = sizeof(sip_header_t) + sizeof(sip_cmd_write_memory);
@@ -356,17 +355,17 @@ static esp_loader_error_t sip_upload_ram_segment(esp_loader_t *loader, const uin
             .len = data_size,
         };
 
-        memcpy(&block_buf[0], &header, sizeof(header));
-        memcpy(&block_buf[sizeof(header)], &cmd, sizeof(cmd));
+        memcpy(&packet[0], &header, sizeof(header));
+        memcpy(&packet[sizeof(header)], &cmd, sizeof(cmd));
         memcpy(
-            &block_buf[sizeof(header) + sizeof(cmd)],
+            &packet[sizeof(header) + sizeof(cmd)],
             &data[size - remaining],
             data_size
         );
 
         RETURN_ON_ERROR(sdio_write_bytes(loader, 1,
                                          esp_sdio_target[loader->_target].slchost_packet_space_end - header.len,
-                                         block_buf, header.len));
+                                         packet, header.len));
 
         remaining -= data_size;
         loader->_proto_ctx.sdio.sip_seq_tx++;
@@ -380,7 +379,6 @@ static esp_loader_error_t sip_run_ram_code(esp_loader_t *loader, const uint32_t 
     loader->_port->ops->start_timer(loader->_port, STUB_DEFAULT_TIMEOUT);
     RETURN_ON_ERROR(slave_wait_ready(loader));
 
-    uint8_t block_buf[SD_BLOCK_SIZE] __attribute__((aligned(4)));
     const sip_header_t header = {
         .fc[0] = SIP_PACKET_TYPE_CTRL & SIP_TYPE_MASK,
         .fc[1] = SIP_HDR_F_SYNC,
@@ -390,13 +388,14 @@ static esp_loader_error_t sip_run_ram_code(esp_loader_t *loader, const uint32_t 
     };
 
     const sip_cmd_bootup cmd = { .boot_addr = entrypoint, .discard_link = 1};
+    uint8_t packet[sizeof(header) + sizeof(cmd)];
 
-    memcpy(&block_buf[0], &header, sizeof(header));
-    memcpy(&block_buf[sizeof(header)], &cmd, sizeof(cmd));
+    memcpy(&packet[0], &header, sizeof(header));
+    memcpy(&packet[sizeof(header)], &cmd, sizeof(cmd));
 
     return sdio_write_bytes(loader, 1,
                             esp_sdio_target[loader->_target].slchost_packet_space_end - header.len,
-                            block_buf, header.len);
+                            packet, header.len);
 }
 
 static const esp_stub_t *sdio_get_stub(target_chip_t target)
@@ -417,7 +416,7 @@ static const esp_stub_t *sdio_get_stub(target_chip_t target)
 static esp_loader_error_t sdio_read_stub_packet(esp_loader_t *loader, uint8_t *dest,
         size_t max_size, size_t *recv_size)
 {
-    uint32_t interrupt_status __attribute__((aligned(4))) = 0;
+    uint32_t interrupt_status = 0;
     uint32_t poll_count = 0;
 
     do {
@@ -433,10 +432,10 @@ static esp_loader_error_t sdio_read_stub_packet(esp_loader_t *loader, uint8_t *d
         }
     } while ((interrupt_status & STUB_INT_NEW_PKT) == 0);
 
-    uint32_t packet_size __attribute__((aligned(4))) = 0;
+    uint32_t packet_size = 0;
     RETURN_ON_ERROR(sdio_read_bytes(loader, 1, STUB_CONF_W0_REG, &packet_size, sizeof(packet_size)));
 
-    uint32_t clr __attribute__((aligned(4))) = STUB_INT_NEW_PKT;
+    uint32_t clr = STUB_INT_NEW_PKT;
     if (packet_size == 0 || packet_size > max_size) {
         RETURN_ON_ERROR(sdio_write_bytes(loader, 1, STUB_INT_CLR_REG, &clr, sizeof(clr)));
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
@@ -444,23 +443,11 @@ static esp_loader_error_t sdio_read_stub_packet(esp_loader_t *loader, uint8_t *d
 
     const uint32_t packet_addr = esp_sdio_target[loader->_target].slchost_packet_space_end - packet_size;
 
-    uint8_t block_buf[SD_BLOCK_SIZE] __attribute__((aligned(4)));
     uint32_t bytes_read = 0;
-
     while (bytes_read < packet_size) {
-        const uint32_t chunk_size = MIN(SD_BLOCK_SIZE, packet_size - bytes_read);
-        uint8_t *chunk_dest = dest + bytes_read;
-        uint8_t *read_dest = WORD_ALIGNED(chunk_dest) ? chunk_dest : block_buf;
+        const uint16_t chunk_size = (uint16_t)MIN(SD_BLOCK_SIZE, packet_size - bytes_read);
 
-        esp_loader_error_t err = sdio_read_bytes(loader, 1, packet_addr + bytes_read,
-                                 read_dest, chunk_size);
-        if (err != ESP_LOADER_SUCCESS) {
-            return err;
-        }
-
-        if (read_dest == block_buf) {
-            memcpy(chunk_dest, block_buf, chunk_size);
-        }
+        RETURN_ON_ERROR(sdio_read_bytes(loader, 1, packet_addr + bytes_read, dest + bytes_read, chunk_size));
 
         bytes_read += chunk_size;
     }
@@ -491,7 +478,7 @@ static esp_loader_error_t slave_upload_stub(esp_loader_t *loader)
 
     // Wait for stub to signal it is ready
     static const uint8_t expected_ohai[] = {'O', 'H', 'A', 'I'};
-    uint8_t buf[sizeof(expected_ohai)] __attribute__((aligned(4)));
+    uint8_t buf[sizeof(expected_ohai)];
     size_t recv_size = 0;
 
     loader->_port->ops->start_timer(loader->_port, STUB_BOOT_TIMEOUT);
@@ -535,7 +522,7 @@ static esp_loader_error_t sdio_wait_rx_space(esp_loader_t *loader, uint32_t tran
             return ESP_LOADER_ERROR_TIMEOUT;
         }
 
-        uint32_t token_rdata __attribute__((aligned(4))) = 0;
+        uint32_t token_rdata = 0;
         RETURN_ON_ERROR(sdio_read_bytes(loader, 1, STUB_TOKEN_RDATA_REG, &token_rdata, sizeof(token_rdata)));
 
         uint32_t token1 = (token_rdata >> 16) & 0x0FFFU;
@@ -549,7 +536,7 @@ static esp_loader_error_t sdio_wait_rx_space(esp_loader_t *loader, uint32_t tran
 
 static esp_loader_error_t sdio_send_stub_ack(esp_loader_t *loader, uint32_t bytes_recv)
 {
-    uint32_t ack __attribute__((aligned(4))) = bytes_recv;
+    uint32_t ack = bytes_recv;
 
     RETURN_ON_ERROR(sdio_wait_rx_space(loader, sizeof(ack)));
     return sdio_write_bytes(loader, 1,
@@ -557,22 +544,23 @@ static esp_loader_error_t sdio_send_stub_ack(esp_loader_t *loader, uint32_t byte
                             &ack, sizeof(ack));
 }
 
-static esp_loader_error_t sdio_check_response(esp_loader_t *loader, const send_cmd_config *config, uint8_t *block_buf)
+static esp_loader_error_t sdio_check_response(esp_loader_t *loader, const send_cmd_config *config)
 {
     command_t command = ((const command_common_t *)config->cmd)->command;
+    uint8_t response_buf[SDIO_RESPONSE_MAX_SIZE];
     size_t response_len = 0;
-    RETURN_ON_ERROR(sdio_read_stub_packet(loader, block_buf, SD_BLOCK_SIZE, &response_len));
+    RETURN_ON_ERROR(sdio_read_stub_packet(loader, response_buf, sizeof(response_buf), &response_len));
 
     if (response_len < sizeof(common_response_t) + sizeof(response_status_t)) {
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
-    common_response_t *response = (common_response_t *)block_buf;
+    common_response_t *response = (common_response_t *)response_buf;
     if (response->direction != READ_DIRECTION || response->command != command) {
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 
-    response_status_t *status = (response_status_t *)(block_buf + response_len - sizeof(response_status_t));
+    response_status_t *status = (response_status_t *)(response_buf + response_len - sizeof(response_status_t));
 
     if (status->failed) {
         log_loader_internal_error(loader, status->error);
@@ -587,7 +575,7 @@ static esp_loader_error_t sdio_check_response(esp_loader_t *loader, const send_c
         const size_t resp_data_size = response_len - sizeof(common_response_t) - sizeof(response_status_t);
 
         if (resp_data_size > 0) {
-            memcpy(config->resp_data, block_buf + sizeof(common_response_t), resp_data_size);
+            memcpy(config->resp_data, response_buf + sizeof(common_response_t), resp_data_size);
 
             if (config->resp_data_recv_size != NULL) {
                 *config->resp_data_recv_size = resp_data_size;
@@ -608,35 +596,31 @@ static esp_loader_error_t sdio_send_cmd(esp_loader_t *loader, const send_cmd_con
 
     const uint32_t packet_base = esp_sdio_target[loader->_target].slchost_packet_space_end - total_len;
 
-    uint8_t block_buf[SD_BLOCK_SIZE] __attribute__((aligned(4)));
-    memcpy(block_buf, config->cmd, config->cmd_size);
+    uint32_t bytes_sent = 0;
+    while (bytes_sent < config->cmd_size) {
+        const uint16_t chunk_size = (uint16_t)MIN(SD_BLOCK_SIZE, config->cmd_size - bytes_sent);
 
-    uint32_t first_block_data_bytes = 0;
-    if (config->data != NULL && config->data_size > 0) {
-        first_block_data_bytes = MIN(SD_BLOCK_SIZE - config->cmd_size, config->data_size);
-        memcpy(block_buf + config->cmd_size, config->data, first_block_data_bytes);
+        RETURN_ON_ERROR(sdio_write_bytes(loader, 1, packet_base + bytes_sent,
+                                         (const uint8_t *)config->cmd + bytes_sent, chunk_size));
+
+        bytes_sent += chunk_size;
     }
 
-    uint32_t first_chunk_size = config->cmd_size + first_block_data_bytes;
-    RETURN_ON_ERROR(sdio_write_bytes(loader, 1, packet_base, block_buf, first_chunk_size));
-
-    if (config->data != NULL && first_block_data_bytes < config->data_size) {
-        uint32_t bytes_sent = first_block_data_bytes;
-        const uint32_t total_data = config->data_size;
-
-        while (bytes_sent < total_data) {
-            uint32_t chunk_size = MIN(SD_BLOCK_SIZE, total_data - bytes_sent);
-            memcpy(block_buf, (const uint8_t *)config->data + bytes_sent, chunk_size);
+    if (config->data != NULL && config->data_size > 0) {
+        bytes_sent = 0;
+        while (bytes_sent < config->data_size) {
+            const uint16_t chunk_size = (uint16_t)MIN(SD_BLOCK_SIZE, config->data_size - bytes_sent);
 
             RETURN_ON_ERROR(sdio_write_bytes(loader, 1,
                                              packet_base + config->cmd_size + bytes_sent,
-                                             block_buf, chunk_size));
+                                             (const uint8_t *)config->data + bytes_sent,
+                                             chunk_size));
 
             bytes_sent += chunk_size;
         }
     }
 
-    return sdio_check_response(loader, config, block_buf);
+    return sdio_check_response(loader, config);
 }
 
 // Temporary functions until the new stub is ready and placed at the end of RAM (ESPTOOL-1058).

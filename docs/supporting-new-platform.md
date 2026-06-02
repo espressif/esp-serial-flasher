@@ -82,6 +82,10 @@ Transmit / receive bytes over the transport.
 
 - Block until all bytes are sent / received or `timeout` (ms) elapses.
 - Return `ESP_LOADER_SUCCESS` on success, `ESP_LOADER_ERROR_TIMEOUT` on timeout.
+- Accept regular byte buffers from the protocol layer. If the hardware driver has DMA,
+  cache, or word-alignment requirements, handle them inside the port implementation
+  (for example by using the platform driver's aligned-buffer support or a port-local
+  bounce buffer).
 
 Not present for SDIO — use `sdio_write` / `sdio_read` instead.
 
@@ -176,6 +180,8 @@ esp_loader_error_t (*sdio_card_init)(esp_loader_port_t *port);
 ```
 
 These replace `write`/`read` for SDIO. `sdio_card_init` performs bus-level card initialisation and is called once per connection (before `enter_bootloader`).
+
+As with the regular `write`/`read` callbacks, `sdio_write` and `sdio_read` must accept ordinary byte buffers from the protocol layer. Any alignment required by the host controller or DMA engine belongs in the port implementation. The ESP-IDF SDIO port enables `SDMMC_HOST_FLAG_ALLOC_ALIGNED_BUF` so the SDMMC host driver can handle unaligned buffers.
 
 ---
 

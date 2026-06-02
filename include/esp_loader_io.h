@@ -106,20 +106,24 @@ typedef struct {
      */
     esp_loader_error_t (*change_transmission_rate)(esp_loader_port_t *port, uint32_t rate);
 
-    /** Writes bytes to the peripheral (UART/USB/SPI). NULL for SDIO. */
+    /** Writes bytes to the peripheral (UART/USB/SPI). NULL for SDIO.
+     *  Hardware/DMA alignment requirements must be handled by the port implementation. */
     esp_loader_error_t (*write)(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout);
 
-    /** Reads bytes from the peripheral (UART/USB/SPI). NULL for SDIO. */
+    /** Reads bytes from the peripheral (UART/USB/SPI). NULL for SDIO.
+     *  Hardware/DMA alignment requirements must be handled by the port implementation. */
     esp_loader_error_t (*read)(esp_loader_port_t *port, uint8_t *data, uint16_t size, uint32_t timeout);
 
     /** Controls the SPI chip-select pin. NULL for non-SPI ports. */
     void (*spi_set_cs)(esp_loader_port_t *port, uint32_t level);
 
-    /** Writes data over SDIO. NULL for non-SDIO ports. */
+    /** Writes data over SDIO. NULL for non-SDIO ports.
+     *  Hardware/DMA alignment requirements must be handled by the port implementation. */
     esp_loader_error_t (*sdio_write)(esp_loader_port_t *port, uint32_t function, uint32_t addr,
                                      const uint8_t *data, uint16_t size, uint32_t timeout);
 
-    /** Reads data over SDIO. NULL for non-SDIO ports. */
+    /** Reads data over SDIO. NULL for non-SDIO ports.
+     *  Hardware/DMA alignment requirements must be handled by the port implementation. */
     esp_loader_error_t (*sdio_read)(esp_loader_port_t *port, uint32_t function, uint32_t addr,
                                     uint8_t *data, uint16_t size, uint32_t timeout);
 
