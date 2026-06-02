@@ -4,19 +4,20 @@ This guide describes the breaking changes introduced in v2 and explains how to u
 
 ## Overview of Breaking Changes
 
-| Area                        | v1                                                            | v2                                                                                                     |
-| --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Library state               | Global / static variables                                     | Caller-owned `esp_loader_t` context                                                                    |
-| Initialization              | Not required                                                  | `esp_loader_init_serial()` / `esp_loader_init_spi()` / etc. required                                   |
-| Function signatures         | No context parameter                                          | First parameter is `esp_loader_t *loader`                                                              |
-| Flash / mem operation state | Stored inside `esp_loader_t`                                  | Separate `esp_loader_flash_cfg_t` / `esp_loader_flash_deflate_cfg_t` / `esp_loader_mem_cfg_t` contexts |
-| Port layer                  | Free functions (`loader_port_write`, etc.)                    | `esp_loader_port_ops_t` vtable                                                                         |
-| Protocol selection          | Compile-time `SERIAL_FLASHER_INTERFACE_*`                     | Call `esp_loader_init_serial()` / `esp_loader_init_spi()` / `esp_loader_init_sdio()`                   |
-| Kconfig options             | `SERIAL_FLASHER_INTERFACE_*` choice                           | `SERIAL_FLASHER_PORT_*` booleans (multiple can be enabled)                                             |
-| Error type header           | Defined in `esp_loader.h`                                     | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                        |
-| Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*` | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable           |
-| `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues     | `reboot` parameter removed; **must now be called** — performs MD5 verification                         |
-| Raspberry Pi port           | Dedicated `port/raspberry_port.{c,h}` using pigpio            | Replaced by the generic `port/linux_port.{c,h}` (see below)                                            |
+| Area                        | v1                                                                      | v2                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Library state               | Global / static variables                                               | Caller-owned `esp_loader_t` context                                                                    |
+| Initialization              | Not required                                                            | `esp_loader_init_serial()` / `esp_loader_init_spi()` / etc. required                                   |
+| Function signatures         | No context parameter                                                    | First parameter is `esp_loader_t *loader`                                                              |
+| Flash / mem operation state | Stored inside `esp_loader_t`                                            | Separate `esp_loader_flash_cfg_t` / `esp_loader_flash_deflate_cfg_t` / `esp_loader_mem_cfg_t` contexts |
+| Port layer                  | Free functions (`loader_port_write`, etc.)                              | `esp_loader_port_ops_t` vtable                                                                         |
+| Protocol selection          | Compile-time `SERIAL_FLASHER_INTERFACE_*`                               | Call `esp_loader_init_serial()` / `esp_loader_init_spi()` / `esp_loader_init_sdio()`                   |
+| Kconfig options             | `SERIAL_FLASHER_INTERFACE_*` choice                                     | `SERIAL_FLASHER_PORT_*` booleans (multiple can be enabled)                                             |
+| Error type header           | Defined in `esp_loader.h`                                               | Separate `esp_loader_error.h` (auto-included by `esp_loader.h`)                                        |
+| Conditionally-compiled APIs | Many functions guarded by `#ifdef SERIAL_FLASHER_INTERFACE_*`           | All functions always available; return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC` if not applicable           |
+| `esp_loader_flash_finish()` | Accepted `reboot` bool; not recommended due to ROM issues               | `reboot` parameter removed; **must now be called** — performs MD5 verification                         |
+| Logging                     | Optional `debug_print` string callback and `SERIAL_FLASHER_DEBUG_TRACE` | Levelled `log` / `log_hex` callbacks and `SERIAL_FLASHER_LOG_LEVEL`                                    |
+| Raspberry Pi port           | Dedicated `port/raspberry_port.{c,h}` using pigpio                      | Replaced by the generic `port/linux_port.{c,h}` (see below)                                            |
 
 ---
 
@@ -253,12 +254,49 @@ const esp_loader_port_ops_t my_platform_ops = {
     .start_timer              = my_start_timer,
     .remaining_time           = my_remaining_time,
     .delay_ms                 = my_delay_ms,
-    .debug_print              = my_debug_print,      /* or NULL */
+    .log                      = my_log,              /* or NULL */
+    .log_hex                  = my_log_hex,          /* or NULL */
     .change_transmission_rate = my_change_rate,      /* or NULL */
     .write                    = my_write,
     .read                     = my_read,
 };
 ```
+
+### Logging callback migration
+
+The `debug_print` port callback has been removed. Implement `log` for formatted text messages and optionally `log_hex` for transfer dumps:
+
+```c
+static const char *const level_prefix[] = { "", "E", "W", "I", "D" };
+
+static void my_log(esp_loader_port_t *port, esp_loader_log_level_t level,
+                   const char *fmt, va_list args)
+{
+    (void)port;
+    printf("[%s] esf: ", level_prefix[level]);
+    vprintf(fmt, args);
+    putchar('\n');
+}
+
+static void my_log_hex(esp_loader_port_t *port, esp_loader_log_level_t level,
+                       const char *label, const uint8_t *data, size_t size)
+{
+    (void)port;
+    printf("[%s] esf: %s (%zu bytes):\n",
+           level_prefix[level], label ? label : "hex", size);
+    /* Render data[0..size) using the platform logger. */
+}
+```
+
+Set `.log = NULL` to suppress text output and `.log_hex = NULL` to suppress hex dumps. The built-in ports use the library's standard stdio helpers or their platform logger.
+
+`SERIAL_FLASHER_DEBUG_TRACE` / `CONFIG_SERIAL_FLASHER_DEBUG_TRACE` has also been removed. Select the compile-time minimum log level instead:
+
+```cmake
+cmake -DSERIAL_FLASHER_LOG_LEVEL=DEBUG ..
+```
+
+For ESP-IDF or Zephyr, choose one of the `CONFIG_SERIAL_FLASHER_LOG_LEVEL_*` Kconfig options. DEBUG (`4`) enables per-command traces and transfer hex dumps; the default is WARN (`2`). Regular CMake builds may use either names (`DEBUG`) or numbers (`4`).
 
 See `docs/supporting-new-platform.md` for a complete guide to writing a new port.
 

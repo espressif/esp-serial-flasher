@@ -27,3 +27,7 @@ typedef struct send_cmd_config {
 } send_cmd_config;
 
 void log_loader_internal_error(esp_loader_t *loader, error_code_t error);
+
+#if SERIAL_FLASHER_LOG_LEVEL >= ESP_LOADER_LOG_DEBUG
+const char *loader_command_name(command_t cmd);
+#endif

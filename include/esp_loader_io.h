@@ -6,9 +6,32 @@
 
 #pragma once
 
+#include <stdarg.h>
 #include <stdint.h>
 #include <stddef.h>
 #include "esp_loader_error.h"
+
+/**
+ * @brief Log verbosity levels used by the log and log_hex port callbacks.
+ *
+ * The numeric defines are usable in preprocessor @c #if guards as well as
+ * in C expressions.  The enum typedef provides type safety in function
+ * signatures; each member is initialised from the corresponding define so
+ * the two representations are always in sync.
+ */
+#define ESP_LOADER_LOG_NONE    0  /*!< All output suppressed */
+#define ESP_LOADER_LOG_ERROR   1  /*!< Protocol errors, MD5 mismatch */
+#define ESP_LOADER_LOG_WARN    2  /*!< Flash size fallback, SDIO retries (default) */
+#define ESP_LOADER_LOG_INFO    3  /*!< Connect success, chip, flash size, write start */
+#define ESP_LOADER_LOG_DEBUG   4  /*!< Per-command trace, hex dumps, SPI polling */
+
+typedef enum {
+    ESP_LOADER_LOG_LEVEL_NONE  = ESP_LOADER_LOG_NONE,
+    ESP_LOADER_LOG_LEVEL_ERROR = ESP_LOADER_LOG_ERROR,
+    ESP_LOADER_LOG_LEVEL_WARN  = ESP_LOADER_LOG_WARN,
+    ESP_LOADER_LOG_LEVEL_INFO  = ESP_LOADER_LOG_INFO,
+    ESP_LOADER_LOG_LEVEL_DEBUG = ESP_LOADER_LOG_DEBUG,
+} esp_loader_log_level_t;
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,10 +118,23 @@ typedef struct {
     void (*delay_ms)(esp_loader_port_t *port, uint32_t ms);
 
     /**
-     * Prints a debug message string.
-     * Set to NULL to suppress debug output.
+     * Logs a formatted text message at the given level.
+     * The format string follows printf conventions and does NOT include a trailing newline —
+     * the implementation is responsible for adding one if needed.
+     * Set to NULL to suppress all text output.
      */
-    void (*debug_print)(esp_loader_port_t *port, const char *str);
+    void (*log)(esp_loader_port_t *port, esp_loader_log_level_t level,
+                const char *fmt, va_list args);
+
+    /**
+     * Logs a binary buffer dump at the given level.
+     * @param label  Optional human-readable label (may be NULL).
+     * @param data   Pointer to the raw bytes to display.
+     * @param size   Number of bytes.
+     * Set to NULL to suppress hex output.
+     */
+    void (*log_hex)(esp_loader_port_t *port, esp_loader_log_level_t level,
+                    const char *label, const uint8_t *data, size_t size);
 
     /**
      * Changes the peripheral clock/baud rate.

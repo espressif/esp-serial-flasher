@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <chrono>
 #include <thread>
@@ -36,19 +37,33 @@ static inline test_tcp_port_t *port_instance(esp_loader_port_t *base)
     return static_cast<test_tcp_port_t *>(static_cast<void *>(base));
 }
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(test_tcp_port_t *p, const uint8_t *data, uint16_t size, bool write)
-{
-    if (p->write_prev != write) {
-        p->write_prev = write;
-        cout << endl << "--- " << (write ? "WRITE" : "READ") << " ---" << endl;
-    }
+static const char *const s_log_level_str[] = { "", "E", "W", "I", "D" };
 
-    for (uint32_t i = 0; i < size; i++) {
-        cout << hex << static_cast<unsigned int>(data[i]) << dec << ' ';
+static void test_port_log(esp_loader_port_t *port, esp_loader_log_level_t level,
+                          const char *fmt, va_list args)
+{
+    (void)port;
+    printf("[%s] esf: ", s_log_level_str[level]);
+    vprintf(fmt, args);
+    putchar('\n');
+}
+
+static void test_port_log_hex(esp_loader_port_t *port, esp_loader_log_level_t level,
+                              const char *label, const uint8_t *data, size_t size)
+{
+    (void)port;
+    printf("[%s] esf: %s (%zu bytes):\n", s_log_level_str[level],
+           label ? label : "hex", size);
+    for (size_t i = 0; i < size; i++) {
+        printf("%02x ", data[i]);
+        if ((i + 1) % 16 == 0) {
+            putchar('\n');
+        }
+    }
+    if (size % 16 != 0) {
+        putchar('\n');
     }
 }
-#endif
 
 static esp_loader_error_t test_port_write(esp_loader_port_t *port, const uint8_t *data, uint16_t size, uint32_t timeout)
 {
@@ -62,9 +77,6 @@ static esp_loader_error_t test_port_write(esp_loader_port_t *port, const uint8_t
             cout << "Socket send failed\n";
             return ESP_LOADER_ERROR_FAIL;
         }
-#if SERIAL_FLASHER_DEBUG_TRACE
-        transfer_debug_print(p, data, bytes_written, true);
-#endif
         written += bytes_written;
     } while (written != size);
 
@@ -99,10 +111,6 @@ static esp_loader_error_t test_port_read(esp_loader_port_t *port, uint8_t *data,
             return ESP_LOADER_ERROR_FAIL;
         }
     }
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(p, data, bytes_read, false);
-#endif
 
     p->file.write((const char *)data, size);
     p->file.flush();
@@ -155,7 +163,8 @@ static const esp_loader_port_ops_t test_port_ops = {
     /* start_timer              = */ test_port_start_timer,
     /* remaining_time           = */ test_port_remaining_time,
     /* delay_ms                 = */ test_port_delay_ms,
-    /* debug_print              = */ nullptr,
+    /* log                      = */ test_port_log,
+    /* log_hex                  = */ test_port_log_hex,
     /* change_transmission_rate = */ nullptr,
     /* write                    = */ test_port_write,
     /* read                     = */ test_port_read,

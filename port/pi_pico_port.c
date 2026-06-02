@@ -8,22 +8,7 @@
 #include "hardware/gpio.h"
 #include "pico/time.h"
 #include "pi_pico_port.h"
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void transfer_debug_print(const uint8_t *data, uint16_t size, bool write)
-{
-    static bool write_prev = false;
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        printf("%02x ", data[i]);
-    }
-}
-#endif
+#include "loader_port_stdio_log.h"
 
 /* The driver returns a baudrate it managed to achieve which might not be the
  * exact baudrate requested. Tolerance is 1%. */
@@ -91,10 +76,6 @@ static esp_loader_error_t pi_pico_uart_write(esp_loader_port_t *port, const uint
         }
     }
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(data, pos, true);
-#endif
-
     return (pos == size) ? ESP_LOADER_SUCCESS : ESP_LOADER_ERROR_TIMEOUT;
 }
 
@@ -114,10 +95,6 @@ static esp_loader_error_t pi_pico_uart_read(esp_loader_port_t *port, uint8_t *da
             pos++;
         }
     }
-
-#if SERIAL_FLASHER_DEBUG_TRACE
-    transfer_debug_print(data, pos, false);
-#endif
 
     return (pos == size) ? ESP_LOADER_SUCCESS : ESP_LOADER_ERROR_TIMEOUT;
 }
@@ -160,12 +137,6 @@ static void pi_pico_uart_enter_bootloader(esp_loader_port_t *port)
     gpio_put(p->boot_pin_num, SERIAL_FLASHER_BOOT_INVERT ? 0 : 1);
 }
 
-static void pi_pico_uart_debug_print(esp_loader_port_t *port, const char *str)
-{
-    (void)port;
-    printf("DEBUG: %s\n", str);
-}
-
 static esp_loader_error_t pi_pico_uart_change_rate(esp_loader_port_t *port, uint32_t baudrate)
 {
     pi_pico_port_t *p = container_of(port, pi_pico_port_t, port);
@@ -186,7 +157,8 @@ const esp_loader_port_ops_t pi_pico_uart_ops = {
     .start_timer              = pi_pico_uart_start_timer,
     .remaining_time           = pi_pico_uart_remaining_time,
     .delay_ms                 = pi_pico_uart_delay_ms,
-    .debug_print              = pi_pico_uart_debug_print,
+    .log                      = loader_port_stdio_log,
+    .log_hex                  = loader_port_stdio_log_hex,
     .change_transmission_rate = pi_pico_uart_change_rate,
     .write                    = pi_pico_uart_write,
     .read                     = pi_pico_uart_read,

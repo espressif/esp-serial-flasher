@@ -33,7 +33,11 @@ typedef struct {
     void               (*start_timer)(esp_loader_port_t *port, uint32_t ms);
     uint32_t           (*remaining_time)(esp_loader_port_t *port);
     void               (*delay_ms)(esp_loader_port_t *port, uint32_t ms);
-    void               (*debug_print)(esp_loader_port_t *port, const char *str); /* NULL = no debug */
+    void               (*log)(esp_loader_port_t *port, esp_loader_log_level_t level,
+                              const char *fmt, va_list args); /* NULL = no text output */
+    void               (*log_hex)(esp_loader_port_t *port, esp_loader_log_level_t level,
+                                  const char *label, const uint8_t *data,
+                                  size_t size); /* NULL = no hex output */
     esp_loader_error_t (*change_transmission_rate)(esp_loader_port_t *port, uint32_t rate); /* NULL if unsupported */
 
     /* UART / USB / SPI */
@@ -137,13 +141,18 @@ Blocking delay in milliseconds.
 
 ---
 
-### `debug_print` (optional)
+### `log` / `log_hex` (optional)
 
 ```c
-void (*debug_print)(esp_loader_port_t *port, const char *str);
+void (*log)(esp_loader_port_t *port, esp_loader_log_level_t level,
+            const char *fmt, va_list args);
+void (*log_hex)(esp_loader_port_t *port, esp_loader_log_level_t level,
+                const char *label, const uint8_t *data, size_t size);
 ```
 
-Route library debug messages to your platform's console/logger. Set to `NULL` to suppress all output.
+Route library messages to your platform's console or logger. `log` receives printf-style text without a trailing newline; `log_hex` receives binary buffers for transfer dumps at the supplied level. The built-in ports print hex dump headers with the same level prefix as text logs. Set either callback to `NULL` to suppress that output class.
+
+Logging is compiled according to `SERIAL_FLASHER_LOG_LEVEL` / `CONFIG_SERIAL_FLASHER_LOG_LEVEL_*`. The default level is WARN, so DEBUG command traces and hex dumps are not included unless the build selects DEBUG.
 
 ---
 
@@ -273,7 +282,8 @@ const esp_loader_port_ops_t your_platform_ops = {
     .start_timer              = your_start_timer,
     .remaining_time           = your_remaining_time,
     .delay_ms                 = your_delay_ms,
-    .debug_print              = NULL,
+    .log                      = NULL,
+    .log_hex                  = NULL,
     .change_transmission_rate = NULL,
     .write                    = your_write,
     .read                     = your_read,

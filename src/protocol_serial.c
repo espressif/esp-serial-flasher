@@ -8,10 +8,41 @@
 #include "protocol_prv.h"
 #include "esp_loader.h"
 #include "esp_loader_protocol.h"
+#include "loader_log.h"
 #include <stddef.h>
 #include <string.h>
 
 #define CMD_SIZE(cmd) ( sizeof(cmd) - sizeof(command_common_t) )
+
+#if SERIAL_FLASHER_LOG_LEVEL >= ESP_LOADER_LOG_DEBUG
+const char *loader_command_name(command_t cmd)
+{
+    switch (cmd) {
+    case FLASH_BEGIN:          return "FLASH_BEGIN";
+    case FLASH_DATA:           return "FLASH_DATA";
+    case FLASH_END:            return "FLASH_END";
+    case MEM_BEGIN:            return "MEM_BEGIN";
+    case MEM_END:              return "MEM_END";
+    case MEM_DATA:             return "MEM_DATA";
+    case SYNC:                 return "SYNC";
+    case WRITE_REG:            return "WRITE_REG";
+    case READ_REG:             return "READ_REG";
+    case SPI_SET_PARAMS:       return "SPI_SET_PARAMS";
+    case SPI_ATTACH:           return "SPI_ATTACH";
+    case CHANGE_BAUDRATE:      return "CHANGE_BAUDRATE";
+    case FLASH_DEFL_BEGIN:     return "FLASH_DEFL_BEGIN";
+    case FLASH_DEFL_DATA:      return "FLASH_DEFL_DATA";
+    case FLASH_DEFL_END:       return "FLASH_DEFL_END";
+    case SPI_FLASH_MD5:        return "SPI_FLASH_MD5";
+    case GET_SECURITY_INFO:    return "GET_SECURITY_INFO";
+    case ERASE_FLASH:          return "ERASE_FLASH";
+    case ERASE_REGION:         return "ERASE_REGION";
+    case READ_FLASH_ROM:       return "READ_FLASH_ROM";
+    case READ_FLASH_STUB:      return "READ_FLASH_STUB";
+    default:                   return "UNKNOWN";
+    }
+}
+#endif
 
 static uint8_t compute_checksum(const uint8_t *data, uint32_t size)
 {
@@ -24,35 +55,41 @@ static uint8_t compute_checksum(const uint8_t *data, uint32_t size)
     return checksum;
 }
 
+#if SERIAL_FLASHER_LOG_LEVEL >= ESP_LOADER_LOG_ERROR
+static const char *loader_internal_error_name(error_code_t error)
+{
+    switch (error) {
+    case INVALID_CRC:              return "INVALID_CRC";
+    case INVALID_COMMAND:          return "INVALID_COMMAND";
+    case COMMAND_FAILED:           return "COMMAND_FAILED";
+    case FLASH_WRITE_ERR:          return "FLASH_WRITE_ERR";
+    case FLASH_READ_ERR:           return "FLASH_READ_ERR";
+    case READ_LENGTH_ERR:          return "READ_LENGTH_ERR";
+    case DEFLATE_ERROR:            return "DEFLATE_ERROR";
+    case STUB_BAD_DATA_LEN:        return "BAD_DATA_LEN";
+    case STUB_BAD_DATA_CHECKSUM:   return "BAD_DATA_CHECKSUM";
+    case STUB_BAD_BLOCKSIZE:       return "BAD_BLOCKSIZE";
+    case STUB_INVALID_COMMAND:     return "INVALID_COMMAND";
+    case STUB_FAILED_SPI_OP:       return "FAILED_SPI_OP";
+    case STUB_FAILED_SPI_UNLOCK:   return "FAILED_SPI_UNLOCK";
+    case STUB_NOT_IN_FLASH_MODE:   return "NOT_IN_FLASH_MODE";
+    case STUB_INFLATE_ERROR:       return "INFLATE_ERROR";
+    case STUB_NOT_ENOUGH_DATA:     return "NOT_ENOUGH_DATA";
+    case STUB_TOO_MUCH_DATA:       return "TOO_MUCH_DATA";
+    case STUB_CMD_NOT_IMPLEMENTED: return "CMD_NOT_IMPLEMENTED";
+    default:                       return "UNKNOWN";
+    }
+}
+#endif
+
 void log_loader_internal_error(esp_loader_t *loader, error_code_t error)
 {
-    if (loader->_port->ops->debug_print == NULL) {
-        return;
-    }
-
-    switch (error) {
-    case INVALID_CRC:               loader->_port->ops->debug_print(loader->_port, "Error: INVALID_CRC"); break;
-    case INVALID_COMMAND:           loader->_port->ops->debug_print(loader->_port, "Error: INVALID_COMMAND"); break;
-    case COMMAND_FAILED:            loader->_port->ops->debug_print(loader->_port, "Error: COMMAND_FAILED"); break;
-    case FLASH_WRITE_ERR:           loader->_port->ops->debug_print(loader->_port, "Error: FLASH_WRITE_ERR"); break;
-    case FLASH_READ_ERR:            loader->_port->ops->debug_print(loader->_port, "Error: FLASH_READ_ERR"); break;
-    case READ_LENGTH_ERR:           loader->_port->ops->debug_print(loader->_port, "Error: READ_LENGTH_ERR"); break;
-    case DEFLATE_ERROR:             loader->_port->ops->debug_print(loader->_port, "Error: DEFLATE_ERROR"); break;
-
-    case STUB_BAD_DATA_LEN:         loader->_port->ops->debug_print(loader->_port, "Error: BAD_DATA_LEN"); break;
-    case STUB_BAD_DATA_CHECKSUM:    loader->_port->ops->debug_print(loader->_port, "Error: BAD_DATA_CHECKSUM"); break;
-    case STUB_BAD_BLOCKSIZE:        loader->_port->ops->debug_print(loader->_port, "Error: BAD_BLOCKSIZE"); break;
-    case STUB_INVALID_COMMAND:      loader->_port->ops->debug_print(loader->_port, "Error: INVALID_COMMAND"); break;
-    case STUB_FAILED_SPI_OP:        loader->_port->ops->debug_print(loader->_port, "Error: FAILED_SPI_OP"); break;
-    case STUB_FAILED_SPI_UNLOCK:    loader->_port->ops->debug_print(loader->_port, "Error: FAILED_SPI_UNLOCK"); break;
-    case STUB_NOT_IN_FLASH_MODE:    loader->_port->ops->debug_print(loader->_port, "Error: NOT_IN_FLASH_MODE"); break;
-    case STUB_INFLATE_ERROR:        loader->_port->ops->debug_print(loader->_port, "Error: INFLATE_ERROR"); break;
-    case STUB_NOT_ENOUGH_DATA:      loader->_port->ops->debug_print(loader->_port, "Error: NOT_ENOUGH_DATA"); break;
-    case STUB_TOO_MUCH_DATA:        loader->_port->ops->debug_print(loader->_port, "Error: TOO_MUCH_DATA"); break;
-    case STUB_CMD_NOT_IMPLEMENTED:  loader->_port->ops->debug_print(loader->_port, "Error: CMD_NOT_IMPLEMENTED"); break;
-
-    default:                        loader->_port->ops->debug_print(loader->_port, "Error: UNKNOWN ERROR"); break;
-    }
+#if SERIAL_FLASHER_LOG_LEVEL >= ESP_LOADER_LOG_ERROR
+    LOADER_LOGE(loader, "Protocol error: %s", loader_internal_error_name(error));
+#else
+    (void)loader;
+    (void)error;
+#endif
 }
 
 esp_loader_error_t loader_flash_begin_cmd(esp_loader_t *loader,

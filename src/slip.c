@@ -7,6 +7,7 @@
 #include "slip.h"
 #include "esp_loader.h"
 #include "esp_loader_protocol.h"
+#include "loader_log.h"
 
 static const uint8_t DELIMITER = 0xC0;
 static const uint8_t C0_REPLACEMENT[2] = {0xDB, 0xDC};
@@ -52,6 +53,7 @@ esp_loader_error_t SLIP_receive_packet(esp_loader_t *loader, uint8_t *buff, cons
             }
         } else if (ch == DELIMITER) {
             *recv_size = i;
+            LOADER_LOG_HEX(loader, "SERIAL RX", buff, *recv_size);
             return ESP_LOADER_SUCCESS;
         } else {
             buff[i++] = ch;
@@ -68,6 +70,7 @@ esp_loader_error_t SLIP_receive_packet(esp_loader_t *loader, uint8_t *buff, cons
     } while (ch != DELIMITER);
 
     *recv_size = max_size;
+    LOADER_LOG_HEX(loader, "SERIAL RX", buff, *recv_size);
 
     return ESP_LOADER_SUCCESS;
 }
@@ -75,6 +78,7 @@ esp_loader_error_t SLIP_receive_packet(esp_loader_t *loader, uint8_t *buff, cons
 
 esp_loader_error_t SLIP_send(esp_loader_t *loader, const uint8_t *data, const size_t size)
 {
+    LOADER_LOG_HEX(loader, "SERIAL TX", data, size);
     uint32_t to_write = 0;  // Bytes ready to write as they are
     uint32_t written = 0;   // Bytes already written
 

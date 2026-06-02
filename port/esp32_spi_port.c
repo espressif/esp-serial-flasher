@@ -5,10 +5,11 @@
  */
 
 #include "esp32_spi_port.h"
-#include "esp_log.h"
+#include "loader_port_stdio_log.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
 #include "esp_idf_version.h"
+#include <stdio.h>
 #include <unistd.h>
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0)
@@ -19,35 +20,7 @@
 
 #define WORD_ALIGNED(ptr) ((size_t)ptr % sizeof(size_t) == 0)
 
-#if SERIAL_FLASHER_DEBUG_TRACE
-static void dec_to_hex_str(const uint8_t dec, uint8_t hex_str[3])
-{
-    static const uint8_t dec_to_hex[] = {
-        '0', '1', '2', '3', '4', '5', '6', '7',
-        '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-    };
-
-    hex_str[0] = dec_to_hex[dec >> 4];
-    hex_str[1] = dec_to_hex[dec & 0xF];
-    hex_str[2] = '\0';
-}
-
-static void serial_debug_print(const uint8_t *data, uint16_t size, bool write)
-{
-    static bool write_prev = false;
-    uint8_t hex_str[3];
-
-    if (write_prev != write) {
-        write_prev = write;
-        printf("\n--- %s ---\n", write ? "WRITE" : "READ");
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        dec_to_hex_str(data[i], hex_str);
-        printf("%s ", hex_str);
-    }
-}
-#endif
+LOADER_PORT_STDIO_LOG_CALLBACK(esp32_spi_log, "esf-spi");
 
 static esp_loader_error_t esp32_spi_port_init(esp_loader_port_t *port)
 {
@@ -127,9 +100,6 @@ static esp_loader_error_t esp32_spi_write(esp_loader_port_t *port, const uint8_t
     esp_err_t err = spi_device_transmit(p->_device_h, &transaction);
 
     if (err == ESP_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        serial_debug_print(data, size, true);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == ESP_ERR_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -156,9 +126,6 @@ static esp_loader_error_t esp32_spi_read(esp_loader_port_t *port, uint8_t *data,
     esp_err_t err = spi_device_transmit(p->_device_h, &transaction);
 
     if (err == ESP_OK) {
-#if SERIAL_FLASHER_DEBUG_TRACE
-        serial_debug_print(data, size, false);
-#endif
         return ESP_LOADER_SUCCESS;
     } else if (err == ESP_ERR_TIMEOUT) {
         return ESP_LOADER_ERROR_TIMEOUT;
@@ -240,12 +207,6 @@ static void esp32_spi_enter_bootloader(esp_loader_port_t *port)
     spi_bus_add_device(p->spi_bus, &p->_device_config, &p->_device_h);
 }
 
-static void esp32_spi_debug_print(esp_loader_port_t *port, const char *str)
-{
-    (void)port;
-    printf("DEBUG: %s\n", str);
-}
-
 static esp_loader_error_t esp32_spi_change_rate(esp_loader_port_t *port, uint32_t frequency)
 {
     esp32_spi_port_t *p = container_of(port, esp32_spi_port_t, port);
@@ -273,7 +234,8 @@ const esp_loader_port_ops_t esp32_spi_ops = {
     .start_timer              = esp32_spi_start_timer,
     .remaining_time           = esp32_spi_remaining_time,
     .delay_ms                 = esp32_spi_delay_ms,
-    .debug_print              = esp32_spi_debug_print,
+    .log                      = esp32_spi_log,
+    .log_hex                  = loader_port_stdio_log_hex,
     .change_transmission_rate = esp32_spi_change_rate,
     .write                    = esp32_spi_write,
     .read                     = esp32_spi_read,

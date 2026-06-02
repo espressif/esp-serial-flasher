@@ -10,6 +10,7 @@
 #include "esp_loader_protocol.h"
 #include "esp_targets.h"
 #include "slip.h"
+#include "loader_log.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -43,6 +44,9 @@ static esp_loader_error_t uart_spi_attach(esp_loader_t *loader, uint32_t config)
 
 static esp_loader_error_t uart_send_cmd(esp_loader_t *loader, const send_cmd_config *config)
 {
+    command_t command = ((const command_common_t *)config->cmd)->command;
+    LOADER_LOGD(loader, "CMD -> %s (0x%02x)", loader_command_name(command), (unsigned)command);
+
     RETURN_ON_ERROR(SLIP_send_delimiter(loader));
 
     RETURN_ON_ERROR(SLIP_send(loader, (const uint8_t *)config->cmd, config->cmd_size));
@@ -53,7 +57,6 @@ static esp_loader_error_t uart_send_cmd(esp_loader_t *loader, const send_cmd_con
 
     RETURN_ON_ERROR(SLIP_send_delimiter(loader));
 
-    command_t command = ((const command_common_t *)config->cmd)->command;
     const uint8_t response_cnt = command == SYNC ? 8 : 1;
 
     for (uint8_t recv_cnt = 0; recv_cnt < response_cnt; recv_cnt++) {
@@ -90,6 +93,7 @@ static esp_loader_error_t uart_check_response(esp_loader_t *loader, const send_c
         log_loader_internal_error(loader, status->error);
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
+    LOADER_LOGD(loader, "CMD <- %s OK", loader_command_name(command));
 
     if (config->reg_value != NULL) {
         *config->reg_value = response->value;
