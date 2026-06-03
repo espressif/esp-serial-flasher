@@ -140,7 +140,8 @@ static esp_loader_error_t loader_ensure_spi_attached(esp_loader_t *loader)
     loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
 
     if (loader->_target == ESP8266_CHIP) {
-        RETURN_ON_ERROR(loader_flash_begin_cmd(loader, 0, 0, 0, 0, 0, false));
+        uint32_t sequence_number = 0;
+        RETURN_ON_ERROR(loader_flash_begin_cmd(loader, &sequence_number, 0, 0, 0, 0, false));
     } else {
         uint32_t spi_config;
         RETURN_ON_ERROR(loader_read_spi_config(loader, loader->_target, &spi_config));
