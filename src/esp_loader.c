@@ -511,7 +511,7 @@ esp_loader_error_t esp_loader_flash_start(esp_loader_t *loader, esp_loader_flash
 }
 
 
-esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, void *payload, uint32_t size)
+esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, const void *payload, uint32_t size)
 {
 
     if (loader->_protocol_type == ESP_LOADER_PROTOCOL_SPI) {
@@ -522,17 +522,8 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
         return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-    uint32_t padding_bytes = cfg->block_size - size;
-    uint8_t *data = (uint8_t *)payload;
-    uint32_t padding_index = size;
-
-    const uint8_t padding_value = 0xFF;
-    while (padding_bytes--) {
-        data[padding_index++] = padding_value;
-    }
-
     if (!cfg->skip_verify) {
-        md5_update(cfg, payload, (size + 3) & ~3);
+        md5_update(cfg, payload, size);
     }
 
     unsigned int attempt = 0;
@@ -541,7 +532,7 @@ esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash
     do {
         cfg->_state._sequence_number = saved_seq;
         loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-        result = loader_flash_data_cmd(loader, &cfg->_state._sequence_number, (uint8_t *)payload, cfg->block_size);
+        result = loader_flash_data_cmd(loader, &cfg->_state._sequence_number, payload, size);
         attempt++;
         if (result != ESP_LOADER_SUCCESS && attempt < SERIAL_FLASHER_WRITE_BLOCK_RETRIES) {
             LOADER_LOGW(loader, "Flash write failed (attempt %u/%u), retrying",
