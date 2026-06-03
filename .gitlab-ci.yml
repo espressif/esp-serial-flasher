@@ -175,7 +175,10 @@ build_host_idf_v5.5:
 build_host_idf_v6.0:
   image: espressif/idf:release-v6.0
   extends: .build_host_template
-  allow_failure: true
+
+build_host_idf_v6.1:
+  image: espressif/idf:release-v6.1
+  extends: .build_host_template
 
 build_host_idf_master:
   image: espressif/idf:latest
