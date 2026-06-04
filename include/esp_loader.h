@@ -358,7 +358,7 @@ esp_loader_error_t esp_loader_flash_start(esp_loader_t *loader, esp_loader_flash
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
-esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, void *payload, uint32_t size);
+esp_loader_error_t esp_loader_flash_write(esp_loader_t *loader, esp_loader_flash_cfg_t *cfg, const void *payload, uint32_t size);
 
 /**
   * @brief Ends flash operation.
