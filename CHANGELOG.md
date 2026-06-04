@@ -20,6 +20,102 @@
 </div>
 <hr>
 
+## v2.0.0 (2026-06-04)
+
+### 🚨 Breaking changes
+
+- The port logging API replaces debug_print with levelled
+log and log_hex callbacks. SERIAL_FLASHER_DEBUG_TRACE is removed;
+configure SERIAL_FLASHER_LOG_LEVEL or the
+CONFIG_SERIAL_FLASHER_LOG_LEVEL_* Kconfig choice instead. *(Jaroslav Burian - 6cec7b1)*
+- esp_loader_change_transmission_rate_stub is removed.
+connect_to_target_with_stub() takes only the target rate (0 to skip). *(Jaroslav Burian - ee35ca4)*
+- The pre-built STM32H743 example project no longer
+exists. Users must generate a CubeMX project for their own MCU and
+follow the guide in examples/stm32_example/README.md. *(Jaroslav Burian - 37a9940)*
+- Port configuration structs have renamed fields:
+reset_trigger_pin → reset_pin, gpio0_trigger_pin → boot_pin. *(Jaroslav Burian - dbfe6a7)*
+- Port configuration structs have renamed fields:
+reset_trigger_pin → reset_pin, gpio0_trigger_pin → boot_pin. *(Jaroslav Burian - 986b0f3)*
+- Linux port and example replaces the dedicated Raspberry Pi port. *(Jaroslav Burian - af11d24)*
+- The minimum required CMake version has been raised from
+3.5/3.13/3.16/3.20 to 3.22 across all CMakeLists.txt files and
+documentation. *(Jaroslav Burian - c3f2d92)*
+- `loader_port_*_init()`, `loader_port_*_deinit()`, and
+global `*_uart_port` / `*_sdio_port` / `*_spi_port` variables are removed
+from all port headers. Callers must declare a `<platform>_port_t` struct,
+set `.port.ops`, fill config fields, and pass `&port.port` directly to
+`esp_loader_init_*()`. *(Jaroslav Burian - 9677c4b)*
+- The reboot flag has been removed from esp_loader_flash_finish().
+Previously, the flag had no effect due to bug in ROM bootloader.
+See docs/migration-v1-to-v2.md for migration guidance. *(Jaroslav Burian - 3193ffe)*
+- esp_loader_flash_finish() now verifies MD5,
+esp_loader_flash_verify() is removed. MD5 library is bundled with the
+library always which adds around 2kB flash usage.
+**esp_loader_flash_finish() must always be called after flashing** to
+finalize the flash operation and trigger the MD5 verification. *(Jaroslav Burian - 64f25ca)*
+- all public API function signatures changed; port
+implementations must be rewritten as a vtable. See
+docs/migration-v1-to-v2.md for the full upgrade guide. *(Jaroslav Burian - 272c1ff)*
+- ESP-IDF v5.4 and older are no longer supported. *(Jaroslav Burian - 25f15fb)*
+
+### ✨ New Features
+
+- **log**: replace debug_print with levelled log/log_hex callbacks *(Jaroslav Burian - 6cec7b1)*
+- **examples**: Add support for RP2350 *(Vojtech Piroch - 75756b2)*
+- **sdio**: support full esp-flasher-stub command protocol *(Jaroslav Burian - 59f066f)*
+- **serial**: increase flash read throughput with stub *(Jaroslav Burian - d9ad3bc)*
+- **port**: Update Zephyr integration and sample *(Marek Matej - 174f3ea)*
+- **examples**: Improve error message when firmware binaries are not provided *(Vojtech Piroch - 5d13d3a)*
+- **stubs**: Migrate to the new espressif/esp-flasher-stub *(Jaroslav Burian - c6189bd)*
+- **uart**: Reconnect to ROM if stub running on mem_begin *(Jaroslav Burian - 9854c21)*
+- **port**: Add generic Linux example working with USB and GPIOs *(Jaroslav Burian - af11d24)*
+- **port**: Allow multiple simultaneous loader instances over different peripherals *(Jaroslav Burian - 9677c4b)*
+- **protocol**: add flash deflate write *(kerms - f3cd5f9)*
+- Add support for ESP32-C61 as target device *(Jeija - 4e33990)*
+- Add esp_loader_deinit() to release hardware resources *(Jaroslav Burian - 05c2240)*
+- Remove necessity to specify target chip in secure download mode *(Jaroslav Burian - 4327c64)*
+- Attach flash only when needed *(Jaroslav Burian - 6ee3983)*
+- Allow runtime MD5 check selection *(Jaroslav Burian - 64f25ca)*
+- context-based API with runtime protocol selection *(Jaroslav Burian - 272c1ff)*
+
+### 🐛 Bug Fixes
+
+- **flash**: remove in-place buffer mutation and send exact payload size *(Jaroslav Burian - 7831ab2)*
+- **esp8266**: pass sequence_number by pointer to loader_flash_begin_cmd *(Jaroslav Burian - 1d457d7)*
+- **slip**: apply escape decoding to first payload byte *(Jaroslav Burian - 6929841)*
+- **port**: Use correct pin type for Espressif ports *(Jaroslav Burian - 36fbd2c)*
+- **port**: Fix deadline_ms overflow by comparing elapsed time against timeout *(Jaroslav Burian - 77617a6)*
+- **port**: Log warning and return false on USB RX stream buffer short write *(Jaroslav Burian - 0d4808f)*
+- **targets**: Access regs member directly instead of casting esp_target_t pointer *(Jaroslav Burian - 54f8c7c)*
+- **sdio**: Use common buffer for send and response to save stack space *(Jaroslav Burian - 6f4b276)*
+- **port**: USB port had wrong variable type causing timeout after 72 minutes *(Jaroslav Burian - 08d3c64)*
+- **port**: Properly reinit UART after changing baud rate *(Jaroslav Burian - 8e8c509)*
+- **sdio**: SDIO stub was limiting flash size to 2MB, this was fixed *(Jaroslav Burian - 2e77e8b)*
+- **examples**: Use cross platform MD5 hash computation *(Oliver Norin - 3e78dba)*
+- default write block retries to 3 when macro is unset *(Jaroslav Burian - 2248398)*
+- Check return value of loader_flash_read_stub_cmd *(Jaroslav Burian - d42674e)*
+- Remove (unsigned) casts in ROUNDUP macro to preserve input type width *(Jaroslav Burian - 6f4a422)*
+- Replace floating-point timeout calculation with integer arithmetic *(Jaroslav Burian - 88c6a9a)*
+- Correct timer overflow and LOAD_RAM_TIMEOUT_PER_MB value *(Jaroslav Burian - 7f40ce3)*
+- Use same sequence number when retrying to write flash *(Jaroslav Burian - b6e1917)*
+- Do not send flash end command to ROM as it has issues *(Jaroslav Burian - 3193ffe)*
+
+### 📖 Documentation
+
+- **port**: Update port versioning policy *(Jaroslav Burian - 13d249a)*
+- Add flash size footprint section to README *(Jaroslav Burian - 779714a)*
+- Remove single target limitation from README.md *(Jaroslav Burian - ac85c26)*
+
+### 🔧 Code Refactoring
+
+- **sdio**: move buffer alignment handling to port *(Jaroslav Burian - 33c1524)*
+- **examples**: Replace stm32 example with setup guide *(Jaroslav Burian - 37a9940)*
+- **port**: Rename GPIO pin fields for consistency *(Jaroslav Burian - dbfe6a7)*
+- **port**: Rename GPIO pin fields for consistency *(Jaroslav Burian - 986b0f3)*
+- unify baud rate change for ROM and stub *(Jaroslav Burian - ee35ca4)*
+
+
 ## v1.11.0 (2025-12-05)
 
 ### ✨ New Features
