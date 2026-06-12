@@ -11,7 +11,7 @@ dependencies:
     rules:
       - if: "target in [esp32s2, esp32s3, esp32p4]"
   usb_host_ch34x_vcp:
-    version: "^2.2"
+    version: "^2.2.1"
     rules:
       - if: "target in [esp32s2, esp32s3, esp32p4]"
 files:
