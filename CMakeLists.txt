@@ -126,6 +126,12 @@ if (DEFINED ESP_PLATFORM)
         list(APPEND public_requires "esp_driver_sdmmc")
     endif()
 
+    # USB host headers are used directly by esp32_usb_cdc_acm_port.c; add only when selected
+    # so that targets without USB OTG (e.g. esp32) are not required to provide them.
+    if (CONFIG_SERIAL_FLASHER_PORT_USB_CDC_ACM)
+        list(APPEND priv_requires "usb")
+    endif()
+
     # Register component to esp-idf build system
     idf_component_register(SRCS ${srcs}
                            INCLUDE_DIRS include port
@@ -133,14 +139,8 @@ if (DEFINED ESP_PLATFORM)
                            PRIV_REQUIRES ${priv_requires}
                            REQUIRES ${public_requires})
 
-    # USB CDC-ACM host support comes from a managed component; add it only when selected
-    # so that targets without USB OTG (e.g. esp32) are not required to provide the header.
-    if (CONFIG_SERIAL_FLASHER_PORT_USB_CDC_ACM)
-        idf_component_set_property(${COMPONENT_NAME} PRIV_REQUIRES usb APPEND)
-    endif()
-
     set(target ${COMPONENT_LIB})
-    component_compile_options(-Wstrict-prototypes)
+    target_compile_options(${target} PRIVATE "-Wstrict-prototypes")
 
 else()
     # Create traditional CMake target
