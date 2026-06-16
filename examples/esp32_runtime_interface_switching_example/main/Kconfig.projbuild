@@ -1,0 +1,87 @@
+menu "Runtime Interface Switching Example Configuration"
+
+    comment "Default pin assignments target the ESP32-P4-Function-EV-Board"
+
+    menu "SDIO interface"
+
+        config EXAMPLE_SDIO_RESET_PIN
+            int "SDIO target reset GPIO"
+            range 0 56
+            default 54
+
+        config EXAMPLE_SDIO_BOOT_PIN
+            int "SDIO target boot GPIO"
+            range 0 56
+            default 53
+
+        config EXAMPLE_SDIO_D0_PIN
+            int "SDIO D0 GPIO"
+            range 0 56
+            default 50
+
+        config EXAMPLE_SDIO_D1_PIN
+            int "SDIO D1 GPIO"
+            range 0 56
+            default 49
+
+        config EXAMPLE_SDIO_D2_PIN
+            int "SDIO D2 GPIO"
+            range 0 56
+            default 48
+
+        config EXAMPLE_SDIO_D3_PIN
+            int "SDIO D3 GPIO"
+            range 0 56
+            default 47
+
+        config EXAMPLE_SDIO_CLK_PIN
+            int "SDIO CLK GPIO"
+            range 0 56
+            default 51
+
+        config EXAMPLE_SDIO_CMD_PIN
+            int "SDIO CMD GPIO"
+            range 0 56
+            default 52
+
+    endmenu
+
+    menu "UART interface"
+
+        config EXAMPLE_UART_TX_PIN
+            int "UART TX GPIO"
+            range 0 56
+            default 5
+
+        config EXAMPLE_UART_RX_PIN
+            int "UART RX GPIO"
+            range 0 56
+            default 6
+
+        config EXAMPLE_UART_RESET_PIN
+            int "UART target reset GPIO"
+            range 0 56
+            default 24
+
+        config EXAMPLE_UART_BOOT_PIN
+            int "UART target boot GPIO"
+            range 0 56
+            default 25
+
+    endmenu
+
+    menu "USB interface"
+
+        config EXAMPLE_USB_PERIPHERAL_INDEX
+            int "USB host peripheral index"
+            range 0 1
+            default 0
+            help
+                Selects which USB OTG peripheral the USB host driver uses.
+                The value is converted to the peripheral_map bitmask as
+                BIT(EXAMPLE_USB_PERIPHERAL_INDEX), so 0 maps to BIT0 and
+                1 maps to BIT1.
+
+    endmenu
+
+endmenu
