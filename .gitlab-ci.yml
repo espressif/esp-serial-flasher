@@ -61,7 +61,7 @@ build_target_example:
         PATHS: "esp32_spi_load_ram_example"
       - TARGET_CHIP: esp32c6
         BUILD_TYPE: flash
-        PATHS: "esp32_sdio_example"
+        PATHS: "esp32_sdio_example:esp32_runtime_interface_switching_example"
       - TARGET_CHIP: esp32c6
         BUILD_TYPE: ram
         PATHS: "esp32_sdio_load_ram_example"
@@ -137,21 +137,26 @@ check_stub_source_correctness:
     - |
       echo "CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y" >> examples/esp32_sdio_example/sdkconfig.defaults
       echo "CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y" >> examples/esp32_sdio_load_ram_example/sdkconfig.defaults
+    # Each example builds once from sdkconfig.defaults with its optional sdkconfig.ci layered on
+    # top via -DSDKCONFIG_DEFAULTS. idf-build-apps resolves both files per example directory,
+    # later files override earlier ones, and missing files are silently skipped - so an example
+    # without a sdkconfig.ci just builds from sdkconfig.defaults. No --config rules are used, so
+    # the build dir stays exactly ${BUILD_DIR} (the name the pytest build_dir fixture looks for).
     - |
       if [ -n "${TARGETS}" ]; then
           python -m idf_build_apps build -v -p . \
               --recursive \
               --exclude ./test/target-example-src \
-              --config "sdkconfig.defaults*" \
-              --build-dir ${BUILD_DIR}_@w \
+              --sdkconfig-defaults "sdkconfig.defaults;sdkconfig.ci" \
+              --build-dir ${BUILD_DIR} \
               --check-warnings \
               --target ${TARGETS}
       else
           python -m idf_build_apps build -v -p . \
               --recursive \
               --exclude ./test/target-example-src \
-              --config-rules "sdkconfig.defaults*" \
-              --build-dir ${BUILD_DIR}_@w \
+              --sdkconfig-defaults "sdkconfig.defaults;sdkconfig.ci" \
+              --build-dir ${BUILD_DIR} \
               --check-warnings
       fi
     # Show ccache statistics if enabled globally
@@ -350,7 +355,27 @@ test_esp2:
     - cd $CI_PROJECT_DIR
     - pytest --target=esp32 --port=/dev/serial_ports/ESP32_ESP32H2
     - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_usb_cdc_acm_example'
-    - pytest --target=esp32p4 --port=/dev/serial_ports/ESP32P4_ESP32C6
+    - pytest --target=esp32p4 --port=/dev/serial_ports/ESP32P4_ESP32C6 -k 'not test_esp32_runtime_interface_switching_example'
+
+test_esp3:
+  extends: .test_template
+  tags:
+    - ESF-RPI-04
+  needs:
+    - build_host_idf_v5.5
+    - build_host_idf_master
+  parallel:
+    matrix:
+      - CI_BUILD_FOLDER:
+          - "build_stable"
+          - "build_master"
+  rules:
+    - if: '$CI_BUILD_FOLDER == "build_master"'
+      allow_failure: true
+    - when: always
+  script:
+    - cd $CI_PROJECT_DIR
+    - pytest --target=esp32p4 --port=/dev/serial_ports/ESP32P4_UART_ESP32C6 -k test_esp32_runtime_interface_switching_example
 
 test_zephyr:
   extends: .test_template
