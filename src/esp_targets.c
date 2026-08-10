@@ -633,3 +633,35 @@ uint32_t esp_targets_get_efuse_base(target_chip_t target)
     }
     return esp_target[target].efuse_base;
 }
+
+esp_loader_error_t get_crystal_frequency_esp32c2(esp_loader_t *loader, uint32_t *frequency)
+{
+    /*
+    There is a bug in the ESP32-C2 ROM that causes it to think it has a 40 MHz crystal,
+    even though it might be 26 MHz. That is why we need to check frequency and adjust
+    the transmission rate accordingly.
+
+    The logic here is:
+    - We know that our baud rate and the target's UART baud rate are roughly the same,
+    or we couldn't communicate
+    - We can read the UART clock divider register to know how the ESP derives this
+    from the APB bus frequency
+    - Multiplying these two together gives us the bus frequency which is either
+    the crystal frequency or multiple of the crystal frequency (for some chips).
+    */
+
+    const uint32_t ESP32C2_CRYSTAL_26MHZ = 26;
+    const uint32_t ESP32C2_CRYSTAL_40MHZ = 40;
+    const uint32_t CRYSTAL_FREQ_THRESHOLD = 33;
+    const uint32_t UART_CLK_DIV_REG = 0x60000014;
+    const uint32_t UART_CLK_DIV_REG_MASK = 0xFFFFF;
+
+    *frequency = 0;
+    uint32_t est_freq;
+    RETURN_ON_ERROR(esp_loader_read_register(loader, UART_CLK_DIV_REG, &est_freq));
+    est_freq &= UART_CLK_DIV_REG_MASK;
+    est_freq = (115200u * est_freq) / 1000000U;
+
+    *frequency = (est_freq > CRYSTAL_FREQ_THRESHOLD) ? ESP32C2_CRYSTAL_40MHZ : ESP32C2_CRYSTAL_26MHZ;
+    return ESP_LOADER_SUCCESS;
+}

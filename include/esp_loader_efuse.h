@@ -312,8 +312,13 @@ esp_loader_error_t esp_loader_efuse_write_bit(
  * @brief Burn all staged writes to the target chip.
  *
  * Validates the write context, programs each block with staged data in
- * hardware-safe order (BLKn..BLK1 first, then BLK0 in a single pass), and
- * clears the context on success.
+ * hardware-safe order (BLKn..BLK1 first, then BLK0), and clears the context on
+ * success.
+ *
+ * BLK0 is burned in two passes: data first, then the WR_DIS / RD_DIS protection
+ * bits together with DIS_DOWNLOAD_MODE / ENABLE_SECURITY_DOWNLOAD, which end the
+ * download session. A pass carrying either of those two cannot be verified —
+ * the chip stops responding as they are programmed — so it is not read back.
  *
  * Modern chips: BLK1+ are RS(44,32) encoded; BLK0 is plain OTP.
  * ESP32: per-block write path with runtime NONE/3/4 coding (see design docs).
@@ -323,7 +328,13 @@ esp_loader_error_t esp_loader_efuse_write_bit(
  *
  * @param loader  Active loader context.
  * @param ctx     Write context populated by esp_loader_efuse_write_* calls.
- * @return ESP_LOADER_SUCCESS on success, or an error code.
+ * @return ESP_LOADER_SUCCESS on success,
+ *         ESP_LOADER_ERROR_EFUSE_BLOCK_IN_USE if a parity-coded block on the chip
+ *         already holds content other than what is staged (nothing is burned),
+ *         ESP_LOADER_ERROR_EFUSE_BURN_FAILED if programming was attempted and the
+ *         chip answered with an error or failed read-back verification (@p ctx then
+ *         retains only the unburned work), or a transport/layout error code — a
+ *         transport error is reported as itself, not as EFUSE_BURN_FAILED.
  */
 esp_loader_error_t esp_loader_efuse_commit(esp_loader_t *loader, esp_loader_efuse_ctx_t *ctx);
 
