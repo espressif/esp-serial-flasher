@@ -31,6 +31,8 @@ typedef struct target_registers_t {
 
 esp_loader_error_t loader_detect_chip(esp_loader_t *loader);
 esp_loader_error_t loader_read_mac(esp_loader_t *loader, target_chip_t target_code, uint8_t *mac);
+
+esp_loader_error_t loader_read_chip_revision(esp_loader_t *loader, target_chip_t target_code, uint16_t *revision);
 bool encryption_in_begin_flash_cmd(target_chip_t target);
 esp_loader_error_t loader_read_spi_config(esp_loader_t *loader, target_chip_t target_chip, uint32_t *spi_config);
 target_chip_t target_from_chip_id(uint32_t chip_id);

@@ -568,6 +568,24 @@ esp_loader_error_t esp_loader_get_security_info(esp_loader_t *loader,
         esp_loader_target_security_info_t *security_info);
 
 /**
+  * @brief Get the silicon revision of the target chip
+  *
+  * The revision is encoded as major * 100 + minor (v3.0 -> 300), matching ESP-IDF's
+  * esp_chip_info_t.revision and the revision argument of
+  * esp_loader_efuse_get_field_info(). The value is read from the chip on every call.
+  *
+  * @param loader[in]     Pointer to initialized loader context.
+  * @param revision[out]  The chip revision.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid argument
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP The target has no chip revision (ESP8266)
+  */
+esp_loader_error_t esp_loader_get_chip_revision(esp_loader_t *loader, uint16_t *revision);
+
+/**
   * @brief Initiates RAM load operation.
   *
   * @param loader[in]  Pointer to initialized loader context.

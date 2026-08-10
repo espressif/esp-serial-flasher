@@ -749,6 +749,19 @@ static uint32_t byte_popcnt(uint8_t byte)
     return cnt;
 }
 
+esp_loader_error_t esp_loader_get_chip_revision(esp_loader_t *loader, uint16_t *revision)
+{
+    if (loader == NULL || revision == NULL) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    if (loader->_target == ESP_UNKNOWN_CHIP) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    }
+
+    return loader_read_chip_revision(loader, loader->_target, revision);
+}
+
 esp_loader_error_t esp_loader_get_security_info(esp_loader_t *loader,
         esp_loader_target_security_info_t *security_info)
 {
