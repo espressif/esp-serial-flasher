@@ -408,7 +408,8 @@ typedef struct {
  * @param key_size   1..32 bytes.
  * @param config     Options, or NULL for safe defaults.
  * @return ESP_LOADER_SUCCESS, ESP_LOADER_ERROR_INVALID_PARAM (unknown key block,
- *         bad size, unsupported purpose, KEY_PURPOSE_5 quirk, or block not free),
+ *         bad size, unsupported purpose, or KEY_PURPOSE_5 quirk),
+ *         ESP_LOADER_ERROR_EFUSE_BLOCK_IN_USE (the key block is not free),
  *         ESP_LOADER_ERROR_UNSUPPORTED_FUNC (no KEY_PURPOSE, or P4 purpose that
  *         needs the H-bit on pre-v3.0 silicon), or a transport/layout error code.
  */
@@ -481,7 +482,8 @@ typedef enum {
  * @param key_size   1..target size (16 or 32 bytes; 24 on ESP32 3/4 coding).
  * @param config     Options, or NULL for safe defaults.
  * @return ESP_LOADER_SUCCESS, ESP_LOADER_ERROR_INVALID_PARAM (target not for the
- *         detected chip, bad size, or block in use), ESP_LOADER_ERROR_UNSUPPORTED_FUNC
+ *         detected chip, or bad size), ESP_LOADER_ERROR_EFUSE_BLOCK_IN_USE (the
+ *         target block is already in use), ESP_LOADER_ERROR_UNSUPPORTED_FUNC
  *         (wrong chip family, SB V2 on pre-v3.0 ESP32, or non-NONE coding for
  *         SB V2), or a transport/layout error code.
  */

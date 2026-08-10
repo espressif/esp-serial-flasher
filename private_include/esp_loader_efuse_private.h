@@ -184,13 +184,6 @@ const uint32_t *efuse_get_write_buf(const esp_loader_efuse_ctx_t *ctx, uint8_t b
 
 esp_loader_error_t efuse_validate_staged_writes(esp_loader_t *loader, esp_loader_efuse_ctx_t *ctx);
 
-/* Semantic key operations.
- * Reports via *out_free whether a key block is free to receive a new key (all of:
- * block readable+writeable, KEY_PURPOSE_N is USER and writeable, block all-zero).
- * KEY_PURPOSE-bearing chips only; ESP32/C2 -> ESP_LOADER_ERROR_UNSUPPORTED_FUNC,
- * a non-key block -> ESP_LOADER_ERROR_INVALID_PARAM. */
-esp_loader_error_t efuse_key_block_is_free(esp_loader_t *loader, uint8_t block, bool *out_free);
-
 /* Looks up a key purpose in the chip's per-chip table. Returns NULL if the chip
  * has no KEY_PURPOSE field or does not support this purpose. */
 const efuse_key_purpose_row_t *efuse_lookup_purpose(target_chip_t target,
