@@ -26,6 +26,7 @@ set(srcs
     src/slip.c
     src/esp_loader_efuse.c
     src/esp_loader_efuse_chips.c
+    src/esp_loader_efuse_utility.c
     # Chip+revision -> field metadata. Its own translation unit: it names every
     # generated table below, so only applications that call it link them.
     src/efuse/esp_loader_efuse_field_info.c
