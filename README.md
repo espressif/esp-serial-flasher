@@ -69,15 +69,18 @@ This library enables you to program Espressif SoCs from various host platforms u
 |           RAM download           |  ✅  |     ✅      | ✅  |  ✅  |
 |        Get security info         |  ✅  |     ✅      | ❌  |  ✅  |
 |     Change baud / clock rate     |  ✅  |     ✅      | ❌  |  ❌  |
+|              eFuse               |  ✅  |     ✅      | ❌  |  ✅  |
 
 **Legend**: ✅ Supported | ❌ Not supported | 🔶 Requires connecting with stub (`esp_loader_connect_with_stub()`)
+
+eFuse read and burn are supported on all target devices above except ESP8266 and ESP32-S31, which is still under development. See the [eFuse Guide](docs/efuse.md) for the per-chip capability matrix and the staged-write model.
 
 > [!TIP]
 > Connecting with stub (`esp_loader_connect_with_stub()`) is recommended over the plain ROM bootloader connection when flash size on the host is not a limiting constraint. The stub unlocks faster flashing speeds (higher baud rates), flash sizes larger than 2 MB, compressed writes (deflate), and fast flash read. SDIO connects through the stub automatically. All supported chips now have a bundled stub. See [Flash Size Footprint](#flash-size-footprint) for the flash overhead introduced by the bundled stubs.
 
 ### Public API
 
-- Public headers: [include/esp_loader.h](include/esp_loader.h), [include/esp_loader_io.h](include/esp_loader_io.h), and [include/esp_loader_error.h](include/esp_loader_error.h) define the stable public API of this library.
+- Public headers: [include/esp_loader.h](include/esp_loader.h), [include/esp_loader_io.h](include/esp_loader_io.h), [include/esp_loader_error.h](include/esp_loader_error.h), and [include/esp_loader_efuse.h](include/esp_loader_efuse.h) define the stable public API of this library.
 - Examples and helpers: [examples/common/](examples/common/) contains helper utilities used by the examples; not part of the library API, but can be used as a reference.
 
 ### Versioning and Compatibility
@@ -202,27 +205,39 @@ For complete configuration reference, see [Configuration Documentation](docs/con
 
 ## Flash Size Footprint
 
-The library bundles pre-built stub binaries for all supported chips directly in the host firmware. The table below shows the approximate flash rodata overhead from those stubs.
+The library carries data for every supported chip — bundled stub binaries, eFuse field tables — but it is written so that you only pay for what you call. Data is split per chip and per feature into separate translation units and sections, so the linker keeps only what your application actually references.
 
-| Connection mode                                      | Flash overhead | How                                                                                |
-| :--------------------------------------------------- | :------------: | :--------------------------------------------------------------------------------- |
-| ROM bootloader only (`esp_loader_connect()`)         |     ~0 KB      | No bundled stub symbols are referenced                                             |
-| Bundled stub (`esp_loader_connect_with_stub()`)      |  **+~87 KB**   | The bundled provider references every supported per-chip stub                      |
-| Provider returning one bundled stub                  |   ~6–12 KiB    | Only the selected `esp_stub_<chip>` object is referenced; size depends on the chip |
-| Provider loading a custom stub from external storage |     ~0 KB      | The provider entry point references no bundled stub symbols                        |
-| SDIO interface                                       |  **+~20 KB**   | SDIO references the C5 and C6 stubs directly                                       |
+### Build With Section Garbage Collection
 
-> [!NOTE]
-> SDIO uses the same [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub) command implementation as UART/USB stub mode. The SDIO transport handles packet exchange over the SDIO slave window, while command handling stays shared with the standard stub.
+```bash
+-ffunction-sections -fdata-sections      # compiler
+-Wl,--gc-sections                        # linker
+```
 
-### Reducing Stub Flash Usage
+**These flags are recommended for every build.** ESP-IDF and Zephyr enable them by default; for plain CMake builds add them yourself. Without them the linker's granularity drops to whole object files, and unused per-chip data can be linked into your image even though nothing calls it.
 
-When using ESP-IDF or Zephyr, stub data is automatically removed by the linker's dead-code elimination (`--gc-sections`) unless actively referenced:
+### What Costs What
 
-- **Not using stubs at all** — call only `esp_loader_connect()` and never `esp_loader_connect_with_stub()`. The bundled provider lives in a separate object, so a static-library link does not pull it or the stub data into the application.
-- **One bundled stub** — call `esp_loader_connect_with_stub_provider()` with a provider that returns the required public `esp_stub_<chip>` descriptor. Linker garbage collection can then retain only that chip's stub object.
-- **External stub from external storage** — call `esp_loader_connect_with_stub_provider()` with a provider that loads and returns the stub for the detected chip. Because this API references no bundled stub symbols, the built-in stub data is not linked.
-- **SDIO targets** — SDIO currently uploads a bundled C5 or C6 stub during connection. Leave `CONFIG_SERIAL_FLASHER_PORT_SDIO` disabled for non-SDIO builds.
+Rough orders of magnitude, to decide what is worth caring about. These move with upstream chip support, so measure your own build (`size -A`, or `nm --print-size --size-sort` on the final ELF) rather than budgeting against the numbers here:
+
+| Component                   | Order of magnitude          | Pulled in by                                                     |
+| :-------------------------- | :-------------------------- | :--------------------------------------------------------------- |
+| Library code                | a few KB of `.text`         | always                                                           |
+| All bundled flasher stubs   | ~87 KB of rodata            | `esp_loader_connect_with_stub()`                                 |
+| Flasher stub, per chip      | ~6–12 KiB of rodata         | a provider returning one public `esp_stub_<chip>` descriptor     |
+| SDIO stubs                  | ~20 KB of rodata            | `esp_loader_init_sdio()` — the ESP32-C5 and ESP32-C6 stubs       |
+| eFuse field table, per chip | a few KB of rodata          | referencing a named field of that chip                           |
+| eFuse field tables          | roughly stub-sized in total | `esp_loader_efuse_get_field_info()` — every chip's table at once |
+
+### Keeping It Small
+
+- **Skip the stub** — call only `esp_loader_connect()` and never `esp_loader_connect_with_stub()`. The bundled provider lives in a separate object, so a static-library link does not pull it or the stub data into the application. Note that the stub is otherwise recommended: it unlocks higher baud rates, flash larger than 2 MB, compressed writes, and fast flash read.
+- **Use one bundled stub** — call `esp_loader_connect_with_stub_provider()` with a provider that returns the required public `esp_stub_<chip>` descriptor. Linker garbage collection can then retain only that chip's stub object.
+- **Load a custom stub from external storage** — call `esp_loader_connect_with_stub_provider()` with a provider that loads and returns the stub for the detected chip. Because this API references no bundled stub symbols, the built-in stub data is not linked.
+- **Do not initialise SDIO if you do not use it** — the SDIO path references the ESP32-C5 and ESP32-C6 stubs directly, so those are linked once `esp_loader_init_sdio()` is reachable. (On ESP-IDF, `CONFIG_SERIAL_FLASHER_PORT_SDIO` additionally controls whether the ESP32 SDIO *port* is compiled; it does not gate the stub data, and it does not exist in plain CMake builds.)
+- **Reference eFuse fields for the chips you actually talk to** — each chip's field table is its own translation unit, so using e.g. `ESP32C6_EFUSE_MAC` links the ESP32-C6 table only. The raw-read, bit, key, and burn paths address eFuses by block and bit position and reference no field table at all.
+- **Avoid `esp_loader_efuse_get_field_info()` unless you need it** — resolving a chip and revision to its full field metadata names *every* chip's table and links all of them. It lives in its own translation unit so applications that never call it pay nothing.
+- **If you cannot use `--gc-sections`** — exclude what you do not need at the CMake level: drop the stub `.c` files, or the `src/efuse/<chip>/` tables, from the sources list when integrating the library as a subdirectory or submodule.
 
 For example, a provider can select one bundled stub without pulling in the others:
 
@@ -239,8 +254,6 @@ static const esp_stub_t *esp32s3_stub(esp_loader_t *loader, target_chip_t chip, 
 esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
 esp_loader_connect_with_stub_provider(&loader, &args, esp32s3_stub, NULL);
 ```
-
-For plain CMake builds with linker GC disabled (e.g. static libraries without `--gc-sections`), or when targeting a host where every byte counts, you can exclude the stub sources at the CMake level by removing the stub `.c` files from the sources list when integrating the library as a subdirectory or submodule.
 
 ## Hardware Connections
 
