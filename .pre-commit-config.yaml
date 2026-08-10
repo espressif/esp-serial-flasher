@@ -17,6 +17,8 @@ repos:
         exclude: &excludes |
             (?x)^(
               .+\.bin
+              |include/efuse/.+
+              |src/efuse/.+
             )$
       - id: end-of-file-fixer
         exclude: *excludes
@@ -28,6 +30,7 @@ repos:
     hooks:
       - id: check-copyright
         args: ['--config', '.check_copyright_config.yaml', '--replace']
+        exclude: *excludes
   - repo: https://github.com/espressif/astyle_py.git
     rev: v1.1.0
     hooks:
@@ -55,6 +58,8 @@ repos:
         exclude: |
             (?x)^(
               .+\.bin|
+              include/efuse/.+|
+              src/efuse/.+|
               zephyr/Kconfig|
               CHANGELOG\.md
             )$

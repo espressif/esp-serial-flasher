@@ -24,7 +24,17 @@ set(srcs
     src/protocol_spi.c
     src/protocol_sdio.c
     src/slip.c
+    # Chip+revision -> field metadata. Its own translation unit: it names every
+    # generated table below, so only applications that call it link them.
+    src/efuse/esp_loader_efuse_field_info.c
 )
+
+# The per-chip field tables under src/efuse/<chip>/ are generated wholesale by
+# tools/copy_efuse_headers.py, which also writes the list of them it defines in
+# EFUSE_TABLE_SOURCES. Regenerating the tables keeps that list in step, so no
+# glob is needed here.
+include(${CMAKE_CURRENT_LIST_DIR}/src/efuse/efuse_tables.cmake)
+list(APPEND srcs ${EFUSE_TABLE_SOURCES})
 set(defs)
 
 # Regular CMake builds are expected to set OPTION_NAME, while ESP-IDF's Kconfig system sets
