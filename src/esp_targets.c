@@ -625,3 +625,11 @@ target_chip_t target_from_chip_id(const uint32_t chip_id)
 
     return ESP_UNKNOWN_CHIP;
 }
+
+uint32_t esp_targets_get_efuse_base(target_chip_t target)
+{
+    if (target >= ESP_MAX_CHIP) {
+        return 0;
+    }
+    return esp_target[target].efuse_base;
+}
