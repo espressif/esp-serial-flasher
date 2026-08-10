@@ -21,13 +21,10 @@ variables:
   ARM_TOOLCHAIN_URL: https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-eabi.tar.xz
   PI_PICO_SDK_REV: 2.2.0
   PI_PICO_SDK: https://github.com/raspberrypi/pico-sdk
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
   PIP_EXTRA_INDEX_URL: "https://dl.espressif.com/pypi"
-
-cache:
-  paths:
-    - "$CI_PROJECT_DIR/.cache/pip"
-
+  # Jobs install their dependencies once, so writing a cache that is discarded
+  # with the container only costs time and disk
+  PIP_NO_CACHE_DIR: "1"
 
 build_target_example:
   # Build examples that will be flashed by the esp-serial-flasher host
