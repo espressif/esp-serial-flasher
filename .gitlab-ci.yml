@@ -300,6 +300,22 @@ test_host_qemu:
   script:
     - cd $CI_PROJECT_DIR/test
     - ./run_qemu_test.sh
+
+test_efuse_host:
+  # Host unit tests for the eFuse layer (test/efuse): pure C over an in-memory
+  # fake, so no hardware, no ESP-IDF and no Python.
+  stage: test
+  image: debian:latest
+  tags:
+    - internet
+  needs: []
+  script:
+    - apt-get update
+    - apt-get install -y build-essential cmake
+    - cmake -S test/efuse -B build_efuse_test
+    - cmake --build build_efuse_test -j$(nproc)
+    - ctest --test-dir build_efuse_test --output-on-failure
+
 .test_template:
   stage: test
   image: debian:latest
