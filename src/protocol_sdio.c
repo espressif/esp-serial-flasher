@@ -409,14 +409,22 @@ static esp_loader_error_t sip_run_ram_code(esp_loader_t *loader, const uint32_t 
 
 static const esp_stub_t *sdio_get_stub(target_chip_t target)
 {
+#if defined(ESP_STUB_BUNDLE_ALL) || defined(ESP_STUB_BUNDLE_ESP32C5)
     extern const esp_stub_t esp_stub_esp32c5;
+#endif
+#if defined(ESP_STUB_BUNDLE_ALL) || defined(ESP_STUB_BUNDLE_ESP32C6)
     extern const esp_stub_t esp_stub_esp32c6;
+#endif
 
     switch (target) {
+#if defined(ESP_STUB_BUNDLE_ALL) || defined(ESP_STUB_BUNDLE_ESP32C5)
     case ESP32C5_CHIP:
         return &esp_stub_esp32c5;
+#endif
+#if defined(ESP_STUB_BUNDLE_ALL) || defined(ESP_STUB_BUNDLE_ESP32C6)
     case ESP32C6_CHIP:
         return &esp_stub_esp32c6;
+#endif
     default:
         return NULL;
     }

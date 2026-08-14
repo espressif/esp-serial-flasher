@@ -52,4 +52,57 @@ config SERIAL_FLASHER_LOG_LEVEL
     default 3 if SERIAL_FLASHER_LOG_LEVEL_INFO
     default 4 if SERIAL_FLASHER_LOG_LEVEL_DEBUG
 
+config SERIAL_FLASHER_BUNDLE_ALL_STUBS
+    bool "Bundle flasher stubs for all supported chips"
+    default y
+    help
+      Bundle the pre-built flasher stub binaries for all supported target
+      chips. Disable to select individual chips below.
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP8266
+    bool "ESP8266 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32
+    bool "ESP32 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32S2
+    bool "ESP32-S2 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32C3
+    bool "ESP32-C3 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32S3
+    bool "ESP32-S3 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32C2
+    bool "ESP32-C2 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32C5
+    bool "ESP32-C5 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32H2
+    bool "ESP32-H2 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32C6
+    bool "ESP32-C6 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32P4
+    bool "ESP32-P4 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+    help
+      Includes the ESP32-P4 ECO<5 (rev1) variant.
+
+config SERIAL_FLASHER_BUNDLE_STUB_ESP32C61
+    bool "ESP32-C61 flasher stub"
+    depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+
 endif # ESP_SERIAL_FLASHER

@@ -36,4 +36,5 @@ target_sources(${PROJECT_NAME} PRIVATE test_tcp_port.cpp qemu_test.cpp)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	SERIAL_FLASHER_LOG_LEVEL=4
 	SERIAL_FLASHER_WRITE_BLOCK_RETRIES=3
+	ESP_STUB_BUNDLE_ALL
 )

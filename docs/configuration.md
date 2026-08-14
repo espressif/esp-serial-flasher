@@ -81,6 +81,24 @@ For ESP-IDF builds, you choose which port implementations to compile into the li
 - **Depends on**: `SOC_USB_OTG_SUPPORTED`
 - **Description**: Compile the ESP32 USB CDC-ACM port (`esp32_usb_cdc_acm_port.c`). Exposes `esp32_usb_cdc_acm_ops`. Requires the `espressif/usb_host_cdc_acm` managed component.
 
+### Flasher Stub Bundling
+
+The library can bundle flasher stub binaries for all supported chips (default), a subset of chips, or none. Stubs that are not bundled are neither compiled nor referenced; their built-in lookup table entries are omitted (NULL), and connecting with a built-in stub then reports `ESP_LOADER_ERROR_UNSUPPORTED_CHIP` at runtime. External stubs passed via `esp_loader_connect_args_t.ext_stub` are unaffected.
+
+Note that when stub bundling is disabled, SDIO stub support (ESP32-C5 and ESP32-C6 targets) disappears unless their individual options are enabled; SDIO connects then fail with `ESP_LOADER_ERROR_UNSUPPORTED_CHIP`.
+
+#### `SERIAL_FLASHER_BUNDLE_ALL_STUBS`
+
+- **Type**: CMake cache variable / Kconfig (`CONFIG_SERIAL_FLASHER_BUNDLE_ALL_STUBS`)
+- **Default**: Enabled
+- **Description**: Bundle the stub binaries for all supported target chips. Disable to select individual chips below, e.g. to reduce flash footprint or when stubs are loaded from external storage at runtime.
+
+#### `SERIAL_FLASHER_BUNDLE_STUB_<CHIP>`
+
+- **Type**: CMake cache variable / Kconfig, one option per chip (`ESP8266`, `ESP32`, `ESP32-S2`, `ESP32-C3`, `ESP32-S3`, `ESP32-C2`, `ESP32-C5`, `ESP32-H2`, `ESP32-C6`, `ESP32-P4`, `ESP32-C61`)
+- **Default**: Disabled
+- **Description**: Bundle the flasher stub binary for the selected chip. Available only when `SERIAL_FLASHER_BUNDLE_ALL_STUBS` is disabled. The ESP32-P4 option also bundles the ECO\<5 (rev1) stub variant.
+
 ### Retry and Timing Configuration
 
 #### `SERIAL_FLASHER_WRITE_BLOCK_RETRIES`

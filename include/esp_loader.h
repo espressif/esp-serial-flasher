@@ -73,6 +73,22 @@ typedef struct {
     const uint8_t *data;
 } esp_loader_bin_segment_t;
 
+/**
+ * @brief Flasher stub binary descriptor.
+ *
+ * Describes the code and data segments of a flasher stub. The built-in stubs
+ * bundled with this library use this type. An application can construct its own
+ * descriptor from a stub loaded at runtime, e.g. from external storage, and pass
+ * it via the @c ext_stub member of @c esp_loader_connect_args_t.
+ *
+ * @note  The segment data pointers must remain valid until
+ *        esp_loader_connect_with_stub() returns.
+ */
+typedef struct {
+    esp_loader_bin_header_t header;       /*!< Stub binary header; only the entry point is used */
+    esp_loader_bin_segment_t segments[2]; /*!< Stub code and data segments; segments with zero size are skipped */
+} esp_stub_t;
+
 typedef struct {
     target_chip_t target_chip;
     uint32_t eco_version; // Not present on ESP32-S2
@@ -95,11 +111,16 @@ typedef struct {
     uint32_t sync_timeout;  /*!< Maximum time to wait for response from serial interface. */
     int32_t trials;         /*!< Number of trials to connect to target. If greater than 1,
                                100 millisecond delay is inserted after each try. */
+    const esp_stub_t *ext_stub; /*!< Optional flasher stub supplied by the application.
+                                   When NULL, the stub matching the detected chip is used.
+                                   The chip must still be detected successfully; an external
+                                   stub cannot be used for chips unknown to the library. */
 } esp_loader_connect_args_t;
 
 #define ESP_LOADER_CONNECT_DEFAULT() { \
   .sync_timeout = 100, \
   .trials = 10, \
+  .ext_stub = NULL, \
 }
 
 /**
@@ -272,6 +293,7 @@ void esp_loader_deinit(esp_loader_t *loader);
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_TARGET Connected target is invalid
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
 esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args);
@@ -293,12 +315,21 @@ target_chip_t esp_loader_get_target(esp_loader_t *loader);
   *
   * @note  Only supported on the serial (SLIP) interface.
   *
+  * If the @c ext_stub member of @c connect_args is not NULL, that stub is used
+  * instead of the stub matching the detected chip. The target chip still has to
+  * be detected successfully; an external stub cannot be used for chips that are
+  * unknown to the library.
+  *
   * @param loader[in]       Pointer to initialized loader context.
-  * @param connect_args[in] Timing parameters to be used for connecting to target.
+  * @param connect_args[in] Timing parameters to be used for connecting to target,
+  *                         and optionally a custom stub.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid arguments or stub configuration
+  *     - ESP_LOADER_ERROR_INVALID_TARGET Connected target is invalid
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP Attached chip is not supported
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */

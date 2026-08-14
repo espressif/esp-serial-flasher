@@ -49,11 +49,11 @@ CHIPS = [
 ]
 
 # Extra stubs: own source file, NOT in esp_stub[] table, referenced by extern name.
-# Tuple: (json_filename, c_var_name)  — json names may differ from the standard pattern.
+# Tuple: (json_filename, c_var_name, bundle_guard_macro)
 EXTRA_STUBS = [
     # ESP32-P4 ECO5-6 (chip revision v1.x / v2.x) — selected at runtime based on
     # eco_version from GET_SECURITY_INFO when loader->_target == ESP32P4_CHIP.
-    ("esp32p4-rev1.json", "esp_stub_esp32p4rev1"),
+    ("esp32p4-rev1.json", "esp_stub_esp32p4rev1", "ESP_STUB_BUNDLE_ESP32P4"),
 ]
 
 LICENSE_HEADER = """\
@@ -175,15 +175,23 @@ def write_table_file(path: str, version: str, year: int, chips) -> None:
     lines.append("#endif")
     lines.append("")
 
-    # Forward declarations
-    for _enum, _json, c_var in chips:
+    # Forward declarations. Per-chip stub binaries can be excluded from the build
+    # (see the SERIAL_FLASHER_BUNDLE_* options); unselected stubs are not
+    # referenced and their table entries are omitted.
+    for enum_name, _json, c_var in chips:
+        guard = "ESP_STUB_BUNDLE_" + enum_name.removesuffix("_CHIP")
+        lines.append(f"#if defined(ESP_STUB_BUNDLE_ALL) || defined({guard})")
         lines.append(f"extern const esp_stub_t {c_var};")
+        lines.append("#endif")
     lines.append("")
 
     # Lookup table
     lines.append("const esp_stub_t *const esp_stub[ESP_MAX_CHIP] = {")
     for enum_name, _json, c_var in chips:
+        guard = "ESP_STUB_BUNDLE_" + enum_name.removesuffix("_CHIP")
+        lines.append(f"#if defined(ESP_STUB_BUNDLE_ALL) || defined({guard})")
         lines.append(f"    [{enum_name}] = &{c_var},")
+        lines.append("#endif")
     lines.append("};")
     lines.append("")
 
@@ -193,7 +201,10 @@ def write_table_file(path: str, version: str, year: int, chips) -> None:
 
 def write_header_file(path: str, version: str, year: int, extra_stubs) -> None:
     extra_externs = "".join(
-        f"\nextern const esp_stub_t {c_var};" for _json, c_var in extra_stubs
+        f"\n#if defined(ESP_STUB_BUNDLE_ALL) || defined({guard})\n"
+        f"extern const esp_stub_t {c_var};\n"
+        f"#endif"
+        for _json, c_var, guard in extra_stubs
     )
     content = (
         LICENSE_HEADER.format(year=year)
@@ -210,11 +221,6 @@ def write_header_file(path: str, version: str, year: int, extra_stubs) -> None:
 #ifdef __cplusplus
 extern "C" {{
 #endif
-
-typedef struct {{
-    esp_loader_bin_header_t header;
-    esp_loader_bin_segment_t segments[2];
-}} esp_stub_t;
 
 extern const esp_stub_t *const esp_stub[ESP_MAX_CHIP];
 
@@ -247,6 +253,7 @@ if __name__ == "__main__":
     priv_inc = os.path.join(repo_root, "private_include")
 
     os.makedirs(stubs_src, exist_ok=True)
+    os.makedirs(priv_inc, exist_ok=True)
 
     def fetch_and_write(json_name, c_var):
         print(f"  Processing {json_name} → {c_var}.c ...")
@@ -275,7 +282,7 @@ if __name__ == "__main__":
     for _enum, json_name, c_var in CHIPS:
         fetch_and_write(json_name, c_var)
 
-    for json_name, c_var in EXTRA_STUBS:
+    for json_name, c_var, _guard in EXTRA_STUBS:
         fetch_and_write(json_name, c_var)
 
     table_path = os.path.join(stubs_src, "esp_stubs_table.c")

@@ -170,53 +170,30 @@ target_chip_t esp_loader_get_target(esp_loader_t *loader)
     return loader->_target;
 }
 
-esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+static esp_loader_error_t loader_upload_stub(esp_loader_t *loader, uint32_t entrypoint, const esp_loader_bin_segment_t *segments, uint32_t segment_count)
 {
-    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_SERIAL) {
-        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    if (entrypoint == 0) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
     }
-
-    loader->_target_flash_size = 0;
-
-    loader->_port->ops->enter_bootloader(loader->_port);
-
-    RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
-
-    RETURN_ON_ERROR(loader_detect_chip(loader));
-
-    const esp_stub_t *stub;
-    if (loader->_target == ESP32P4_CHIP) {
-        esp_loader_target_security_info_t info;
-        bool got_info = (esp_loader_get_security_info(loader, &info) == ESP_LOADER_SUCCESS);
-        if (got_info && info.eco_version >= ESP32P4_ECO_REV3_MIN) {
-            stub = esp_stub[ESP32P4_CHIP];   // ECO5+
-        } else {
-            stub = &esp_stub_esp32p4rev1;    // ECO < 5 or revision unknown
-        }
-    } else {
-        stub = esp_stub[loader->_target];
-        if (stub == NULL) {
-            return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
-        }
-    }
-
-    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
 
     esp_loader_mem_cfg_t mem_cfg = {0};
 
-    for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
-        if (stub->segments[seg].size == 0) {
+    for (uint32_t seg = 0; seg < segment_count; seg++) {
+        if (segments[seg].size == 0) {
             continue;
         }
+        if (segments[seg].data == NULL) {
+            return ESP_LOADER_ERROR_INVALID_PARAM;
+        }
         mem_cfg = (esp_loader_mem_cfg_t) {
-            .offset = stub->segments[seg].addr,
-            .size = stub->segments[seg].size,
+            .offset = segments[seg].addr,
+            .size = segments[seg].size,
             .block_size = ESP_RAM_BLOCK,
         };
         RETURN_ON_ERROR(esp_loader_mem_start(loader, &mem_cfg));
 
-        size_t remain_size = stub->segments[seg].size;
-        const uint8_t *data_pos = stub->segments[seg].data;
+        size_t remain_size = segments[seg].size;
+        const uint8_t *data_pos = segments[seg].data;
         while (remain_size > 0) {
             size_t data_size = MIN(ESP_RAM_BLOCK, remain_size);
             RETURN_ON_ERROR(esp_loader_mem_write(loader, &mem_cfg, data_pos, data_size));
@@ -225,7 +202,7 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
         }
     }
 
-    RETURN_ON_ERROR(esp_loader_mem_finish(loader, &mem_cfg, stub->header.entrypoint));
+    RETURN_ON_ERROR(esp_loader_mem_finish(loader, &mem_cfg, entrypoint));
 
     uint8_t buff[4];
     size_t recv_size = 0;
@@ -240,6 +217,52 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
     loader->_stub_running = true;
 
     return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+{
+    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_SERIAL) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    }
+
+    loader->_target_flash_size = 0;
+
+    loader->_port->ops->enter_bootloader(loader->_port);
+
+    RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
+
+    RETURN_ON_ERROR(loader_detect_chip(loader));
+
+    if (loader->_target == ESP_UNKNOWN_CHIP) {
+        return ESP_LOADER_ERROR_INVALID_TARGET;
+    }
+
+    const esp_stub_t *stub;
+    if (connect_args->ext_stub != NULL) {
+        stub = connect_args->ext_stub;
+    } else if (loader->_target == ESP32P4_CHIP) {
+        esp_loader_target_security_info_t info;
+        bool got_info = (esp_loader_get_security_info(loader, &info) == ESP_LOADER_SUCCESS);
+        if (got_info && info.eco_version >= ESP32P4_ECO_REV3_MIN) {
+            stub = esp_stub[ESP32P4_CHIP];   // ECO5+
+        } else {
+#if defined(ESP_STUB_BUNDLE_ALL) || defined(ESP_STUB_BUNDLE_ESP32P4)
+            stub = &esp_stub_esp32p4rev1;    // ECO < 5 or revision unknown
+#else
+            stub = NULL;
+#endif
+        }
+    } else {
+        stub = esp_stub[loader->_target];
+    }
+
+    if (stub == NULL) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    }
+
+    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
+
+    return loader_upload_stub(loader, stub->header.entrypoint, stub->segments, sizeof(stub->segments) / sizeof(stub->segments[0]));
 }
 
 esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,

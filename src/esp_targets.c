@@ -288,6 +288,9 @@ esp_loader_error_t loader_detect_chip(esp_loader_t *loader)
        This won't work if the target does not support the command. */
     esp_loader_target_security_info_t security_info;
     if (esp_loader_get_security_info(loader, &security_info) == ESP_LOADER_SUCCESS) {
+        if (security_info.target_chip == ESP_UNKNOWN_CHIP) {
+            return ESP_LOADER_ERROR_INVALID_TARGET;
+        }
         loader->_target = security_info.target_chip;
         goto success;
     }

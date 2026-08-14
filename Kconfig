@@ -31,6 +31,80 @@ menu "ESP serial flasher"
         default 3 if SERIAL_FLASHER_LOG_LEVEL_INFO
         default 4 if SERIAL_FLASHER_LOG_LEVEL_DEBUG
 
+    config SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        bool "Bundle flasher stubs for all supported chips"
+        default y
+        help
+            Bundle the pre-built flasher stub binaries for all supported target chips.
+            Disable this to select individual chips below, e.g. to reduce flash
+            footprint or when stubs are loaded from external storage at runtime.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP8266
+        bool "ESP8266 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP8266 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32
+        bool "ESP32 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32S2
+        bool "ESP32-S2 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-S2 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32C3
+        bool "ESP32-C3 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-C3 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32S3
+        bool "ESP32-S3 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-S3 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32C2
+        bool "ESP32-C2 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-C2 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32C5
+        bool "ESP32-C5 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-C5 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32H2
+        bool "ESP32-H2 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-H2 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32C6
+        bool "ESP32-C6 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-C6 flasher stub binary.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32P4
+        bool "ESP32-P4 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-P4 flasher stub binary, including the ECO<5 (rev1) variant.
+
+    config SERIAL_FLASHER_BUNDLE_STUB_ESP32C61
+        bool "ESP32-C61 flasher stub"
+        depends on !SERIAL_FLASHER_BUNDLE_ALL_STUBS
+        help
+            Bundle the ESP32-C61 flasher stub binary.
+
     config SERIAL_FLASHER_WRITE_BLOCK_RETRIES
         int "Number of retries when writing blocks either to target flash or RAM"
         default 3

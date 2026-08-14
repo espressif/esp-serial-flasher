@@ -1,30 +1,72 @@
 cmake_minimum_required(VERSION 3.22)
 
+set(defs)
+
+# Flasher stub bundling.
+# Per-chip stub binaries are compiled and referenced through ESP_STUB_BUNDLE_*
+# preprocessor guards (defined below and passed as compile definitions).
+# Unselected stubs are neither compiled nor referenced, and their lookup-table
+# entries are omitted (NULL), so connecting with a built-in stub then reports
+# ESP_LOADER_ERROR_UNSUPPORTED_CHIP at runtime. Options can be set as CMake
+# cache variables or as CONFIG_* Kconfig values in ESP-IDF and Zephyr builds.
+macro(flasher_stub_option name default)
+    if (DEFINED CONFIG_${name})
+        if (CONFIG_${name} STREQUAL "y")
+            set(${name} ON)
+        else()
+            set(${name} OFF)
+        endif()
+    elseif (NOT DEFINED ${name})
+        set(${name} ${default})
+    endif()
+endmacro()
+
+flasher_stub_option(SERIAL_FLASHER_BUNDLE_ALL_STUBS ON)
+
+set(stub_sources src/stubs/esp_stubs_table.c)
+if (SERIAL_FLASHER_BUNDLE_ALL_STUBS)
+    list(APPEND defs ESP_STUB_BUNDLE_ALL)
+    set(stub_sources ${stub_sources}
+        src/stubs/esp_stub_esp8266.c
+        src/stubs/esp_stub_esp32.c
+        src/stubs/esp_stub_esp32s2.c
+        src/stubs/esp_stub_esp32c3.c
+        src/stubs/esp_stub_esp32s3.c
+        src/stubs/esp_stub_esp32c2.c
+        src/stubs/esp_stub_esp32c5.c
+        src/stubs/esp_stub_esp32h2.c
+        src/stubs/esp_stub_esp32c6.c
+        src/stubs/esp_stub_esp32p4.c
+        src/stubs/esp_stub_esp32p4rev1.c
+        src/stubs/esp_stub_esp32c61.c
+    )
+else()
+    foreach(chip IN ITEMS ESP8266 ESP32 ESP32S2 ESP32C3 ESP32S3 ESP32C2 ESP32C5 ESP32H2 ESP32C6 ESP32P4 ESP32C61)
+        flasher_stub_option(SERIAL_FLASHER_BUNDLE_STUB_${chip} OFF)
+        if (SERIAL_FLASHER_BUNDLE_STUB_${chip})
+            string(TOLOWER "${chip}" stub_chip_lower)
+            list(APPEND stub_sources src/stubs/esp_stub_${stub_chip_lower}.c)
+            list(APPEND defs ESP_STUB_BUNDLE_${chip})
+        endif()
+    endforeach()
+    # The ESP32-P4 ECO<5 (rev1) stub follows the ESP32-P4 selection.
+    if (SERIAL_FLASHER_BUNDLE_STUB_ESP32P4)
+        list(APPEND stub_sources src/stubs/esp_stub_esp32p4rev1.c)
+    endif()
+endif()
+
 # Core sources — always compiled; all protocols are available for runtime selection.
 set(srcs
     src/md5_hash.c
     src/esp_loader.c
     src/esp_targets.c
-    src/stubs/esp_stubs_table.c
-    src/stubs/esp_stub_esp8266.c
-    src/stubs/esp_stub_esp32.c
-    src/stubs/esp_stub_esp32s2.c
-    src/stubs/esp_stub_esp32c3.c
-    src/stubs/esp_stub_esp32s3.c
-    src/stubs/esp_stub_esp32c2.c
-    src/stubs/esp_stub_esp32c5.c
-    src/stubs/esp_stub_esp32h2.c
-    src/stubs/esp_stub_esp32c6.c
-    src/stubs/esp_stub_esp32p4.c
-    src/stubs/esp_stub_esp32p4rev1.c
-    src/stubs/esp_stub_esp32c61.c
+    ${stub_sources}
     src/protocol_serial.c
     src/protocol_uart.c
     src/protocol_spi.c
     src/protocol_sdio.c
     src/slip.c
 )
-set(defs)
 
 # Regular CMake builds are expected to set OPTION_NAME, while ESP-IDF's Kconfig system sets
 # CONFIG_OPTION_NAME.
