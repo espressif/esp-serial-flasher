@@ -174,6 +174,8 @@ static const esp_sdio_target_t esp_sdio_target[ESP_MAX_CHIP] = {
         .slc_conf1_rx_stitch_en = (1 << 6),
         .slc_len_conf_tx_packet_load_en = (1 << 24),
     },
+    // ESP32S31
+    {},
 };
 
 static esp_loader_error_t slave_read_register(esp_loader_t *loader, const uint32_t addr, uint32_t *reg)
