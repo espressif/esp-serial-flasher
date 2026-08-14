@@ -346,10 +346,14 @@ static esp_loader_error_t sip_upload_ram_segment(esp_loader_t *loader, const uin
     RETURN_ON_ERROR(slave_wait_ready(loader));
 
     uint8_t packet[SIP_PACKET_SIZE];
+    const uint32_t nondata_size = sizeof(sip_header_t) + sizeof(sip_cmd_write_memory);
+    const uint32_t max_data_size = SIP_PACKET_SIZE - nondata_size;
+
+    // Signed, because rounding the last chunk up to four bytes can overshoot
+    // what is left. Inside the loop it is positive, so the cast below is exact.
     int32_t remaining = size;
     while (remaining > 0) {
-        const uint32_t nondata_size = sizeof(sip_header_t) + sizeof(sip_cmd_write_memory);
-        const uint32_t data_size = ROUNDUP(MIN(remaining, SIP_PACKET_SIZE - nondata_size), 4);
+        const uint32_t data_size = ROUNDUP(MIN((uint32_t)remaining, max_data_size), 4);
 
         const sip_header_t header = {
             .fc[0] = SIP_PACKET_TYPE_CTRL & SIP_TYPE_MASK,

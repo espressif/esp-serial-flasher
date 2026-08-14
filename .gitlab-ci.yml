@@ -1,7 +1,7 @@
 stages:
   - pre_check
-  - build_target_example
-  - build_host_examples
+  - build_target_app
+  - build_host_apps
   - test
   - deploy
 
@@ -26,9 +26,9 @@ variables:
   # with the container only costs time and disk
   PIP_NO_CACHE_DIR: "1"
 
-build_target_example:
-  # Build examples that will be flashed by the esp-serial-flasher host
-  stage: build_target_example
+build_target_app:
+  # Build target firmware for examples and test apps (flashed by host-side tools)
+  stage: build_target_app
   image: espressif/idf:release-v5.5
   tags:
     - build
@@ -37,6 +37,7 @@ build_target_example:
     paths:
       - "test/target-example-src/hello-world-ESP32-src/build-*"
       - "examples/*/target-firmware/"
+      - "test/test_apps/*/target-firmware/"
     when: always
     expire_in: 3 days
   before_script:
@@ -70,7 +71,7 @@ build_target_example:
         PATHS: "esp32_load_ram_example"
   script:
     - cd $CI_PROJECT_DIR
-    - python3 test/build_target_example.py ${TARGET_CHIP} ${BUILD_TYPE} $(echo ${PATHS} | tr ':' ' ')
+    - python3 test/build_target_app.py ${TARGET_CHIP} ${BUILD_TYPE} $(echo ${PATHS} | tr ':' ' ')
     - |
       if echo ${PATHS} | grep -q "esp32_deflate_example"; then
         # esp32_deflate_example needs to have target firmware binaries compressed for deflate flashing, because it flashes compressed data
@@ -103,12 +104,10 @@ check_stub_source_correctness:
     - git diff -I 'SPDX-FileCopyrightText' --exit-code  # ignore annual copyright year updates
 
 .build_host_template:
-  stage: build_host_examples
+  stage: build_host_apps
   tags:
     - build
     - internet
-  needs:
-    - build_target_example
   before_script:
     - apt install ccache
     - pip install -U idf-build-apps --prefer-binary
@@ -205,10 +204,8 @@ build_host_idf_master:
   allow_failure: true
 
 build_host_zephyr:
-  stage: build_host_examples
+  stage: build_host_apps
   image: debian:latest
-  needs:
-    - build_target_example
   before_script:
     - apt-get update
     - apt-get install -y git cmake ninja-build wget python3 python3-pip python3-venv xz-utils
@@ -236,13 +233,11 @@ build_host_zephyr:
     - west build -p -b esp32_devkitc/esp32/procpu $CI_PROJECT_DIR/examples/zephyr_example -DZEPHYR_EXTRA_MODULES=$CI_PROJECT_DIR
 
 build_host_pi_pico:
-  stage: build_host_examples
+  stage: build_host_apps
   image: debian:latest
   tags:
     - build
     - internet
-  needs:
-    - build_target_example
   before_script:
     - apt-get update
     - apt-get install -y git wget cmake build-essential python3 python3-pip
@@ -267,12 +262,10 @@ build_host_pi_pico:
     - cmake --build .
 
 build_host_linux:
-  stage: build_host_examples
+  stage: build_host_apps
   image: debian:latest
   tags:
     - ESF-RPI-01
-  needs:
-    - build_target_example
   before_script:
     - apt-get update
     - apt-get install -y cmake gcc g++ make libgpiod-dev
@@ -295,7 +288,6 @@ test_host_qemu:
   script:
     - cd $CI_PROJECT_DIR/test
     - ./run_qemu_test.sh
-
 .test_template:
   stage: test
   image: debian:latest
@@ -313,26 +305,6 @@ test_host_qemu:
     expire_in: 1 week
 
 test_esp1:
-  extends: .test_template
-  tags:
-    - ESF-RPI-02
-  needs:
-    - build_host_idf_v5.5
-    - build_host_idf_master
-  parallel:
-    matrix:
-      - CI_BUILD_FOLDER:
-          - "build_stable"
-          - "build_master"
-  rules:
-    - if: '$CI_BUILD_FOLDER == "build_master"'
-      allow_failure: true
-    - when: always
-  script:
-    - cd $CI_PROJECT_DIR
-    - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_spi_load_ram_example'
-
-test_esp2:
   extends: .test_template
   tags:
     - ESF-RPI-01
@@ -354,7 +326,27 @@ test_esp2:
     - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_usb_cdc_acm_example'
     - pytest --target=esp32p4 --port=/dev/serial_ports/ESP32P4_ESP32C6 -k 'not test_esp32_runtime_interface_switching_example'
 
-test_esp3:
+test_esp2:
+  extends: .test_template
+  tags:
+    - ESF-RPI-02
+  needs:
+    - build_host_idf_v5.5
+    - build_host_idf_master
+  parallel:
+    matrix:
+      - CI_BUILD_FOLDER:
+          - "build_stable"
+          - "build_master"
+  rules:
+    - if: '$CI_BUILD_FOLDER == "build_master"'
+      allow_failure: true
+    - when: always
+  script:
+    - cd $CI_PROJECT_DIR
+    - pytest --target=esp32s3 --port=/dev/serial_ports/ESP32S3_ESP32C3 -k 'not test_esp32_spi_load_ram_example'
+
+test_esp4:
   extends: .test_template
   tags:
     - ESF-RPI-04
@@ -393,12 +385,12 @@ test_pi_pico:
   script:
     - pytest --target=pi_pico --port=/dev/serial_ports/pico_ESP32
 
-test_linux:
+test_linux_example:
   extends: .test_template
   tags:
     - ESF-RPI-01
   needs:
-    - build_target_example
+    - build_target_app
     - build_host_linux
   before_script:
     - apt-get update
@@ -410,6 +402,47 @@ test_linux:
     - cd $CI_PROJECT_DIR
     - pytest --target=linux --port=/dev/serial_ports/ESP32_ESP32H2 -k dtr-rts
     - pytest --target=linux --port=/dev/ttyS0 -k gpio
+
+.test_linux_host_template:
+  stage: test
+  image: debian:latest
+  needs: []
+  variables:
+    APP_DIR: "${CI_PROJECT_DIR}/test/test_apps/linux_host"
+    PORT2: ""
+  before_script:
+    - apt-get update
+    - apt-get install -y cmake gcc g++ make
+  script:
+    - cmake -S ${APP_DIR} -B ${APP_DIR}/build
+    - cmake --build ${APP_DIR}/build
+    - ${APP_DIR}/build/linux_host --port /dev/serial_ports/${PORT}
+      ${PORT2:+--port2 /dev/serial_ports/${PORT2}}
+
+test_linux_host_esp32:
+  extends: .test_linux_host_template
+  tags: [esp32, esp32p4rev1]
+  variables:
+    PORT: ESP32
+    PORT2: ESP32P4
+
+test_linux_host_esp32s3:
+  extends: .test_linux_host_template
+  tags: [esp32s3]
+  variables:
+    PORT: ESP32S3
+
+test_linux_host_esp32p4rev1:
+  extends: .test_linux_host_template
+  tags: [esp32p4rev1]
+  variables:
+    PORT: ESP32P4
+
+test_linux_host_esp32p4:
+  extends: .test_linux_host_template
+  tags: [esp32p4]
+  variables:
+    PORT: ESP32P4
 
 push_to_the_components_registry:
   stage: deploy
