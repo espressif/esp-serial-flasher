@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-// auto-generated from esp-flasher-stub v0.8.0
-// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v0.8.0
+// auto-generated from esp-flasher-stub v1.2.1
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
 
 #pragma once
 

@@ -16,7 +16,7 @@ jobs:
       - name: Regenerate stub sources
         run: |
           python3 cmake/gen_stub_sources.py \
-            '0.8.0' \
+            '1.2.1' \
             'https://github.com/espressif/esp-flasher-stub/releases/download' \
             .
 
