@@ -5,7 +5,7 @@ set(srcs
     src/md5_hash.c
     src/esp_loader.c
     src/esp_targets.c
-    src/stubs/esp_stubs_table.c
+    src/stubs/esp_stub_bundled.c
     src/stubs/esp_stub_esp8266.c
     src/stubs/esp_stub_esp32.c
     src/stubs/esp_stub_esp32s2.c
@@ -178,7 +178,7 @@ endif()
 target_compile_definitions(${target} PUBLIC ${defs})
 
 # This segment pulls the flasher stubs at a specified version at wish, and generates the
-# per-chip files under src/stubs/ and private_include/esp_stubs.h, overwriting the library provided ones.
+# per-chip files under src/stubs/ and include/esp_loader_stubs.h, overwriting the library provided ones.
 # It is also possible to override stub generation to use a custom url or a local folder.
 # Please check if the license under which the custom stub sources are released fits your usecase.
 if (DEFINED SERIAL_FLASHER_STUB_PULL_VERSION OR DEFINED SERIAL_FLASHER_STUB_PULL_OVERRIDE_PATH)

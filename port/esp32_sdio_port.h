@@ -24,8 +24,9 @@ typedef enum {
  * @brief Concrete ESP32 SDIO port instance.
  *
  * Declare one of these, fill the config fields, then pass &port.port to
- * esp_loader_init_sdio(). Hardware initialisation is called automatically
- * inside esp_loader_init_sdio() — no separate init step is needed.
+ * esp_loader_init_sdio(). Hardware
+ * initialisation is called automatically inside this function — no separate
+ * init step is needed.
  *
  * @code
  *   esp32_sdio_port_t port = {

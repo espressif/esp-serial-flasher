@@ -1,13 +1,13 @@
 # SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 """
-Generate per-chip stub source files and a lookup-table from esp-flasher-stub release JSON files.
+Generate per-chip stub source files and bundled providers from esp-flasher-stub release JSON files.
 
 Usage:
     gen_stub_sources.py <version> <base_url> <repo_root> [override_path]
 
 Each chip gets its own C file in <repo_root>/src/stubs/.
-A lookup-table file and the private header are also written/updated.
+The bundled-provider source and public stub declaration header are also written/updated.
 
 JSON format (espressif/esp-flasher-stub):
     { "entry": <uint32>, "text": "<base64>", "text_start": <uint32>,
@@ -19,12 +19,12 @@ import json
 import os
 import sys
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from string import Template
 
 
 # ---------------------------------------------------------------------------
-# Configuration — order MUST match target_chip_t enumeration in include/esp_loader.h
+# Configuration for the bundled provider in include/esp_loader.h target order.
 # Each name derives: enum = NAME.upper()+"_CHIP", json = name+".json", c_var = "esp_stub_"+name
 # ---------------------------------------------------------------------------
 def _chip(name: str):
@@ -49,7 +49,7 @@ CHIPS = [
     ]
 ]
 
-# Extra stubs: own source file, NOT in esp_stub[] table, referenced by extern name.
+# Extra stubs: own source file, selected by special logic in the bundled provider.
 # Tuple: (json_filename, c_var_name)  — json names may differ from the standard pattern.
 EXTRA_STUBS = [
     # ESP32-P4 ECO5-6 (chip revision v1.x / v2.x) — selected at runtime based on
@@ -59,6 +59,16 @@ EXTRA_STUBS = [
 
 LICENSE_HEADER = """\
 // SPDX-FileCopyrightText: 2025-{year} Espressif Systems (Shanghai) CO LTD
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+"""
+
+PUBLIC_HEADER_LICENSE = """\
+// SPDX-FileCopyrightText: 2026{year_suffix} Espressif Systems (Shanghai) CO LTD
+// SPDX-License-Identifier: Apache-2.0
+"""
+
+BUNDLED_PROVIDER_LICENSE = """\
+// SPDX-FileCopyrightText: 2026{year_suffix} Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 """
 
@@ -93,29 +103,28 @@ $license_header
 // auto-generated from esp-flasher-stub v$version — $json_name
 // Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v$version
 
-#include "esp_stubs.h"
+#include "esp_loader.h"
 
 static const uint8_t ${c_var}_text[] = {
 $text_hex
 };
 
 ${data_array}\
+static const esp_loader_bin_segment_t ${c_var}_segments[] = {
+    {
+        .addr = $text_start,
+        .size = sizeof(${c_var}_text),
+        .data = ${c_var}_text,
+    },
+${data_segment}\
+};
+
 const esp_stub_t $c_var = {
     .header = {
         .entrypoint = $entrypoint,
     },
-    .segments = {
-        {
-            .addr = $text_start,
-            .size = sizeof(${c_var}_text),
-            .data = ${c_var}_text,
-        },
-        {
-            .addr = $data_start,
-            .size = $data_size,
-            .data = $data_ptr,
-        },
-    },
+    .segments = ${c_var}_segments,
+    .segment_count = sizeof(${c_var}_segments) / sizeof(${c_var}_segments[0]),
 };
 """)
 
@@ -137,6 +146,15 @@ def write_chip_file(
         if data
         else ""
     )
+    data_segment = (
+        "    {\n"
+        f"        .addr = 0x{data_start:08x},\n"
+        f"        .size = sizeof({c_var}_data),\n"
+        f"        .data = {c_var}_data,\n"
+        "    },\n"
+        if data
+        else ""
+    )
     content = _CHIP_FILE_TEMPLATE.substitute(
         license_header=LICENSE_HEADER.format(year=year),
         version=version,
@@ -144,82 +162,87 @@ def write_chip_file(
         c_var=c_var,
         text_hex=hex_array(text) if text else "",
         data_array=data_array,
+        data_segment=data_segment,
         entrypoint=f"0x{entry:08x}",
         text_start=f"0x{text_start:08x}",
-        data_start=f"0x{data_start:08x}",
-        data_size=len(data),
-        data_ptr=f"{c_var}_data" if data else "NULL",
     )
     with open(path, "w", newline="\n") as f:
         f.write(content)
 
 
-def write_table_file(path: str, version: str, year: int, chips) -> None:
+def write_bundled_provider_file(path: str, version: str, year: int, chips) -> None:
     lines = [
-        LICENSE_HEADER.format(year=year),
+        BUNDLED_PROVIDER_LICENSE.format(year_suffix=f"-{year}" if year > 2026 else ""),
         f"// auto-generated from esp-flasher-stub v{version}",
         f"// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v{version}",
         "",
-        '#include "esp_stubs.h"',
+        '#include "esp_loader_stubs.h"',
+        '#include "esp_targets.h"',
         "",
+        "static const esp_stub_t *bundled_provider(esp_loader_t *loader, target_chip_t chip, void *ctx)",
+        "{",
+        "    (void)ctx;",
+        "",
+        "    switch (chip) {",
     ]
 
-    # Static asserts to catch enum reordering
-    lines.append("#if __STDC_VERSION__ >= 201112L")
-    for idx, (enum_name, _json, _cvar) in enumerate(chips):
-        lines.append(
-            f'_Static_assert({enum_name} == {idx}, "Stub table order matches target_chip_t enumeration");'
-        )
-    lines.append(
-        f'_Static_assert(ESP_MAX_CHIP == {len(chips)}, "Stub table order matches target_chip_t enumeration");'
-    )
-    lines.append("#endif")
-    lines.append("")
-
-    # Forward declarations
-    for _enum, _json, c_var in chips:
-        lines.append(f"extern const esp_stub_t {c_var};")
-    lines.append("")
-
-    # Lookup table
-    lines.append("const esp_stub_t *const esp_stub[ESP_MAX_CHIP] = {")
     for enum_name, _json, c_var in chips:
-        lines.append(f"    [{enum_name}] = &{c_var},")
-    lines.append("};")
-    lines.append("")
+        if enum_name == "ESP32P4_CHIP":
+            lines.extend(
+                [
+                    f"    case {enum_name}: {{",
+                    "        esp_loader_target_security_info_t info;",
+                    "        bool got_info = (esp_loader_get_security_info(loader, &info) == ESP_LOADER_SUCCESS);",
+                    "        return (got_info && info.eco_version >= ESP32P4_ECO_REV3_MIN)",
+                    f"               ? &{c_var} : &esp_stub_esp32p4rev1;",
+                    "    }",
+                ]
+            )
+        else:
+            lines.extend([f"    case {enum_name}:", f"        return &{c_var};"])
+    lines.extend(
+        [
+            "    default:",
+            "        return NULL;",
+            "    }",
+            "}",
+            "",
+            "esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader,",
+            "        esp_loader_connect_args_t *connect_args)",
+            "{",
+            "    return esp_loader_connect_with_stub_provider(loader, connect_args, bundled_provider, NULL);",
+            "}",
+            "",
+        ]
+    )
 
     with open(path, "w", newline="\n") as f:
         f.write("\n".join(lines))
 
 
-def write_header_file(path: str, version: str, year: int, extra_stubs) -> None:
-    extra_externs = "".join(
-        f"\nextern const esp_stub_t {c_var};" for _json, c_var in extra_stubs
+def write_header_file(path: str, version: str, year: int, chips, extra_stubs) -> None:
+    declarations = [
+        f"extern const esp_stub_t {c_var};" for _enum, _json, c_var in chips
+    ]
+    declarations.extend(
+        f"extern const esp_stub_t {c_var};" for _json, c_var in extra_stubs
     )
     content = (
-        LICENSE_HEADER.format(year=year)
+        PUBLIC_HEADER_LICENSE.format(year_suffix=f"-{year}" if year > 2026 else "")
         + f"""\
 // auto-generated from esp-flasher-stub v{version}
 // Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v{version}
 
 #pragma once
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "esp_loader.h"
 
 #ifdef __cplusplus
 extern "C" {{
 #endif
 
-typedef struct {{
-    esp_loader_bin_header_t header;
-    esp_loader_bin_segment_t segments[2];
-}} esp_stub_t;
-
-extern const esp_stub_t *const esp_stub[ESP_MAX_CHIP];
-
-// Extra stubs not in the lookup table — selected at runtime by application code.{extra_externs}
+/** @brief Bundled per-chip flasher stubs. */
+{chr(10).join(declarations)}
 
 #ifdef __cplusplus
 }}
@@ -243,9 +266,9 @@ if __name__ == "__main__":
     repo_root = sys.argv[3]
     override_path = sys.argv[4] if len(sys.argv) >= 5 else None
 
-    year = datetime.now().year
+    year = datetime.now(timezone.utc).year
     stubs_src = os.path.join(repo_root, "src", "stubs")
-    priv_inc = os.path.join(repo_root, "private_include")
+    public_inc = os.path.join(repo_root, "include")
 
     os.makedirs(stubs_src, exist_ok=True)
 
@@ -279,15 +302,15 @@ if __name__ == "__main__":
     for json_name, c_var in EXTRA_STUBS:
         fetch_and_write(json_name, c_var)
 
-    table_path = os.path.join(stubs_src, "esp_stubs_table.c")
-    print(f"  Writing {table_path} ...")
-    write_table_file(table_path, version, year, CHIPS)
+    provider_path = os.path.join(stubs_src, "esp_stub_bundled.c")
+    print(f"  Writing {provider_path} ...")
+    write_bundled_provider_file(provider_path, version, year, CHIPS)
 
-    header_path = os.path.join(priv_inc, "esp_stubs.h")
+    header_path = os.path.join(public_inc, "esp_loader_stubs.h")
     print(f"  Writing {header_path} ...")
-    write_header_file(header_path, version, year, EXTRA_STUBS)
+    write_header_file(header_path, version, year, CHIPS, EXTRA_STUBS)
 
     total = len(CHIPS) + len(EXTRA_STUBS)
     print(
-        f"Done — {total} stub files generated from v{version} ({len(CHIPS)} in table, {len(EXTRA_STUBS)} extra)."
+        f"Done — {total} stub files generated from v{version} ({len(CHIPS)} bundled, {len(EXTRA_STUBS)} extra)."
     )

@@ -13,6 +13,7 @@
 #include <pthread.h>
 #include "linux_port.h"
 #include "esp_loader.h"
+#include "esp_loader_stubs.h"
 #include "esp_loader_io.h"
 #include "esp_targets.h"
 #include "loader_log.h"
@@ -202,6 +203,62 @@ static void *flash_target(void *arg)
     return NULL;
 }
 
+/* ---------------------------- BYO flash stub test ------------------------ */
+
+typedef struct {
+    const esp_stub_t *stub;
+} external_stub_ctx_t;
+
+static const esp_stub_t *external_stub_provider(esp_loader_t *loader, target_chip_t chip, void *ctx)
+{
+    (void)loader;
+    external_stub_ctx_t *stub_ctx = ctx;
+    return chip == ESP32_CHIP ? stub_ctx->stub : NULL;
+}
+
+static test_result_t external_stub_connect(esp_loader_t *loader, const esp_stub_t *stub)
+{
+    esp_loader_connect_args_t connect_cfg = ESP_LOADER_CONNECT_DEFAULT();
+
+    CHECK_EQ(esp_loader_connect(loader, &connect_cfg), ESP_LOADER_SUCCESS,
+             "Cannot connect on %s", g_port1);
+
+    if (esp_loader_get_target(loader) != ESP32_CHIP) {
+        TEST_PRINT_MSG("BYO stub fixture is for ESP32, skipping attached chip");
+        return TEST_SKIP;
+    }
+
+    external_stub_ctx_t stub_ctx = { .stub = stub };
+    CHECK_EQ(esp_loader_connect_with_stub_provider(loader, &connect_cfg,
+             external_stub_provider, &stub_ctx), ESP_LOADER_SUCCESS,
+             "Cannot connect with BYO stub on %s", g_port1);
+    CHECK_EQ(esp_loader_get_target(loader), ESP32_CHIP);
+
+    return TEST_PASS;
+}
+
+static test_result_t test_external_flash_stub(void)
+{
+    esp_loader_t loader;
+    linux_port_t port = {
+        .port.ops  = &g_uart_ops,
+        .device    = g_port1,
+        .baudrate  = DEFAULT_BAUD_RATE,
+        .gpio_mode = LINUX_GPIO_DTR_RTS,
+    };
+
+    test_result_t result;
+    if (esp_loader_init_serial(&loader, &port.port) != ESP_LOADER_SUCCESS) {
+        TEST_PRINT_MSG("Cannot open %s", g_port1);
+        result = TEST_FAIL;
+    } else {
+        result = external_stub_connect(&loader, &esp_stub_esp32);
+        esp_loader_deinit(&loader);
+    }
+
+    return result;
+}
+
 /* ------------------------------ test cases ------------------------------- */
 
 /* The test app is built with SERIAL_FLASHER_LOG_LEVEL=DEBUG so every macro is active. */
@@ -344,6 +401,7 @@ static test_result_t test_parallel_flashing(void)
 
 static const test_case_t test_cases[] = {
     { "register_read_write", test_register_read_write },
+    { "external_flash_stub", test_external_flash_stub },
     { "log_levels", test_log_levels },
     { "log_hex", test_log_hex },
     { "log_null_callbacks", test_log_null_callbacks },

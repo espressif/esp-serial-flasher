@@ -5,7 +5,7 @@ add_executable( ${PROJECT_NAME}
 	test_main.cpp
 	../src/esp_loader.c
 	../src/esp_targets.c
-	../src/stubs/esp_stubs_table.c
+	../src/stubs/esp_stub_bundled.c
 	../src/stubs/esp_stub_esp8266.c
 	../src/stubs/esp_stub_esp32.c
 	../src/stubs/esp_stub_esp32s2.c

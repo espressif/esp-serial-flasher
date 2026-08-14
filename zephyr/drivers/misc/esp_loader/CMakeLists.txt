@@ -28,7 +28,7 @@ if (CONFIG_ESP_SERIAL_FLASHER)
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_loader.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/protocol_serial.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/esp_targets.c
-        ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stubs_table.c
+        ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_bundled.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp8266.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32s2.c

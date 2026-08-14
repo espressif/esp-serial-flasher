@@ -7,9 +7,9 @@
 #include "protocol.h"
 #include "protocol_prv.h"
 #include "esp_loader.h"
+#include "esp_loader_stubs.h"
 #include "esp_loader_protocol.h"
 #include "esp_targets.h"
-#include "esp_stubs.h"
 #include "sip.h"
 #include "loader_log.h"
 #include <stddef.h>
@@ -413,21 +413,6 @@ static esp_loader_error_t sip_run_ram_code(esp_loader_t *loader, const uint32_t 
                             packet, header.len);
 }
 
-static const esp_stub_t *sdio_get_stub(target_chip_t target)
-{
-    extern const esp_stub_t esp_stub_esp32c5;
-    extern const esp_stub_t esp_stub_esp32c6;
-
-    switch (target) {
-    case ESP32C5_CHIP:
-        return &esp_stub_esp32c5;
-    case ESP32C6_CHIP:
-        return &esp_stub_esp32c6;
-    default:
-        return NULL;
-    }
-}
-
 static esp_loader_error_t sdio_read_stub_packet(esp_loader_t *loader, uint8_t *dest,
         size_t max_size, size_t *recv_size)
 {
@@ -473,17 +458,42 @@ static esp_loader_error_t sdio_read_stub_packet(esp_loader_t *loader, uint8_t *d
     return ESP_LOADER_SUCCESS;
 }
 
+static const esp_stub_t *sdio_get_stub(target_chip_t target)
+{
+    switch (target) {
+    case ESP32C5_CHIP:
+        return &esp_stub_esp32c5;
+    case ESP32C6_CHIP:
+        return &esp_stub_esp32c6;
+    default:
+        return NULL;
+    }
+}
+
 static esp_loader_error_t slave_upload_stub(esp_loader_t *loader)
 {
-    loader->_port->ops->start_timer(loader->_port, STUB_DEFAULT_TIMEOUT);
-    RETURN_ON_ERROR(slave_wait_ready(loader));
-
     const esp_stub_t *stub = sdio_get_stub(loader->_target);
     if (stub == NULL) {
         return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
     }
 
-    for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+    if (stub->header.entrypoint == 0 || stub->segments == NULL || stub->segment_count == 0) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    for (size_t seg = 0; seg < stub->segment_count; seg++) {
+        if (stub->segments[seg].size != 0 && stub->segments[seg].data == NULL) {
+            return ESP_LOADER_ERROR_INVALID_PARAM;
+        }
+    }
+
+    loader->_port->ops->start_timer(loader->_port, STUB_DEFAULT_TIMEOUT);
+    RETURN_ON_ERROR(slave_wait_ready(loader));
+
+    for (size_t seg = 0; seg < stub->segment_count; seg++) {
+        if (stub->segments[seg].size == 0) {
+            continue;
+        }
         RETURN_ON_ERROR(sip_upload_ram_segment(loader, stub->segments[seg].addr,
                                                stub->segments[seg].data,
                                                stub->segments[seg].size));
@@ -525,6 +535,7 @@ static esp_loader_error_t sdio_initialize_conn(esp_loader_t *loader, esp_loader_
 
     RETURN_ON_ERROR(slave_detect_chip_internal(loader));
     RETURN_ON_ERROR(slave_init_link(loader));
+
     RETURN_ON_ERROR(slave_upload_stub(loader));
     loader->_proto_ctx.sdio.sip_seq_tx = 0;
     return ESP_LOADER_SUCCESS;

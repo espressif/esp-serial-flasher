@@ -21,6 +21,13 @@ const uint32_t APP_START_ADDRESS = 0x10000;
 
 static esp_loader_t g_loader;
 
+static const esp_stub_t *stub_from_context(esp_loader_t *loader, target_chip_t chip, void *ctx)
+{
+    (void)loader;
+    (void)chip;
+    return static_cast<const esp_stub_t *>(ctx);
+}
+
 
 TEST_CASE( "Can connect " )
 {
@@ -30,6 +37,128 @@ TEST_CASE( "Can connect " )
 
     ESP_ERR_CHECK( esp_loader_connect(&g_loader, &connect_config) );
     REQUIRE( esp_loader_get_target(&g_loader) == ESP32_CHIP );
+}
+
+
+TEST_CASE( "Can reject NULL flash stub provider" )
+{
+    esp_loader_t loader;
+    ESP_ERR_CHECK( esp_loader_init_serial(&loader, &test_tcp_port.port) );
+
+    esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+
+    REQUIRE( esp_loader_connect_with_stub_provider(&loader, &connect_config, nullptr, nullptr)
+             == ESP_LOADER_ERROR_INVALID_PARAM );
+}
+
+
+TEST_CASE( "Can reject BYO flash stub with zero entrypoint" )
+{
+    esp_loader_t loader;
+    ESP_ERR_CHECK( esp_loader_init_serial(&loader, &test_tcp_port.port) );
+
+    const esp_loader_bin_segment_t segment = {};
+    esp_stub_t external_stub = {
+        .segments = &segment,
+        .segment_count = 1,
+    };
+    esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+
+    REQUIRE( esp_loader_connect_with_stub_provider(&loader, &connect_config,
+             stub_from_context, &external_stub)
+             == ESP_LOADER_ERROR_INVALID_PARAM );
+}
+
+
+TEST_CASE( "Can reject BYO flash stub with NULL segments" )
+{
+    esp_loader_t loader;
+    ESP_ERR_CHECK( esp_loader_init_serial(&loader, &test_tcp_port.port) );
+
+    esp_stub_t external_stub = {};
+    external_stub.header.entrypoint = 0x40080000;
+    external_stub.segment_count = 1;
+    esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+
+    REQUIRE( esp_loader_connect_with_stub_provider(&loader, &connect_config,
+             stub_from_context, &external_stub)
+             == ESP_LOADER_ERROR_INVALID_PARAM );
+}
+
+
+TEST_CASE( "Can reject BYO flash stub with no segments" )
+{
+    esp_loader_t loader;
+    ESP_ERR_CHECK( esp_loader_init_serial(&loader, &test_tcp_port.port) );
+
+    const esp_loader_bin_segment_t segment = {};
+    esp_stub_t external_stub = {};
+    external_stub.header.entrypoint = 0x40080000;
+    external_stub.segments = &segment;
+    esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+
+    REQUIRE( esp_loader_connect_with_stub_provider(&loader, &connect_config,
+             stub_from_context, &external_stub)
+             == ESP_LOADER_ERROR_INVALID_PARAM );
+}
+
+
+TEST_CASE( "Can reject BYO flash stub segment with NULL data" )
+{
+    esp_loader_t loader;
+    ESP_ERR_CHECK( esp_loader_init_serial(&loader, &test_tcp_port.port) );
+
+    const uint8_t valid_data[] = { 0, 0, 0, 0 };
+    const esp_loader_bin_segment_t segments[] = {
+        {
+            .addr = 0x40080000,
+            .size = sizeof(valid_data),
+            .data = valid_data,
+        },
+        {
+            .addr = 0x40090000,
+            .size = 4,
+            .data = nullptr,
+        },
+    };
+    esp_stub_t external_stub = {
+        .header = {
+            .entrypoint = 0x40080000,
+        },
+        .segments = segments,
+        .segment_count = sizeof(segments) / sizeof(segments[0]),
+    };
+
+    esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+
+    REQUIRE( esp_loader_connect_with_stub_provider(&loader, &connect_config,
+             stub_from_context, &external_stub)
+             == ESP_LOADER_ERROR_INVALID_PARAM );
+}
+
+
+TEST_CASE( "Can reject BYO flash stub with zero total segment size" )
+{
+    esp_loader_t loader;
+    ESP_ERR_CHECK( esp_loader_init_serial(&loader, &test_tcp_port.port) );
+
+    const esp_loader_bin_segment_t segments[] = {
+        {},
+        {},
+    };
+    esp_stub_t external_stub = {
+        .header = {
+            .entrypoint = 0x40080000,
+        },
+        .segments = segments,
+        .segment_count = sizeof(segments) / sizeof(segments[0]),
+    };
+
+    esp_loader_connect_args_t connect_config = ESP_LOADER_CONNECT_DEFAULT();
+
+    REQUIRE( esp_loader_connect_with_stub_provider(&loader, &connect_config,
+             stub_from_context, &external_stub)
+             == ESP_LOADER_ERROR_INVALID_PARAM );
 }
 
 

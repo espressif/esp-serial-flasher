@@ -4,7 +4,7 @@
 // auto-generated from esp-flasher-stub v1.2.1 — esp32h2.json
 // Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
 
-#include "esp_stubs.h"
+#include "esp_loader.h"
 
 static const uint8_t esp_stub_esp32h2_text[] = {
     0x82, 0x80, 0x01, 0x45, 0x82, 0x80, 0xb7, 0x07, 0x83, 0x40, 0x93, 0x87, 0x07, 0x00, 0x83, 0xc6,
@@ -392,20 +392,23 @@ static const uint8_t esp_stub_esp32h2_data[] = {
     0x3a, 0x03, 0x80, 0x40, 0x3a, 0x03, 0x80, 0x40, 0x3a, 0x03, 0x80, 0x40
 };
 
+static const esp_loader_bin_segment_t esp_stub_esp32h2_segments[] = {
+    {
+        .addr = 0x40800000,
+        .size = sizeof(esp_stub_esp32h2_text),
+        .data = esp_stub_esp32h2_text,
+    },
+    {
+        .addr = 0x40842d68,
+        .size = sizeof(esp_stub_esp32h2_data),
+        .data = esp_stub_esp32h2_data,
+    },
+};
+
 const esp_stub_t esp_stub_esp32h2 = {
     .header = {
         .entrypoint = 0x40800e92,
     },
-    .segments = {
-        {
-            .addr = 0x40800000,
-            .size = sizeof(esp_stub_esp32h2_text),
-            .data = esp_stub_esp32h2_text,
-        },
-        {
-            .addr = 0x40842d68,
-            .size = 204,
-            .data = esp_stub_esp32h2_data,
-        },
-    },
+    .segments = esp_stub_esp32h2_segments,
+    .segment_count = sizeof(esp_stub_esp32h2_segments) / sizeof(esp_stub_esp32h2_segments[0]),
 };

@@ -7,7 +7,6 @@
 #include "protocol.h"
 #include "esp_loader.h"
 #include "esp_loader_protocol.h"
-#include "esp_stubs.h"
 #include "esp_targets.h"
 #include "md5_hash.h"
 #include "slip.h"
@@ -171,41 +170,26 @@ target_chip_t esp_loader_get_target(esp_loader_t *loader)
     return loader->_target;
 }
 
-esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+static esp_loader_error_t loader_upload_stub(esp_loader_t *loader, const esp_stub_t *stub)
 {
-    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_SERIAL) {
-        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    if (stub->header.entrypoint == 0 || stub->segments == NULL || stub->segment_count == 0) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
     }
 
-    loader->_target_flash_size = 0;
-
-    loader->_port->ops->enter_bootloader(loader->_port);
-
-    RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
-
-    RETURN_ON_ERROR(loader_detect_chip(loader));
-
-    const esp_stub_t *stub;
-    if (loader->_target == ESP32P4_CHIP) {
-        esp_loader_target_security_info_t info;
-        bool got_info = (esp_loader_get_security_info(loader, &info) == ESP_LOADER_SUCCESS);
-        if (got_info && info.eco_version >= ESP32P4_ECO_REV3_MIN) {
-            stub = esp_stub[ESP32P4_CHIP];   // ECO5+
-        } else {
-            stub = &esp_stub_esp32p4rev1;    // ECO < 5 or revision unknown
+    bool has_data = false;
+    for (size_t seg = 0; seg < stub->segment_count; seg++) {
+        if (stub->segments[seg].size != 0 && stub->segments[seg].data == NULL) {
+            return ESP_LOADER_ERROR_INVALID_PARAM;
         }
-    } else {
-        stub = esp_stub[loader->_target];
-        if (stub == NULL) {
-            return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
-        }
+        has_data = has_data || stub->segments[seg].size != 0;
     }
-
-    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
+    if (!has_data) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
 
     esp_loader_mem_cfg_t mem_cfg = {0};
 
-    for (uint32_t seg = 0; seg < sizeof(stub->segments) / sizeof(stub->segments[0]); seg++) {
+    for (size_t seg = 0; seg < stub->segment_count; seg++) {
         if (stub->segments[seg].size == 0) {
             continue;
         }
@@ -241,6 +225,37 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
     loader->_stub_running = true;
 
     return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t esp_loader_connect_with_stub_provider(esp_loader_t *loader,
+        esp_loader_connect_args_t *connect_args, esp_loader_stub_provider_t provider, void *ctx)
+{
+    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_SERIAL) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    }
+
+    if (provider == NULL) {
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+
+    loader->_target_flash_size = 0;
+    loader->_spi_attached = false;
+    loader->_stub_running = false;
+
+    loader->_port->ops->enter_bootloader(loader->_port);
+
+    RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
+
+    RETURN_ON_ERROR(loader_detect_chip(loader));
+
+    const esp_stub_t *stub = provider(loader, loader->_target, ctx);
+    if (stub == NULL) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    }
+
+    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
+
+    return loader_upload_stub(loader, stub);
 }
 
 esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
