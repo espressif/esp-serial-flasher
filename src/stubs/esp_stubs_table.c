@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-// auto-generated from esp-flasher-stub v0.8.0
-// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v0.8.0
+// auto-generated from esp-flasher-stub v1.2.1
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
 
 #include "esp_stubs.h"
 
@@ -18,7 +18,8 @@ _Static_assert(ESP32H2_CHIP == 7, "Stub table order matches target_chip_t enumer
 _Static_assert(ESP32C6_CHIP == 8, "Stub table order matches target_chip_t enumeration");
 _Static_assert(ESP32P4_CHIP == 9, "Stub table order matches target_chip_t enumeration");
 _Static_assert(ESP32C61_CHIP == 10, "Stub table order matches target_chip_t enumeration");
-_Static_assert(ESP_MAX_CHIP == 11, "Stub table order matches target_chip_t enumeration");
+_Static_assert(ESP32S31_CHIP == 11, "Stub table order matches target_chip_t enumeration");
+_Static_assert(ESP_MAX_CHIP == 12, "Stub table order matches target_chip_t enumeration");
 #endif
 
 extern const esp_stub_t esp_stub_esp8266;
@@ -32,6 +33,7 @@ extern const esp_stub_t esp_stub_esp32h2;
 extern const esp_stub_t esp_stub_esp32c6;
 extern const esp_stub_t esp_stub_esp32p4;
 extern const esp_stub_t esp_stub_esp32c61;
+extern const esp_stub_t esp_stub_esp32s31;
 
 const esp_stub_t *const esp_stub[ESP_MAX_CHIP] = {
     [ESP8266_CHIP] = &esp_stub_esp8266,
@@ -45,4 +47,5 @@ const esp_stub_t *const esp_stub[ESP_MAX_CHIP] = {
     [ESP32C6_CHIP] = &esp_stub_esp32c6,
     [ESP32P4_CHIP] = &esp_stub_esp32p4,
     [ESP32C61_CHIP] = &esp_stub_esp32c61,
+    [ESP32S31_CHIP] = &esp_stub_esp32s31,
 };

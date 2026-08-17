@@ -32,7 +32,8 @@ static const uint32_t boot_offset[] = {
     [ESP32H2_CHIP] = 0x0,
     [ESP32C6_CHIP] = 0x0,
     [ESP32P4_CHIP] = 0x2000,
-    [ESP32C61_CHIP] = 0x0
+    [ESP32C61_CHIP] = 0x0,
+    [ESP32S31_CHIP] = 0x2000
 };
 
 /* If someone adds a new chip but forgets to update the array, compilation FAILS */
@@ -52,6 +53,7 @@ static const char *target_name[] = {
     [ESP32C6_CHIP] = "ESP32-C6",
     [ESP32P4_CHIP] = "ESP32-P4",
     [ESP32C61_CHIP] = "ESP32-C61",
+    [ESP32S31_CHIP] = "ESP32-S31",
     [ESP_UNKNOWN_CHIP] = "Unknown"
 };
 
