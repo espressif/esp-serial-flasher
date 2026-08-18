@@ -310,6 +310,7 @@ void esp_loader_deinit(esp_loader_t *loader);
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_TARGET Connected target is invalid
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
 esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args);
