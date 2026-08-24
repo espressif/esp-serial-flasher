@@ -887,7 +887,7 @@ esp_loader_error_t esp_loader_flash_read(esp_loader_t *loader, uint8_t *dest, ui
 esp_loader_error_t esp_loader_mem_start(esp_loader_t *loader, esp_loader_mem_cfg_t *cfg)
 {
 
-    uint32_t blocks_to_write = ROUNDUP(cfg->size, cfg->block_size);
+    uint32_t blocks_to_write = (cfg->size + cfg->block_size - 1) / cfg->block_size;
 
     loader->_port->ops->start_timer(loader->_port, timeout_per_mb(cfg->size, LOAD_RAM_TIMEOUT_PER_MB));
 
@@ -906,7 +906,9 @@ esp_loader_error_t esp_loader_mem_write(esp_loader_t *loader, esp_loader_mem_cfg
 
     unsigned int attempt = 0;
     esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;
+    uint32_t saved_seq = cfg->_state._sequence_number;
     do {
+        cfg->_state._sequence_number = saved_seq;
         loader->_port->ops->start_timer(loader->_port, timeout_per_mb(size, LOAD_RAM_TIMEOUT_PER_MB));
         if (loader->_protocol->mem_data_cmd) {
             result = loader->_protocol->mem_data_cmd(loader, data, size);
