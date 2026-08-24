@@ -32,7 +32,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Werror -O3)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 14)
 
-target_sources(${PROJECT_NAME} PRIVATE test_tcp_port.cpp qemu_test.cpp)
+target_sources(${PROJECT_NAME} PRIVATE test_tcp_port.cpp qemu_test.cpp connect_mode_test.cpp)
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	SERIAL_FLASHER_LOG_LEVEL=4
