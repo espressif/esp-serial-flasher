@@ -24,7 +24,7 @@ extern "C" {
 #define MD5_SIZE_STUB 16
 
 // Maximum block sized for RAM and Flash writes, respectively.
-#define ESP_RAM_BLOCK 0x1800
+#define ESP_RAM_BLOCK 0x800
 
 #ifndef MAX
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
