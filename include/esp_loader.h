@@ -90,17 +90,27 @@ typedef struct {
 } esp_loader_target_security_info_t;
 
 /**
+ * @brief Connection reset strategy
+ */
+typedef enum {
+    ESP_LOADER_CONNECT_RESET = 0, /*!< Enter bootloader before connecting. */
+    ESP_LOADER_CONNECT_NO_RESET,  /*!< Connect without resetting the target. */
+} esp_loader_connect_mode_t;
+
+/**
  * @brief Connection arguments
  */
 typedef struct {
     uint32_t sync_timeout;  /*!< Maximum time to wait for response from serial interface. */
     int32_t trials;         /*!< Number of trials to connect to target. If greater than 1,
                                100 millisecond delay is inserted after each try. */
+    esp_loader_connect_mode_t mode; /*!< Reset strategy used while connecting. */
 } esp_loader_connect_args_t;
 
 #define ESP_LOADER_CONNECT_DEFAULT() { \
   .sync_timeout = 100, \
   .trials = 10, \
+  .mode = ESP_LOADER_CONNECT_RESET, \
 }
 
 /**
@@ -268,7 +278,7 @@ void esp_loader_deinit(esp_loader_t *loader);
   * @brief Connects to the target
   *
   * @param loader[in]       Pointer to initialized loader context.
-  * @param connect_args[in] Timing parameters to be used for connecting to target.
+  * @param connect_args[in] Timing and reset strategy to be used for connecting to target.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
@@ -295,7 +305,7 @@ target_chip_t esp_loader_get_target(esp_loader_t *loader);
   * @note  Only supported on the serial (SLIP) interface.
   *
   * @param loader[in]       Pointer to initialized loader context.
-  * @param connect_args[in] Timing parameters to be used for connecting to target.
+  * @param connect_args[in] Timing and reset strategy to be used for connecting to target.
   *
   * @return
   *     - ESP_LOADER_SUCCESS Success
@@ -312,7 +322,7 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
   * @note  Not supported on ESP8266 and ESP32.
   *
   * @param loader[in]       Pointer to initialized loader context.
-  * @param connect_args[in] Timing parameters to be used for connecting to target.
+  * @param connect_args[in] Timing and reset strategy to be used for connecting to target.
   * @param flash_size[in]   Flash size of the target chip in bytes.
   *
   * @return

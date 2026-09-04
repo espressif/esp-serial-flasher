@@ -52,7 +52,6 @@ static const char *target_chip_name(target_chip_t chip)
 #define ERASE_FLASH_TIMEOUT_PER_MB 10000
 
 #define INITIAL_UART_BAUDRATE 115200
-
 #define FLASH_SECTOR_SIZE 4096
 #define ROM_FLASH_BLOCK_SIZE 1024
 
@@ -153,37 +152,42 @@ static esp_loader_error_t loader_ensure_spi_attached(esp_loader_t *loader)
     return ESP_LOADER_SUCCESS;
 }
 
-esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+static void loader_clear_connection_state(esp_loader_t *loader)
 {
-    loader->_port->ops->enter_bootloader(loader->_port);
-
-    RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
-
-    RETURN_ON_ERROR(loader_detect_chip(loader));
-
-    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
-
-    return ESP_LOADER_SUCCESS;
-}
-
-target_chip_t esp_loader_get_target(esp_loader_t *loader)
-{
-    return loader->_target;
-}
-
-esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
-{
-    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_SERIAL) {
-        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
-    }
-
+    loader->_target = ESP_UNKNOWN_CHIP;
     loader->_target_flash_size = 0;
+    loader->_spi_attached = false;
+    loader->_stub_running = false;
+}
 
-    loader->_port->ops->enter_bootloader(loader->_port);
-
+static esp_loader_error_t loader_sync_and_detect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+{
     RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
+    return loader_detect_chip(loader);
+}
 
-    RETURN_ON_ERROR(loader_detect_chip(loader));
+static esp_loader_error_t loader_connect_target(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+{
+    loader_clear_connection_state(loader);
+
+    switch (connect_args->mode) {
+    case ESP_LOADER_CONNECT_RESET:
+        loader->_port->ops->enter_bootloader(loader->_port);
+        return loader_sync_and_detect(loader, connect_args);
+
+    case ESP_LOADER_CONNECT_NO_RESET:
+        return loader_sync_and_detect(loader, connect_args);
+
+    default:
+        LOADER_LOGE(loader, "Invalid connect mode: %d", connect_args->mode);
+        return ESP_LOADER_ERROR_INVALID_PARAM;
+    }
+}
+
+static esp_loader_error_t loader_load_stub_internal(esp_loader_t *loader)
+{
+    loader->_target_flash_size = 0;
+    loader->_stub_running = false;
 
     const esp_stub_t *stub;
     if (loader->_target == ESP32P4_CHIP) {
@@ -200,8 +204,6 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
             return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
         }
     }
-
-    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
 
     esp_loader_mem_cfg_t mem_cfg = {0};
 
@@ -239,8 +241,33 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
     }
 
     loader->_stub_running = true;
+    return ESP_LOADER_SUCCESS;
+}
+
+esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+{
+    RETURN_ON_ERROR(loader_connect_target(loader, connect_args));
+
+    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
 
     return ESP_LOADER_SUCCESS;
+}
+
+target_chip_t esp_loader_get_target(esp_loader_t *loader)
+{
+    return loader->_target;
+}
+
+esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args)
+{
+    if (loader->_protocol_type != ESP_LOADER_PROTOCOL_SERIAL) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
+    }
+
+    RETURN_ON_ERROR(loader_connect_target(loader, connect_args));
+
+    LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
+    return loader_load_stub_internal(loader);
 }
 
 esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
@@ -251,13 +278,8 @@ esp_loader_error_t esp_loader_connect_secure_download_mode(esp_loader_t *loader,
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
     }
 
+    RETURN_ON_ERROR(loader_connect_target(loader, connect_args));
     loader->_target_flash_size = flash_size;
-
-    loader->_port->ops->enter_bootloader(loader->_port);
-
-    RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
-
-    RETURN_ON_ERROR(loader_detect_chip(loader));
 
     if (loader->_target == ESP8266_CHIP || loader->_target == ESP32_CHIP) {
         return ESP_LOADER_ERROR_UNSUPPORTED_FUNC;
@@ -887,7 +909,7 @@ esp_loader_error_t esp_loader_flash_read(esp_loader_t *loader, uint8_t *dest, ui
 esp_loader_error_t esp_loader_mem_start(esp_loader_t *loader, esp_loader_mem_cfg_t *cfg)
 {
 
-    uint32_t blocks_to_write = ROUNDUP(cfg->size, cfg->block_size);
+    uint32_t blocks_to_write = (cfg->size + cfg->block_size - 1) / cfg->block_size;
 
     loader->_port->ops->start_timer(loader->_port, timeout_per_mb(cfg->size, LOAD_RAM_TIMEOUT_PER_MB));
 
@@ -906,7 +928,9 @@ esp_loader_error_t esp_loader_mem_write(esp_loader_t *loader, esp_loader_mem_cfg
 
     unsigned int attempt = 0;
     esp_loader_error_t result = ESP_LOADER_ERROR_FAIL;
+    uint32_t saved_seq = cfg->_state._sequence_number;
     do {
+        cfg->_state._sequence_number = saved_seq;
         loader->_port->ops->start_timer(loader->_port, timeout_per_mb(size, LOAD_RAM_TIMEOUT_PER_MB));
         if (loader->_protocol->mem_data_cmd) {
             result = loader->_protocol->mem_data_cmd(loader, data, size);
