@@ -103,6 +103,18 @@ check_stub_source_correctness:
         .
     - git diff -I 'SPDX-FileCopyrightText' --exit-code  # ignore annual copyright year updates
 
+check_efuse_tables_correctness:
+  # Regenerate the eFuse tables from ESP-IDF master and fail if they differ from
+  # what is committed
+  stage: pre_check
+  image: espressif/idf:latest
+  tags:
+    - internet
+  script:
+    - python3 tools/copy_efuse_headers.py "$IDF_PATH"
+    - git add -AN include/efuse src/efuse  # so newly generated files show up in the diff
+    - git diff -I 'SPDX-FileCopyrightText' --exit-code  # ignore annual copyright year updates
+
 .build_host_template:
   stage: build_host_apps
   tags:
@@ -288,6 +300,22 @@ test_host_qemu:
   script:
     - cd $CI_PROJECT_DIR/test
     - ./run_qemu_test.sh
+
+test_efuse_host:
+  # Host unit tests for the eFuse layer (test/efuse): pure C over an in-memory
+  # fake, so no hardware, no ESP-IDF and no Python.
+  stage: test
+  image: debian:latest
+  tags:
+    - internet
+  needs: []
+  script:
+    - apt-get update
+    - apt-get install -y build-essential cmake
+    - cmake -S test/efuse -B build_efuse_test
+    - cmake --build build_efuse_test -j$(nproc)
+    - ctest --test-dir build_efuse_test --output-on-failure
+
 .test_template:
   stage: test
   image: debian:latest

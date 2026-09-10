@@ -441,6 +441,175 @@ static esp_loader_error_t spi_config_unsupported(esp_loader_t *loader, uint32_t 
     return ESP_LOADER_SUCCESS;
 }
 
+/* Chip revision (wafer version) reads. The word indexes and bit positions below follow
+ * esptool's per-target get_major_chip_version() / get_minor_chip_version(). Each case
+ * reads its words once; nothing here is shared because almost nothing is common. */
+
+// Offset of the eFuse block holding the wafer version fields, relative to efuse_base
+#define EFUSE_BLOCK1_OFFSET 0x44
+#define EFUSE_BLOCK2_OFFSET 0x5C
+#define ESP32C2_EFUSE_BLOCK2_OFFSET 0x40
+#define ESP32S31_EFUSE_BLOCK1_OFFSET 0x50
+
+/* The ESP32's third major version bit is not an eFuse but a bit of the SYSCON date
+ * register, and the three bits are cumulative rather than a plain number. */
+#define ESP32_APB_CTL_DATE_REG 0x3ff6607c
+
+static esp_loader_error_t read_efuse_word(esp_loader_t *loader, uint32_t block, uint32_t word,
+        uint32_t *value)
+{
+    return esp_loader_read_register(loader, efuse_word_addr(block, word), value);
+}
+
+esp_loader_error_t loader_read_chip_revision(esp_loader_t *loader, const target_chip_t target_code,
+        uint16_t *revision)
+{
+    if (target_code >= ESP_MAX_CHIP) {
+        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;
+    }
+
+    const uint32_t base = esp_target[target_code].efuse_base;
+    const uint32_t blk1 = base + EFUSE_BLOCK1_OFFSET;
+    uint32_t major = 0;
+    uint32_t minor = 0;
+
+    switch (target_code) {
+
+    case ESP32_CHIP: {
+        /* BLOCK0 words, so no block offset, plus the SYSCON bit. Only the four
+         * combinations below name a revision; anything else is v0. */
+        uint32_t word3, word5, apb_ctl_date;
+        RETURN_ON_ERROR( read_efuse_word(loader, base, 3, &word3) );
+        RETURN_ON_ERROR( read_efuse_word(loader, base, 5, &word5) );
+        RETURN_ON_ERROR( esp_loader_read_register(loader, ESP32_APB_CTL_DATE_REG, &apb_ctl_date) );
+
+        const uint32_t combined = ((word3 >> 15) & 0x1)
+                                  | (((word5 >> 20) & 0x1) << 1)
+                                  | (((apb_ctl_date >> 31) & 0x1) << 2);
+        switch (combined) {
+        case 1:  major = 1; break;
+        case 3:  major = 2; break;
+        case 7:  major = 3; break;
+        default: major = 0; break;
+        }
+        minor = (word5 >> 24) & 0x3;
+        break;
+    }
+
+    case ESP32S2_CHIP: {
+        uint32_t word3, word4;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 3, &word3) );
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 4, &word4) );
+
+        major = (word3 >> 18) & 0x3;
+        minor = (((word3 >> 20) & 0x1) << 3) | ((word4 >> 4) & 0x7);
+        break;
+    }
+
+    case ESP32C3_CHIP: {
+        uint32_t word3, word5;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 3, &word3) );
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 5, &word5) );
+
+        major = (word5 >> 24) & 0x3;
+        minor = (((word5 >> 23) & 0x1) << 3) | ((word3 >> 18) & 0x7);
+        break;
+    }
+
+    case ESP32S3_CHIP: {
+        /* Same fields as the ESP32-C3, but on silicon carrying block version v1.1 the
+         * major version bits were allocated to another purpose. Only chip v0.0 ever has
+         * that block version, so BLK_VERSION decides whether the bits mean anything. */
+        uint32_t word3, word5;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 3, &word3) );
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 5, &word5) );
+
+        major = (word5 >> 24) & 0x3;
+        minor = (((word5 >> 23) & 0x1) << 3) | ((word3 >> 18) & 0x7);
+
+        if ((minor & 0x7) == 0) {
+            uint32_t blk2_word4;
+            RETURN_ON_ERROR( read_efuse_word(loader, base + EFUSE_BLOCK2_OFFSET, 4, &blk2_word4) );
+
+            const uint32_t blk_version_major = blk2_word4 & 0x3;
+            const uint32_t blk_version_minor = (word3 >> 24) & 0x7;
+            if (blk_version_major == 1 && blk_version_minor == 1) {
+                major = 0;
+                minor = 0;
+            }
+        }
+        break;
+    }
+
+    case ESP32C2_CHIP: {
+        /* The only chip whose wafer version sits in BLOCK2 */
+        uint32_t word1;
+        RETURN_ON_ERROR( read_efuse_word(loader, base + ESP32C2_EFUSE_BLOCK2_OFFSET, 1, &word1) );
+
+        major = (word1 >> 20) & 0x3;
+        minor = (word1 >> 16) & 0xF;
+        break;
+    }
+
+    case ESP32H2_CHIP: {
+        uint32_t word3;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 3, &word3) );
+
+        major = (word3 >> 21) & 0x3;
+        minor = (word3 >> 18) & 0x7;
+        break;
+    }
+
+    case ESP32C6_CHIP: {
+        uint32_t word3;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 3, &word3) );
+
+        major = (word3 >> 22) & 0x3;
+        minor = (word3 >> 18) & 0xF;
+        break;
+    }
+
+    case ESP32C5_CHIP:
+    case ESP32C61_CHIP: {
+        uint32_t word2;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 2, &word2) );
+
+        major = (word2 >> 4) & 0x3;
+        minor = (word2 >> 0) & 0xF;
+        break;
+    }
+
+    case ESP32P4_CHIP: {
+        /* The major version is 3 bits wide here, and its top bit sits apart from the
+         * other two — that third bit is what makes v3.0 representable. */
+        uint32_t word2;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 2, &word2) );
+
+        major = (((word2 >> 23) & 0x1) << 2) | ((word2 >> 4) & 0x3);
+        minor = (word2 >> 0) & 0xF;
+        break;
+    }
+
+    case ESP32S31_CHIP: {
+        /* Same bit layout as the ESP32-C6, but the only chip whose BLOCK1 is not
+         * at EFUSE_BLOCK1_OFFSET, so it cannot share that case. */
+        uint32_t word3;
+        RETURN_ON_ERROR( read_efuse_word(loader, base + ESP32S31_EFUSE_BLOCK1_OFFSET, 3, &word3) );
+
+        major = (word3 >> 22) & 0x3;
+        minor = (word3 >> 18) & 0xF;
+        break;
+    }
+
+    case ESP8266_CHIP:
+    default:
+        return ESP_LOADER_ERROR_UNSUPPORTED_CHIP;   // No chip revision on this target
+    }
+
+    *revision = (uint16_t)(major * 100 + minor);
+    return ESP_LOADER_SUCCESS;
+}
+
 bool encryption_in_begin_flash_cmd(const target_chip_t target)
 {
     return esp_target[target].encryption_in_begin_flash_cmd;
@@ -455,4 +624,44 @@ target_chip_t target_from_chip_id(const uint32_t chip_id)
     }
 
     return ESP_UNKNOWN_CHIP;
+}
+
+uint32_t esp_targets_get_efuse_base(target_chip_t target)
+{
+    if (target >= ESP_MAX_CHIP) {
+        return 0;
+    }
+    return esp_target[target].efuse_base;
+}
+
+esp_loader_error_t get_crystal_frequency_esp32c2(esp_loader_t *loader, uint32_t *frequency)
+{
+    /*
+    There is a bug in the ESP32-C2 ROM that causes it to think it has a 40 MHz crystal,
+    even though it might be 26 MHz. That is why we need to check frequency and adjust
+    the transmission rate accordingly.
+
+    The logic here is:
+    - We know that our baud rate and the target's UART baud rate are roughly the same,
+    or we couldn't communicate
+    - We can read the UART clock divider register to know how the ESP derives this
+    from the APB bus frequency
+    - Multiplying these two together gives us the bus frequency which is either
+    the crystal frequency or multiple of the crystal frequency (for some chips).
+    */
+
+    const uint32_t ESP32C2_CRYSTAL_26MHZ = 26;
+    const uint32_t ESP32C2_CRYSTAL_40MHZ = 40;
+    const uint32_t CRYSTAL_FREQ_THRESHOLD = 33;
+    const uint32_t UART_CLK_DIV_REG = 0x60000014;
+    const uint32_t UART_CLK_DIV_REG_MASK = 0xFFFFF;
+
+    *frequency = 0;
+    uint32_t est_freq;
+    RETURN_ON_ERROR(esp_loader_read_register(loader, UART_CLK_DIV_REG, &est_freq));
+    est_freq &= UART_CLK_DIV_REG_MASK;
+    est_freq = (115200u * est_freq) / 1000000U;
+
+    *frequency = (est_freq > CRYSTAL_FREQ_THRESHOLD) ? ESP32C2_CRYSTAL_40MHZ : ESP32C2_CRYSTAL_26MHZ;
+    return ESP_LOADER_SUCCESS;
 }

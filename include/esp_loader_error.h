@@ -23,7 +23,13 @@ typedef enum {
     ESP_LOADER_ERROR_INVALID_TARGET,   /*!< Connected target is invalid */
     ESP_LOADER_ERROR_UNSUPPORTED_CHIP, /*!< Attached chip is not supported */
     ESP_LOADER_ERROR_UNSUPPORTED_FUNC, /*!< Function is not supported on attached target */
-    ESP_LOADER_ERROR_INVALID_RESPONSE  /*!< Internal error */
+    ESP_LOADER_ERROR_INVALID_RESPONSE, /*!< Internal error */
+    ESP_LOADER_ERROR_EFUSE_BLOCK_IN_USE, /*!< eFuse block cannot receive the write: already
+                                              written with different content, write/read
+                                              protected, or its KEY_PURPOSE is already set */
+    ESP_LOADER_ERROR_EFUSE_BURN_FAILED /*!< eFuse programming was attempted but the chip
+                                            reported an error or failed read-back
+                                            verification; fuses may be partially burned */
 } esp_loader_error_t;
 
 #ifdef __cplusplus

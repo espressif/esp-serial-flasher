@@ -369,6 +369,42 @@ static test_result_t test_register_read_write(void)
     return result;
 }
 
+static test_result_t test_chip_revision(void)
+{
+    esp_loader_t loader;
+    linux_port_t port = {
+        .port.ops  = &g_uart_ops,
+        .device    = g_port1,
+        .baudrate  = DEFAULT_BAUD_RATE,
+        .gpio_mode = LINUX_GPIO_DTR_RTS,
+    };
+
+    CHECK_EQ(esp_loader_init_serial(&loader, &port.port), ESP_LOADER_SUCCESS,
+             "Cannot open %s", g_port1);
+
+    esp_loader_connect_args_t connect_cfg = ESP_LOADER_CONNECT_DEFAULT();
+    CHECK_EQ(esp_loader_connect(&loader, &connect_cfg), ESP_LOADER_SUCCESS,
+             "Cannot connect on %s", g_port1);
+
+    uint16_t revision = 0;
+    uint16_t revision_again = 0;
+    CHECK_EQ(esp_loader_get_chip_revision(&loader, &revision), ESP_LOADER_SUCCESS);
+    CHECK_EQ(esp_loader_get_chip_revision(&loader, &revision_again), ESP_LOADER_SUCCESS);
+    CHECK_EQ(revision_again, revision, "Two reads of the same chip disagree");
+
+    /* Encoded as major * 100 + minor. The bounds are the highest major and minor
+     * of any supported target, not this chip's limits. */
+    const uint16_t major = revision / 100u;
+    const uint16_t minor = revision % 100u;
+    CHECK(major <= 7u, "Major %" PRIu16 " is above the highest major of any target", major);
+    CHECK(minor <= 15u, "Minor %" PRIu16 " is above the highest minor of any target", minor);
+
+    TEST_PRINT_MSG("Chip revision v%" PRIu16 ".%" PRIu16, major, minor);
+
+    esp_loader_deinit(&loader);
+    return TEST_PASS;
+}
+
 static test_result_t test_parallel_flashing(void)
 {
     if (!g_port2) {
@@ -401,6 +437,7 @@ static test_result_t test_parallel_flashing(void)
 
 static const test_case_t test_cases[] = {
     { "register_read_write", test_register_read_write },
+    { "chip_revision", test_chip_revision },
     { "external_flash_stub", test_external_flash_stub },
     { "log_levels", test_log_levels },
     { "log_hex", test_log_hex },
