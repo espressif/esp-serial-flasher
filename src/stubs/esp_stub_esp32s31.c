@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+// SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 // auto-generated from esp-flasher-stub v1.2.1 — esp32s31.json
 // Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
 
-#include "esp_stubs.h"
+#include "esp_loader.h"
 
 static const uint8_t esp_stub_esp32s31_text[] = {
     0xb7, 0xa7, 0x00, 0x2f, 0x93, 0x87, 0x07, 0x00, 0x83, 0xc6, 0x07, 0x00, 0x11, 0x66, 0x93, 0x05,
@@ -472,20 +472,23 @@ static const uint8_t esp_stub_esp32s31_data[] = {
     0x34, 0x13, 0x00, 0x2f, 0x34, 0x13, 0x00, 0x2f, 0x34, 0x13, 0x00, 0x2f
 };
 
+static const esp_loader_bin_segment_t esp_stub_esp32s31_segments[] = {
+    {
+        .addr = 0x2f001000,
+        .size = sizeof(esp_stub_esp32s31_text),
+        .data = esp_stub_esp32s31_text,
+    },
+    {
+        .addr = 0x2f01cdb8,
+        .size = sizeof(esp_stub_esp32s31_data),
+        .data = esp_stub_esp32s31_data,
+    },
+};
+
 const esp_stub_t esp_stub_esp32s31 = {
     .header = {
         .entrypoint = 0x2f00221e,
     },
-    .segments = {
-        {
-            .addr = 0x2f001000,
-            .size = sizeof(esp_stub_esp32s31_text),
-            .data = esp_stub_esp32s31_text,
-        },
-        {
-            .addr = 0x2f01cdb8,
-            .size = 204,
-            .data = esp_stub_esp32s31_data,
-        },
-    },
+    .segments = esp_stub_esp32s31_segments,
+    .segment_count = sizeof(esp_stub_esp32s31_segments) / sizeof(esp_stub_esp32s31_segments[0]),
 };

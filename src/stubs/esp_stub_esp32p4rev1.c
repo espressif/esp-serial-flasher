@@ -4,7 +4,7 @@
 // auto-generated from esp-flasher-stub v1.2.1 — esp32p4-rev1.json
 // Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
 
-#include "esp_stubs.h"
+#include "esp_loader.h"
 
 static const uint8_t esp_stub_esp32p4rev1_text[] = {
     0xb7, 0x07, 0xf5, 0x4f, 0x93, 0x87, 0x07, 0x00, 0x83, 0xc6, 0x07, 0x00, 0x11, 0x66, 0x93, 0x05,
@@ -535,20 +535,23 @@ static const uint8_t esp_stub_esp32p4rev1_data[] = {
     0x34, 0x03, 0xf1, 0x4f, 0x34, 0x03, 0xf1, 0x4f, 0x34, 0x03, 0xf1, 0x4f
 };
 
+static const esp_loader_bin_segment_t esp_stub_esp32p4rev1_segments[] = {
+    {
+        .addr = 0x4ff10000,
+        .size = sizeof(esp_stub_esp32p4rev1_text),
+        .data = esp_stub_esp32p4rev1_text,
+    },
+    {
+        .addr = 0x4ff62db8,
+        .size = sizeof(esp_stub_esp32p4rev1_data),
+        .data = esp_stub_esp32p4rev1_data,
+    },
+};
+
 const esp_stub_t esp_stub_esp32p4rev1 = {
     .header = {
         .entrypoint = 0x4ff11446,
     },
-    .segments = {
-        {
-            .addr = 0x4ff10000,
-            .size = sizeof(esp_stub_esp32p4rev1_text),
-            .data = esp_stub_esp32p4rev1_text,
-        },
-        {
-            .addr = 0x4ff62db8,
-            .size = 204,
-            .data = esp_stub_esp32p4rev1_data,
-        },
-    },
+    .segments = esp_stub_esp32p4rev1_segments,
+    .segment_count = sizeof(esp_stub_esp32p4rev1_segments) / sizeof(esp_stub_esp32p4rev1_segments[0]),
 };

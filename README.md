@@ -204,11 +204,13 @@ For complete configuration reference, see [Configuration Documentation](docs/con
 
 The library bundles pre-built stub binaries for all supported chips directly in the host firmware. The table below shows the approximate flash rodata overhead from those stubs.
 
-| Connection mode                                    | Flash overhead | How                                                                      |
-| :------------------------------------------------- | :------------: | :----------------------------------------------------------------------- |
-| ROM bootloader only (`esp_loader_connect()`)       |     ~0 KB      | Stubs stripped by linker GC — none of the stub binary data is referenced |
-| With stub (`esp_loader_connect_with_stub()`)       |  **+~87 KB**   | All 11 per-chip stub binaries are pulled into flash rodata               |
-| SDIO interface (`CONFIG_SERIAL_FLASHER_PORT_SDIO`) |  **+~20 KB**   | Only SDIO-supported esp-flasher-stub binaries are linked                 |
+| Connection mode                                      | Flash overhead | How                                                                                |
+| :--------------------------------------------------- | :------------: | :--------------------------------------------------------------------------------- |
+| ROM bootloader only (`esp_loader_connect()`)         |     ~0 KB      | No bundled stub symbols are referenced                                             |
+| Bundled stub (`esp_loader_connect_with_stub()`)      |  **+~87 KB**   | The bundled provider references every supported per-chip stub                      |
+| Provider returning one bundled stub                  |   ~6–12 KiB    | Only the selected `esp_stub_<chip>` object is referenced; size depends on the chip |
+| Provider loading a custom stub from external storage |     ~0 KB      | The provider entry point references no bundled stub symbols                        |
+| SDIO interface                                       |  **+~20 KB**   | SDIO references the C5 and C6 stubs directly                                       |
 
 > [!NOTE]
 > SDIO uses the same [esp-flasher-stub](https://github.com/espressif/esp-flasher-stub) command implementation as UART/USB stub mode. The SDIO transport handles packet exchange over the SDIO slave window, while command handling stays shared with the standard stub.
@@ -217,8 +219,26 @@ The library bundles pre-built stub binaries for all supported chips directly in 
 
 When using ESP-IDF or Zephyr, stub data is automatically removed by the linker's dead-code elimination (`--gc-sections`) unless actively referenced:
 
-- **Not using stubs at all** — call only `esp_loader_connect()` and never `esp_loader_connect_with_stub()`. The entire ~87 KB of stub rodata is stripped automatically; no extra configuration is needed.
-- **SDIO targets** — only the esp-flasher-stub objects referenced by the SDIO target selection code are linked. Leave `CONFIG_SERIAL_FLASHER_PORT_SDIO` disabled for non-SDIO builds.
+- **Not using stubs at all** — call only `esp_loader_connect()` and never `esp_loader_connect_with_stub()`. The bundled provider lives in a separate object, so a static-library link does not pull it or the stub data into the application.
+- **One bundled stub** — call `esp_loader_connect_with_stub_provider()` with a provider that returns the required public `esp_stub_<chip>` descriptor. Linker garbage collection can then retain only that chip's stub object.
+- **External stub from external storage** — call `esp_loader_connect_with_stub_provider()` with a provider that loads and returns the stub for the detected chip. Because this API references no bundled stub symbols, the built-in stub data is not linked.
+- **SDIO targets** — SDIO currently uploads a bundled C5 or C6 stub during connection. Leave `CONFIG_SERIAL_FLASHER_PORT_SDIO` disabled for non-SDIO builds.
+
+For example, a provider can select one bundled stub without pulling in the others:
+
+```c
+#include "esp_loader_stubs.h"
+
+static const esp_stub_t *esp32s3_stub(esp_loader_t *loader, target_chip_t chip, void *ctx)
+{
+    (void)loader;
+    (void)ctx;
+    return chip == ESP32S3_CHIP ? &esp_stub_esp32s3 : NULL;
+}
+
+esp_loader_connect_args_t args = ESP_LOADER_CONNECT_DEFAULT();
+esp_loader_connect_with_stub_provider(&loader, &args, esp32s3_stub, NULL);
+```
 
 For plain CMake builds with linker GC disabled (e.g. static libraries without `--gc-sections`), or when targeting a host where every byte counts, you can exclude the stub sources at the CMake level by removing the stub `.c` files from the sources list when integrating the library as a subdirectory or submodule.
 

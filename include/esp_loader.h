@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_loader_error.h"
@@ -73,6 +74,24 @@ typedef struct {
     uint32_t size;
     const uint8_t *data;
 } esp_loader_bin_segment_t;
+
+/**
+ * @brief Flasher stub binary descriptor.
+ *
+ * Describes the code and data segments of a flasher stub. The built-in stubs
+ * bundled with this library use this type. An application can construct its own
+ * descriptor from a stub loaded at runtime, e.g. from external storage, and
+ * return it from an @c esp_loader_stub_provider_t callback.
+ *
+ * @note  The segment array and its data pointers must remain valid until the
+ *        connection call that invoked the provider returns. At least one
+ *        segment is required.
+ */
+typedef struct {
+    esp_loader_bin_header_t header;                /*!< Stub binary header; only the entry point is used */
+    const esp_loader_bin_segment_t *segments;      /*!< Stub code and data segments */
+    size_t segment_count;                          /*!< Number of entries in @c segments */
+} esp_stub_t;
 
 typedef struct {
     target_chip_t target_chip;
@@ -196,6 +215,24 @@ typedef struct esp_loader {
 } esp_loader_t;
 
 /**
+  * @brief Selects the flasher stub to upload for the detected chip.
+  *
+  * The callback runs after the target has been detected. It may return a
+  * bundled stub, construct or load a custom stub, or return NULL to reject the
+  * attached chip. The returned descriptor and its segment data must remain
+  * valid until the connection call that invoked the provider returns.
+  *
+  * @param loader[in] Pointer to the initialized loader context.
+  * @param chip[in]   Detected target chip.
+  * @param ctx[in]    Caller-owned provider context.
+  *
+  * @return Stub descriptor to upload, or NULL if no stub is available for the
+  *         detected chip.
+  */
+typedef const esp_stub_t *(*esp_loader_stub_provider_t)(esp_loader_t *loader,
+        target_chip_t chip, void *ctx);
+
+/**
   * @brief Initialize the loader context for the serial (SLIP) protocol.
   *
   * Use with any byte-stream port: UART (@c esp32_uart_ops), USB CDC-ACM
@@ -273,6 +310,7 @@ void esp_loader_deinit(esp_loader_t *loader);
   * @return
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_TARGET Connected target is invalid
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
   */
 esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_args_t *connect_args);
@@ -280,8 +318,8 @@ esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_a
 /**
   * @brief   Returns attached target chip.
   *
-  * @warning This function can only be called after connection with target
-  *          has been successfully established by calling esp_loader_connect().
+  * @warning This function can only be called after a connection with the
+  *          target has been successfully established.
   *
   * @param loader[in] Pointer to initialized loader context.
   *
@@ -290,7 +328,29 @@ esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_a
 target_chip_t esp_loader_get_target(esp_loader_t *loader);
 
 /**
-  * @brief Connects to the target while using the flasher stub
+  * @brief Connects to the target using a caller-selected flasher stub.
+  *
+  * @note  Only supported on the serial (SLIP) interface.
+  *
+  * @param loader[in]       Pointer to initialized loader context.
+  * @param connect_args[in] Timing parameters to be used for connecting to target.
+  * @param provider[in]     Callback that selects or loads the stub after chip detection.
+  * @param ctx[in]          Opaque caller context passed to @p provider.
+  *
+  * @return
+  *     - ESP_LOADER_SUCCESS Success
+  *     - ESP_LOADER_ERROR_TIMEOUT Timeout
+  *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid provider or stub configuration
+  *     - ESP_LOADER_ERROR_INVALID_TARGET Connected target is invalid
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP Provider has no stub for the attached chip
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
+  */
+esp_loader_error_t esp_loader_connect_with_stub_provider(esp_loader_t *loader,
+        esp_loader_connect_args_t *connect_args, esp_loader_stub_provider_t provider, void *ctx);
+
+/**
+  * @brief Connects to the target using the bundled flasher stub
   *
   * @note  Only supported on the serial (SLIP) interface.
   *
@@ -301,6 +361,9 @@ target_chip_t esp_loader_get_target(esp_loader_t *loader);
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_INVALID_PARAM Invalid stub configuration
+  *     - ESP_LOADER_ERROR_INVALID_TARGET Connected target is invalid
+  *     - ESP_LOADER_ERROR_UNSUPPORTED_CHIP Attached chip is not supported
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   */
 esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader_connect_args_t *connect_args);
@@ -319,6 +382,7 @@ esp_loader_error_t esp_loader_connect_with_stub(esp_loader_t *loader, esp_loader
   *     - ESP_LOADER_SUCCESS Success
   *     - ESP_LOADER_ERROR_TIMEOUT Timeout
   *     - ESP_LOADER_ERROR_INVALID_RESPONSE Internal error
+  *     - ESP_LOADER_ERROR_INVALID_TARGET Connected target is invalid
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Not supported by the protocol
   *     - ESP_LOADER_ERROR_UNSUPPORTED_FUNC Chip does not support secure download mode
   */
@@ -592,8 +656,8 @@ esp_loader_error_t esp_loader_read_register(esp_loader_t *loader, uint32_t addre
   * @brief Change host and target transmission rate.
   *
   * Sends a change-baud command to the ROM bootloader or flasher stub, then updates
-  * the host port via @c change_transmission_rate. Works after @c esp_loader_connect()
-  * or @c esp_loader_connect_with_stub().
+  * the host port via @c change_transmission_rate. Works after
+  * @c esp_loader_connect() or either flasher-stub connection function.
   *
   * @note  Only supported on the serial (SLIP) interface. Not supported on ESP8266 or SDIO.
   *

@@ -4,7 +4,7 @@
 // auto-generated from esp-flasher-stub v1.2.1 — esp8266.json
 // Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
 
-#include "esp_stubs.h"
+#include "esp_loader.h"
 
 static const uint8_t esp_stub_esp8266_text[] = {
     0xa8, 0x10, 0x00, 0x40, 0x01, 0xff, 0xff, 0x46, 0x4f, 0x09, 0x00, 0x00, 0xf8, 0x02, 0x00, 0x60,
@@ -786,20 +786,23 @@ static const uint8_t esp_stub_esp8266_data[] = {
     0x02, 0x03, 0x07, 0x00, 0x03, 0x03, 0x0b, 0x00
 };
 
+static const esp_loader_bin_segment_t esp_stub_esp8266_segments[] = {
+    {
+        .addr = 0x4010c500,
+        .size = sizeof(esp_stub_esp8266_text),
+        .data = esp_stub_esp8266_text,
+    },
+    {
+        .addr = 0x3fffae6c,
+        .size = sizeof(esp_stub_esp8266_data),
+        .data = esp_stub_esp8266_data,
+    },
+};
+
 const esp_stub_t esp_stub_esp8266 = {
     .header = {
         .entrypoint = 0x4010c504,
     },
-    .segments = {
-        {
-            .addr = 0x4010c500,
-            .size = sizeof(esp_stub_esp8266_text),
-            .data = esp_stub_esp8266_text,
-        },
-        {
-            .addr = 0x3fffae6c,
-            .size = 920,
-            .data = esp_stub_esp8266_data,
-        },
-    },
+    .segments = esp_stub_esp8266_segments,
+    .segment_count = sizeof(esp_stub_esp8266_segments) / sizeof(esp_stub_esp8266_segments[0]),
 };

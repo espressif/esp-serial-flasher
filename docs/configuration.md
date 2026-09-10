@@ -48,7 +48,7 @@ All init functions accept an `esp_loader_port_t *` (the embedded base of a calle
 | -------------------------- | ----------- | ---------------------------------------------- |
 | `esp_loader_init_serial()` | Serial SLIP | UART, USB CDC-ACM, Linux tty; full feature set |
 | `esp_loader_init_spi()`    | SPI         | RAM download only                              |
-| `esp_loader_init_sdio()`   | SDIO        | Experimental; limited platform support         |
+| `esp_loader_init_sdio()`   | SDIO        | Experimental; uses bundled C5/C6 stubs         |
 
 Functions not supported by a given protocol return `ESP_LOADER_ERROR_UNSUPPORTED_FUNC`.
 
