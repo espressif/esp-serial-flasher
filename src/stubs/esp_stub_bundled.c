@@ -40,6 +40,8 @@ static const esp_stub_t *bundled_provider(esp_loader_t *loader, target_chip_t ch
         return &esp_stub_esp32c61;
     case ESP32S31_CHIP:
         return &esp_stub_esp32s31;
+    case ESP32H21_CHIP:
+        return &esp_stub_esp32h21;
     default:
         return NULL;
     }

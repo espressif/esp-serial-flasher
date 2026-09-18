@@ -24,6 +24,7 @@ extern const esp_stub_t esp_stub_esp32c6;
 extern const esp_stub_t esp_stub_esp32p4;
 extern const esp_stub_t esp_stub_esp32c61;
 extern const esp_stub_t esp_stub_esp32s31;
+extern const esp_stub_t esp_stub_esp32h21;
 extern const esp_stub_t esp_stub_esp32p4rev1;
 
 #ifdef __cplusplus

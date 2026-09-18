@@ -27,6 +27,7 @@ static const char *target_chip_name(target_chip_t chip)
         [ESP32C2_CHIP] = "ESP32-C2",
         [ESP32C5_CHIP] = "ESP32-C5",
         [ESP32H2_CHIP] = "ESP32-H2",
+        [ESP32H21_CHIP] = "ESP32-H21",
         [ESP32C6_CHIP] = "ESP32-C6",
         [ESP32P4_CHIP] = "ESP32-P4",
         [ESP32C61_CHIP] = "ESP32-C61",
