@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-// auto-generated from esp-flasher-stub v1.2.1 — esp32c2.json
-// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
+// auto-generated from esp-flasher-stub v1.3.0 — esp32c2.json
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.3.0
 
 #include "esp_loader.h"
 
