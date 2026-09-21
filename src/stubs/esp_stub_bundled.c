@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-// auto-generated from esp-flasher-stub v1.2.1
-// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
+// auto-generated from esp-flasher-stub v1.3.0
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.3.0
 
 #include "esp_loader_stubs.h"
 #include "esp_targets.h"
@@ -40,6 +40,8 @@ static const esp_stub_t *bundled_provider(esp_loader_t *loader, target_chip_t ch
         return &esp_stub_esp32c61;
     case ESP32S31_CHIP:
         return &esp_stub_esp32s31;
+    case ESP32H21_CHIP:
+        return &esp_stub_esp32h21;
     default:
         return NULL;
     }

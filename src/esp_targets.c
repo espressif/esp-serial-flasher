@@ -28,6 +28,7 @@ typedef struct {
 #define ESP8266_SPI_REG_BASE 0x60000200
 #define ESP32S2_SPI_REG_BASE 0x3f402000
 #define ESP32H2_SPI_REG_BASE 0x60003000
+#define ESP32H21_SPI_REG_BASE 0x60003000
 #define ESP32C5_SPI_REG_BASE 0x60003000
 #define ESP32C6_SPI_REG_BASE 0x60003000
 #define ESP32P4_SPI_REG_BASE 0x5008d000
@@ -287,6 +288,26 @@ static const esp_target_t esp_target[ESP_MAX_CHIP] = {
         .mac_efuse_offset = 0x50,
         .encryption_in_begin_flash_cmd = true,
         .chip_id = 32,
+    },
+
+    // ESP32H21
+    {
+        .regs = {
+            .cmd  = ESP32H21_SPI_REG_BASE + 0x00,
+            .usr  = ESP32H21_SPI_REG_BASE + 0x18,
+            .usr1 = ESP32H21_SPI_REG_BASE + 0x1c,
+            .usr2 = ESP32H21_SPI_REG_BASE + 0x20,
+            .w0   = ESP32H21_SPI_REG_BASE + 0x58,
+            .mosi_dlen = ESP32H21_SPI_REG_BASE + 0x24,
+            .miso_dlen = ESP32H21_SPI_REG_BASE + 0x28,
+        },
+        .efuse_base = 0x600B4000,
+        .chip_magic_value = NULL,
+        .magic_values_count = 0,
+        .read_spi_config = spi_config_unsupported,
+        .mac_efuse_offset = 0x44,
+        .encryption_in_begin_flash_cmd = true,
+        .chip_id = 25,
     },
 };
 
@@ -557,6 +578,15 @@ esp_loader_error_t loader_read_chip_revision(esp_loader_t *loader, const target_
 
         major = (word3 >> 21) & 0x3;
         minor = (word3 >> 18) & 0x7;
+        break;
+    }
+
+    case ESP32H21_CHIP: {
+        uint32_t word5;
+        RETURN_ON_ERROR( read_efuse_word(loader, blk1, 5, &word5) );
+
+        major = (word5 >> 8) & 0x3;
+        minor = (word5 >> 4) & 0xF;
         break;
     }
 

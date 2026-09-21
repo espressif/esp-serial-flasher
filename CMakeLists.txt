@@ -14,6 +14,7 @@ set(srcs
     src/stubs/esp_stub_esp32c2.c
     src/stubs/esp_stub_esp32c5.c
     src/stubs/esp_stub_esp32h2.c
+    src/stubs/esp_stub_esp32h21.c
     src/stubs/esp_stub_esp32c6.c
     src/stubs/esp_stub_esp32p4.c
     src/stubs/esp_stub_esp32p4rev1.c

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0
-// auto-generated from esp-flasher-stub v1.2.1
-// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.2.1
+// auto-generated from esp-flasher-stub v1.3.0
+// Source: https://github.com/espressif/esp-flasher-stub/releases/tag/v1.3.0
 
 #pragma once
 
@@ -24,6 +24,7 @@ extern const esp_stub_t esp_stub_esp32c6;
 extern const esp_stub_t esp_stub_esp32p4;
 extern const esp_stub_t esp_stub_esp32c61;
 extern const esp_stub_t esp_stub_esp32s31;
+extern const esp_stub_t esp_stub_esp32h21;
 extern const esp_stub_t esp_stub_esp32p4rev1;
 
 #ifdef __cplusplus
