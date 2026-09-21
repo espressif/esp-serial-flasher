@@ -43,6 +43,7 @@ if (CONFIG_ESP_SERIAL_FLASHER)
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32p4rev1.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32c61.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32s31.c
+        ${ZEPHYR_CURRENT_MODULE_DIR}/src/stubs/esp_stub_esp32h4.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/protocol_uart.c
         ${ZEPHYR_CURRENT_MODULE_DIR}/src/slip.c
     )

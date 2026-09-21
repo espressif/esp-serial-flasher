@@ -65,6 +65,7 @@ This makes it safe to build up, inspect, and abandon a set of writes. It also le
 | ESP32-H21 |      🚧       | –                       |
 | ESP32-P4  |      ✅       | KEY0–KEY5               |
 | ESP32-S31 |      🚧       | —                       |
+| ESP32-H4  |      🚧       | –                       |
 
 **Legend**: ✅ Supported | ❌ Not supported | 🚧 Under development
 

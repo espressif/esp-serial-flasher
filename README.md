@@ -50,6 +50,7 @@ This library enables you to program Espressif SoCs from various host platforms u
 | ESP32-P4  |  ✅  | 🚧  |  ❌  |     ✅      |
 | ESP32-C61 |  ✅  | ❌  |  🚧  |     ✅      |
 | ESP32-S31 |  ✅  | ❌  |  ❌  |     ✅      |
+| ESP32-H4  |  ✅  | 🚧  |  ❌  |     ✅      |
 
 **Legend**: ✅ Supported | ❌ Not supported | 🚧 Under development
 
@@ -74,7 +75,7 @@ This library enables you to program Espressif SoCs from various host platforms u
 
 **Legend**: ✅ Supported | ❌ Not supported | 🔶 Requires connecting with stub (`esp_loader_connect_with_stub()`)
 
-eFuse read and burn are supported on all target devices above except ESP8266 and ESP32-S31, which is still under development. See the [eFuse Guide](docs/efuse.md) for the per-chip capability matrix and the staged-write model.
+eFuse read and burn are supported on all target devices above except ESP8266. See the [eFuse Guide](docs/efuse.md) for the per-chip capability matrix and the staged-write model.
 
 > [!TIP]
 > Connecting with stub (`esp_loader_connect_with_stub()`) is recommended over the plain ROM bootloader connection when flash size on the host is not a limiting constraint. The stub unlocks faster flashing speeds (higher baud rates), flash sizes larger than 2 MB, compressed writes (deflate), and fast flash read. SDIO connects through the stub automatically. All supported chips now have a bundled stub. See [Flash Size Footprint](#flash-size-footprint) for the flash overhead introduced by the bundled stubs.
