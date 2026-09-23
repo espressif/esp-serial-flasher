@@ -178,6 +178,8 @@ static const esp_sdio_target_t esp_sdio_target[ESP_MAX_CHIP] = {
     {},
     // ESP32H21
     {},
+    // ESP32H4
+    {},
 };
 
 static esp_loader_error_t slave_read_register(esp_loader_t *loader, const uint32_t addr, uint32_t *reg)
