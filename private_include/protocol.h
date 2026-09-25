@@ -31,7 +31,7 @@ extern "C" {
 
 #define MD5_SIZE 32
 
-__pragma( pack(push, 1) )
+_Pragma("pack(push, 1)")
 typedef enum
 {
     FLASH_BEGIN = 0x02,
@@ -196,7 +196,7 @@ typedef struct
     uint32_t status_mask;
 } write_spi_command_t;
 
-__pragma( pack(pop))
+_Pragma("pack(pop)")
 
 esp_loader_error_t loader_initialize_conn(esp_loader_connect_args_t *connect_args);
 

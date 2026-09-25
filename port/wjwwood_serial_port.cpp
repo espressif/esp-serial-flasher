@@ -24,6 +24,7 @@
 #include "wjwwood_serial_port.h"
 
 using std::chrono::high_resolution_clock;
+using std::chrono::steady_clock;
 using std::chrono::duration_cast;
 using std::chrono::duration;
 using std::chrono::milliseconds;
@@ -63,7 +64,8 @@ void setTimeout(uint32_t timeout)
         return;
     }
 
-    serial_port->setTimeout(serial::Timeout::simpleTimeout(timeout));
+	auto timeoutVal = serial::Timeout::simpleTimeout(timeout);
+    serial_port->setTimeout(timeoutVal);
     serial_config.timeout = timeout;
 }
 
@@ -191,13 +193,13 @@ void loader_port_delay_ms(uint32_t ms)
 
 void loader_port_start_timer(uint32_t ms)
 {
-    serial_timer = high_resolution_clock::now() + (ms * 1ms);
+    serial_timer = steady_clock::now() + std::chrono::milliseconds(ms);
 }
 
 uint32_t loader_port_remaining_time(void)
 {
-    auto time_now = high_resolution_clock::now();
-    int32_t remaining = (duration_cast<milliseconds>(serial_timer - time_now)).count();
+    auto time_now = steady_clock::now();
+    int32_t remaining = duration_cast<milliseconds>(serial_timer - time_now).count();
     return (remaining > 0) ? (uint32_t)remaining : 0;
 }
 
