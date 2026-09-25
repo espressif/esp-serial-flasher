@@ -20,6 +20,37 @@
 </div>
 <hr>
 
+## v2.1.0 (2026-09-25)
+
+### ✨ New Features
+
+- **stubs**: update bundled flasher stubs to v1.3.0 *(Vojtech Piroch - 7382b2a)*
+- **efuse**: add key burning for modern and legacy chips *(Jaroslav Burian - 6d4bf64)*
+- **efuse**: add coding schemes and the burn engine *(Jaroslav Burian - 7df7a50)*
+- **efuse**: add field reads, staged writes and pre-commit validation *(Jaroslav Burian - cf9c245)*
+- **efuse**: add chip layout model and raw block reads *(Jaroslav Burian - 487bbb8)*
+- **efuse**: add public API header and generated field tables *(Jaroslav Burian - 3eddaa3)*
+- **stub**: support using BYO custom flash stubs *(Jackson Ming Hu - cd514dd)*
+- **target**: add USB host support for ESP32-S31 *(zhouli - bf20fcb)*
+- **target**: add ESP32-S31 support *(Jackson Ming Hu - 43d3ae6)*
+- **stub**: update flasher stub to v1.2.1 *(Jackson Ming Hu - 69374e4)*
+- **examples**: Add runtime interface switching example *(Vojtech Piroch - f30ba64)*
+- Add support for esp32h4 as a target *(Vojtech Piroch - dd16e38)*
+- Add support for esp32h21 as a target *(Vojtech Piroch - 76211de)*
+- add esp_loader_get_chip_revision() *(Jaroslav Burian - e908917)*
+
+### 🐛 Bug Fixes
+
+- **ci**: keep CI artifacts out of the uploaded component *(Jaroslav Burian - 14aaaed)*
+- **target**: reject unknown chip from security info *(Jackson Ming Hu - d6dd1d8)*
+- **cmake**: fix ESP-IDF build system v2 compatibility *(Jaroslav Burian - d84f112)*
+- Invert DTR/RTS polarity in usb driver *(Vojtech Piroch - edfa77b)*
+
+### 📖 Documentation
+
+- **efuse**: document eFuse support and rework the footprint section *(Jaroslav Burian - f30fba1)*
+
+
 ## v2.0.0 (2026-06-04)
 
 ### 🚨 Breaking changes
