@@ -17,3 +17,7 @@ dependencies:
 files:
    exclude:
     - ".cache/**/*"
+    - "**/build*/**/*"
+    - "**/pytest_embedded_log/**/*"
+    - "**/target-firmware/**/*.bin"
+    - "**/target-firmware/**/*.elf"

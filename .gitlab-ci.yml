@@ -481,6 +481,8 @@ push_to_the_components_registry:
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
     - if: '$FORCE_PUSH_COMPONENT == "1"'
+  # Artifacts from earlier stages would otherwise be packed into the uploaded component
+  dependencies: []
   script:
     - pip install idf-component-manager
     - compote component upload --allow-existing --name=esp-serial-flasher --namespace=espressif
