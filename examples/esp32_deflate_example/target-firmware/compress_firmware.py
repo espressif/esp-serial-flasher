@@ -16,9 +16,9 @@ If no arguments provided, compresses all .bin files in the script directory
 except *_deflated.bin.
 """
 
-import zlib
 import os
 import sys
+import zlib
 
 
 def compress_firmware(input_path, output_path):
@@ -80,7 +80,7 @@ def main():
         output_path = os.path.join(script_dir, output_name)
         if not compress_firmware(input_path, output_path):
             sys.exit(1)
-        print("")
+        print()
 
 
 if __name__ == "__main__":

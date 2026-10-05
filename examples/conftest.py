@@ -4,7 +4,6 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import List, Optional
 
 import pytest
 
@@ -16,16 +15,14 @@ def pytest_configure(config):
         config.option.embedded_services = "serial"
     elif "linux" in target:
         pass
-    elif "pi_pico" in target:
-        config.option.embedded_services = "serial"
-    elif "zephyr" in target:
+    elif "pi_pico" in target or "zephyr" in target:
         config.option.embedded_services = "serial"
     else:
         config.option.embedded_services = "esp,idf"
 
 
 def pytest_collection_modifyitems(
-    session: pytest.Session, config: pytest.Config, items: List[pytest.Item]
+    session: pytest.Session, config: pytest.Config, items: list[pytest.Item]
 ):
     """Modify test collection based on selected target"""
     target = config.getoption("--target")
@@ -59,9 +56,7 @@ def config(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture
-def build_dir(
-    request: pytest.FixtureRequest, app_path: str, config: Optional[str]
-) -> str:
+def build_dir(request: pytest.FixtureRequest, app_path: str, config: str | None) -> str:
     """
     Check local build dir and return the valid one
 
