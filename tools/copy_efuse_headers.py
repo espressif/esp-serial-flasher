@@ -33,7 +33,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import NamedTuple
 
-
 # Generated files are new to this repository, so they carry a single year.
 COPYRIGHT_YEAR = 2026
 
@@ -160,7 +159,7 @@ def split_esp32c2_key_block(text: str) -> str:
         r" = \{.*?\};\n",
         "",
         text,
-        flags=re.S,
+        flags=re.DOTALL,
     )
 
 
@@ -388,7 +387,7 @@ def transform_source(chip: str, prefix: str, text: str) -> str:
     )
 
 
-FIELD_RE = re.compile(r"^const esp_loader_efuse_desc_t\* (\w+)\[\] = \{", re.M)
+FIELD_RE = re.compile(r"^const esp_loader_efuse_desc_t\* (\w+)\[\] = \{", re.MULTILINE)
 
 HEADER_TEMPLATE = """\
 /*
