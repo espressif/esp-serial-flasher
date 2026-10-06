@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Unlicense OR CC0-1.0
-import pytest
-from pytest_embedded import Dut
-from esptool.cmds import detect_chip
 import time
+
+import pytest
+from esptool.cmds import detect_chip
+from pytest_embedded import Dut
 
 FLASH_ADDRESS = 0x1000
 BIN_FILE = "/zephyr/zephyr.bin"
