@@ -6,3 +6,5 @@ pytest-embedded-idf>=1.10.3
 pytest-embedded-serial>=1.10.3
 pytest-embedded-serial-esp>=1.10.3
 pexpect>=4.8.0
+# Stable register/timing reference for the standalone P4 CTest.
+esptool==5.3.1
