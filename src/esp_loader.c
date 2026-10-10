@@ -11,6 +11,7 @@
 #include "md5_hash.h"
 #include "slip.h"
 #include "loader_log.h"
+#include "esp32p4_flash_power.h"
 #include <string.h>
 #include <assert.h>
 #include <inttypes.h>
@@ -162,6 +163,8 @@ esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_a
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
 
+    RETURN_ON_ERROR(loader_prepare_p4_flash_power(loader));
+
     LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
 
     return ESP_LOADER_SUCCESS;
@@ -249,6 +252,8 @@ esp_loader_error_t esp_loader_connect_with_stub_provider(esp_loader_t *loader,
     RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
+
+    RETURN_ON_ERROR(loader_prepare_p4_flash_power(loader));
 
     const esp_stub_t *stub = provider(loader, loader->_target, ctx);
     if (stub == NULL) {
