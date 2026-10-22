@@ -717,3 +717,76 @@ esp_loader_error_t get_crystal_frequency_esp32c2(esp_loader_t *loader, uint32_t 
     *frequency = (est_freq > CRYSTAL_FREQ_THRESHOLD) ? ESP32C2_CRYSTAL_40MHZ : ESP32C2_CRYSTAL_26MHZ;
     return ESP_LOADER_SUCCESS;
 }
+
+static esp_loader_error_t modify_register(esp_loader_t *loader, uint32_t address,
+        uint32_t clear_mask, uint32_t set_mask)
+{
+    uint32_t value;
+    RETURN_ON_ERROR(esp_loader_read_register(loader, address, &value));
+    return esp_loader_write_register(loader, address, (value & ~clear_mask) | set_mask);
+}
+
+esp_loader_error_t loader_power_on_flash_esp32p4(esp_loader_t *loader)
+{
+    const uint32_t EFUSE_RD_REPEAT_DATA1_REG = 0x5012D034;
+    const uint32_t EFUSE_DOWNLOAD_MODE_XPD_ON = 1U << 16;
+    const uint32_t LP_SYS_ANA_XPD_PAD_GROUP_REG = 0x5011010C;
+    const uint32_t PMU_EXT_LDO_P0_0P1A_ANA_REG = 0x501151BC;
+    const uint32_t PMU_ANA_0P1A_EN_CUR_LIM_0 = 1U << 27;
+    const uint32_t PMU_EXT_LDO_P0_0P1A_REG = 0x501151B8;
+    const uint32_t PMU_0P1A_TARGET0_0 = 0xFFU << 23;
+    const uint32_t PMU_0P1A_TARGET0_DEFAULT = 0x80U << 23;
+    const uint32_t PMU_0P1A_FORCE_TIEH_SEL_0 = 1U << 7;
+    const uint32_t PMU_DATE_REG = 0x501153FC;
+    const uint32_t PMU_DATE_FLASH_FORCE_ON = 0x3;
+
+    /* Flash power is off by default in download mode since v3.1 (ECO6) */
+    uint16_t revision;
+    RETURN_ON_ERROR(loader_read_chip_revision(loader, ESP32P4_CHIP, &revision));
+    if (revision < 301) {
+        return ESP_LOADER_SUCCESS;
+    }
+
+    /* Since v3.2, ROM powers the flash on in SPI_ATTACH when DOWNLOAD_MODE_XPD_ON is set,
+     * then busy-waits for PMU_0P1A_CNT_TARGET0_REACH_0_HP_INT_RAW. That interrupt only
+     * triggers on an XPD low-to-high transition. The v3.2 ROM does not drive XPD low first,
+     * so if the force-on bits are still set from a previous session, the interrupt never
+     * triggers and ROM hangs. Later ROMs drive XPD low first, so they need nothing here. */
+    if (revision >= 302) {
+        uint32_t efuse;
+        RETURN_ON_ERROR(esp_loader_read_register(loader, EFUSE_RD_REPEAT_DATA1_REG, &efuse));
+        if (efuse & EFUSE_DOWNLOAD_MODE_XPD_ON) {
+            if (revision > 302) {
+                return ESP_LOADER_SUCCESS;
+            }
+            uint32_t date;
+            RETURN_ON_ERROR(esp_loader_read_register(loader, PMU_DATE_REG, &date));
+            if ((date & PMU_DATE_FLASH_FORCE_ON) == PMU_DATE_FLASH_FORCE_ON) {
+                RETURN_ON_ERROR(esp_loader_write_register(loader, PMU_DATE_REG,
+                                date & ~PMU_DATE_FLASH_FORCE_ON));
+            }
+            return ESP_LOADER_SUCCESS;
+        }
+    }
+
+    /* Power up pad group */
+    RETURN_ON_ERROR(esp_loader_write_register(loader, LP_SYS_ANA_XPD_PAD_GROUP_REG, 1));
+    loader->_port->ops->delay_ms(loader->_port, 10);
+
+    RETURN_ON_ERROR(modify_register(loader, PMU_EXT_LDO_P0_0P1A_ANA_REG, 0, PMU_ANA_0P1A_EN_CUR_LIM_0));
+    RETURN_ON_ERROR(modify_register(loader, PMU_EXT_LDO_P0_0P1A_REG, 0, PMU_0P1A_FORCE_TIEH_SEL_0));
+    /* Bit 1 overrides the flash LDO XPD signal, bit 0 forces it on */
+    RETURN_ON_ERROR(modify_register(loader, PMU_DATE_REG, 0, PMU_DATE_FLASH_FORCE_ON));
+    loader->_port->ops->delay_ms(loader->_port, 1);
+    RETURN_ON_ERROR(modify_register(loader, PMU_EXT_LDO_P0_0P1A_ANA_REG, PMU_ANA_0P1A_EN_CUR_LIM_0, 0));
+
+    /* The PMU loads the eFuse-selected flash voltage once the LDO counter reaches TARGET0,
+     * so zero it to make that happen immediately, then restore the default */
+    RETURN_ON_ERROR(modify_register(loader, PMU_EXT_LDO_P0_0P1A_REG, PMU_0P1A_TARGET0_0, 0));
+    RETURN_ON_ERROR(modify_register(loader, PMU_EXT_LDO_P0_0P1A_REG, PMU_0P1A_TARGET0_0,
+                                    PMU_0P1A_TARGET0_DEFAULT));
+    RETURN_ON_ERROR(modify_register(loader, PMU_EXT_LDO_P0_0P1A_REG, PMU_0P1A_FORCE_TIEH_SEL_0, 0));
+    loader->_port->ops->delay_ms(loader->_port, 2);
+
+    return ESP_LOADER_SUCCESS;
+}

@@ -162,6 +162,10 @@ esp_loader_error_t esp_loader_connect(esp_loader_t *loader, esp_loader_connect_a
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
 
+    if (loader->_target == ESP32P4_CHIP && loader->_protocol_type == ESP_LOADER_PROTOCOL_SERIAL) {
+        RETURN_ON_ERROR(loader_power_on_flash_esp32p4(loader));
+    }
+
     LOADER_LOGI(loader, "Connected - target: %s", target_chip_name(loader->_target));
 
     return ESP_LOADER_SUCCESS;
@@ -249,6 +253,11 @@ esp_loader_error_t esp_loader_connect_with_stub_provider(esp_loader_t *loader,
     RETURN_ON_ERROR(loader->_protocol->initialize_conn(loader, connect_args));
 
     RETURN_ON_ERROR(loader_detect_chip(loader));
+
+    /* The stub attaches flash on startup, so it must already be powered */
+    if (loader->_target == ESP32P4_CHIP) {
+        RETURN_ON_ERROR(loader_power_on_flash_esp32p4(loader));
+    }
 
     const esp_stub_t *stub = provider(loader, loader->_target, ctx);
     if (stub == NULL) {

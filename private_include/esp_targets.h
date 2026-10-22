@@ -39,3 +39,11 @@ target_chip_t target_from_chip_id(uint32_t chip_id);
 const target_registers_t *get_esp_target_data(target_chip_t chip);
 uint32_t esp_targets_get_efuse_base(target_chip_t target);
 esp_loader_error_t get_crystal_frequency_esp32c2(esp_loader_t *loader, uint32_t *frequency);
+
+/**
+ * @brief Power on the SPI flash of an ESP32-P4 v3.1+ before it is accessed from ROM or stub.
+ *
+ * Same sequence as esptool's ESP32P4ROM.power_on_flash(), also applied to revisions above v3.2,
+ * whose ROM can safely re-run its own power-on. Not usable in secure download mode.
+ */
+esp_loader_error_t loader_power_on_flash_esp32p4(esp_loader_t *loader);
