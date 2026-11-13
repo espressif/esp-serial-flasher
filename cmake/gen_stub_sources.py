@@ -9,14 +9,23 @@ Usage:
 Each chip gets its own C file in <repo_root>/src/stubs/.
 The bundled-provider source and public stub declaration header are also written/updated.
 
+For each plugin in PLUGINS that a JSON file has, the chip file also defines a
+<c_var>_<plugin> stub with the core stub segments followed by the plugin segments.
+The core stub data is shared, not duplicated.
+
 JSON format (espressif/esp-flasher-stub):
     { "entry": <uint32>, "text": "<base64>", "text_start": <uint32>,
-      "data": "<base64>", "data_start": <uint32>, "bss_start": <uint32> }
+      "data": "<base64>", "data_start": <uint32>, "bss_start": <uint32>,
+      "plugin_start_offset": <uint32>, "plugin_start_slots": <uint32>,
+      "plugins": { "<name>": { "text": "<base64>", "text_start": <uint32>,
+                               "data": "<base64>", "data_start": <uint32>,
+                               "entry": <uint32> } } }
 """
 
 import base64
 import json
 import os
+import struct
 import sys
 import urllib.request
 from datetime import datetime, timezone
@@ -59,6 +68,11 @@ EXTRA_STUBS = [
     ("esp32p4-rev1.json", "esp_stub_esp32p4rev1"),
 ]
 
+# Plugins: JSON "plugins" names, each with its own stub variants. They are not in
+# the public header: the SDIO protocol declares its stubs and uploads them itself
+# during esp_loader_connect().
+PLUGINS = ("sdio",)
+
 LICENSE_HEADER = """\
 // SPDX-FileCopyrightText: 2025-{year} Espressif Systems (Shanghai) CO LTD
 // SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -87,17 +101,33 @@ def hex_array(data: bytes, indent: int = 4) -> str:
 
 
 def load_stub_json(file_obj):
+    """Return the stub entry point, its segments and its plugins.
+
+    Segments are (name, addr, bytes) tuples. The plugins map a name from PLUGINS
+    to its segments: the plugin text, its data and the start hook that writes
+    the plugin entry into the first plugin_start[] slot of the base stub data.
+    The base stub calls the start function at boot, which zeroes the plugin BSS
+    and registers the plugin. Plugins missing from the JSON are left out.
+    """
     stub = json.load(file_obj)
-    entry = stub["entry"]
-    text = base64.b64decode(stub["text"])
-    text_start = stub["text_start"]
-    try:
-        data = base64.b64decode(stub["data"])
-        data_start = stub["data_start"]
-    except KeyError:
-        data = b""
-        data_start = 0
-    return entry, text, text_start, data, data_start
+    segments = [("text", stub["text_start"], base64.b64decode(stub["text"]))]
+    if stub.get("data"):
+        segments.append(("data", stub["data_start"], base64.b64decode(stub["data"])))
+
+    plugins = {}
+    for name in PLUGINS:
+        p = stub.get("plugins", {}).get(name)
+        if not p:
+            continue
+        plugin = [(f"{name}_text", p["text_start"], base64.b64decode(p["text"]))]
+        if p.get("data"):
+            plugin.append(
+                (f"{name}_data", p["data_start"], base64.b64decode(p["data"]))
+            )
+        start_addr = stub["data_start"] + stub["plugin_start_offset"]
+        plugin.append((f"{name}_start_hook", start_addr, struct.pack("<I", p["entry"])))
+        plugins[name] = plugin
+    return stub["entry"], segments, plugins
 
 
 _CHIP_FILE_TEMPLATE = Template("""\
@@ -107,28 +137,30 @@ $license_header
 
 #include "esp_loader.h"
 
-static const uint8_t ${c_var}_text[] = {
-$text_hex
-};
+${arrays}\
+${stubs}""")
 
-${data_array}\
-static const esp_loader_bin_segment_t ${c_var}_segments[] = {
-    {
-        .addr = $text_start,
-        .size = sizeof(${c_var}_text),
-        .data = ${c_var}_text,
-    },
-${data_segment}\
-};
-
-const esp_stub_t $c_var = {
+_STUB_TEMPLATE = Template("""\
+const esp_stub_t $stub_var = {
     .header = {
         .entrypoint = $entrypoint,
     },
-    .segments = ${c_var}_segments,
-    .segment_count = sizeof(${c_var}_segments) / sizeof(${c_var}_segments[0]),
+    .segments = ${stub_var}_segments,
+    .segment_count = sizeof(${stub_var}_segments) / sizeof(${stub_var}_segments[0]),
 };
 """)
+
+
+def _segment_table(c_var: str, table: str, segments) -> str:
+    entries = "".join(
+        "    {\n"
+        f"        .addr = 0x{addr:08x},\n"
+        f"        .size = sizeof({c_var}_{name}),\n"
+        f"        .data = {c_var}_{name},\n"
+        "    },\n"
+        for name, addr, _data in segments
+    )
+    return f"static const esp_loader_bin_segment_t {c_var}_{table}[] = {{\n{entries}}};\n\n"
 
 
 def write_chip_file(
@@ -138,35 +170,29 @@ def write_chip_file(
     json_name: str,
     c_var: str,
     entry: int,
-    text: bytes,
-    text_start: int,
-    data: bytes,
-    data_start: int,
+    segments,
+    plugins,
 ) -> None:
-    data_array = (
-        f"static const uint8_t {c_var}_data[] = {{\n{hex_array(data)}\n}};\n\n"
-        if data
-        else ""
+    arrays = "".join(
+        f"static const uint8_t {c_var}_{name}[] = {{\n{hex_array(data)}\n}};\n\n"
+        for name, _addr, data in segments + [s for p in plugins.values() for s in p]
     )
-    data_segment = (
-        "    {\n"
-        f"        .addr = 0x{data_start:08x},\n"
-        f"        .size = sizeof({c_var}_data),\n"
-        f"        .data = {c_var}_data,\n"
-        "    },\n"
-        if data
-        else ""
-    )
+    # The plugin hook overwrites part of the core data segment, so the plugin
+    # segments must follow the core segments.
+    stubs = [(c_var, "", segments)] + [
+        (f"{c_var}_{name}", f"{name}_", segments + plugin_segments)
+        for name, plugin_segments in plugins.items()
+    ]
     content = _CHIP_FILE_TEMPLATE.substitute(
         license_header=LICENSE_HEADER.format(year=year),
         version=version,
         json_name=json_name,
-        c_var=c_var,
-        text_hex=hex_array(text) if text else "",
-        data_array=data_array,
-        data_segment=data_segment,
-        entrypoint=f"0x{entry:08x}",
-        text_start=f"0x{text_start:08x}",
+        arrays=arrays,
+        stubs="\n".join(
+            _segment_table(c_var, f"{prefix}segments", stub_segments)
+            + _STUB_TEMPLATE.substitute(stub_var=stub_var, entrypoint=f"0x{entry:08x}")
+            for stub_var, prefix, stub_segments in stubs
+        ),
     )
     with open(path, "w", newline="\n") as f:
         f.write(content)
@@ -279,23 +305,14 @@ if __name__ == "__main__":
         if override_path:
             json_path = os.path.join(override_path, json_name)
             with open(json_path) as fh:
-                entry, text, text_start, data, data_start = load_stub_json(fh)
+                entry, segments, plugins = load_stub_json(fh)
         else:
             url = f"{base_url}/v{version}/{json_name}"
             with urllib.request.urlopen(url) as resp:
-                entry, text, text_start, data, data_start = load_stub_json(resp)
+                entry, segments, plugins = load_stub_json(resp)
         out_path = os.path.join(stubs_src, f"{c_var}.c")
         write_chip_file(
-            out_path,
-            version,
-            year,
-            json_name,
-            c_var,
-            entry,
-            text,
-            text_start,
-            data,
-            data_start,
+            out_path, version, year, json_name, c_var, entry, segments, plugins
         )
 
     for _enum, json_name, c_var in CHIPS:
