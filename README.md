@@ -48,7 +48,7 @@ This library enables you to program Espressif SoCs from various host platforms u
 | ESP32-C6  |  ✅  | ❌  |  ✅  |     ✅      |
 | ESP32-C5  |  ✅  | ❌  |  ✅  |     ✅      |
 | ESP32-P4  |  ✅  | 🚧  |  ❌  |     ✅      |
-| ESP32-C61 |  ✅  | ❌  |  🚧  |     ✅      |
+| ESP32-C61 |  ✅  | ❌  |  ✅  |     ✅      |
 | ESP32-S31 |  ✅  | ❌  |  ❌  |     ✅      |
 | ESP32-H4  |  ✅  | 🚧  |  ❌  |     ✅      |
 

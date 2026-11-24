@@ -9,7 +9,6 @@
 #include "esp_loader_protocol.h"
 #include "esp_targets.h"
 #include "md5_hash.h"
-#include "slip.h"
 #include "loader_log.h"
 #include <string.h>
 #include <assert.h>
@@ -221,10 +220,10 @@ static esp_loader_error_t loader_upload_stub(esp_loader_t *loader, const esp_stu
     uint8_t buff[4];
     size_t recv_size = 0;
     loader->_port->ops->start_timer(loader->_port, DEFAULT_TIMEOUT);
-    esp_loader_error_t err = SLIP_receive_packet(loader, buff, sizeof(buff) / sizeof(buff[0]), &recv_size);
+    esp_loader_error_t err = loader->_protocol->recv_stub_packet(loader, buff, sizeof(buff), &recv_size);
     if (err != ESP_LOADER_SUCCESS) {
         return err;
-    } else if (recv_size != sizeof(buff) || memcmp(buff, "OHAI", sizeof(buff) / sizeof(buff[0]))) {
+    } else if (recv_size != sizeof(buff) || memcmp(buff, "OHAI", sizeof(buff))) {
         return ESP_LOADER_ERROR_INVALID_RESPONSE;
     }
 

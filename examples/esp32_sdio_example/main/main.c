@@ -33,7 +33,7 @@ extern const uint8_t app_bin[];
 extern const uint32_t app_bin_size;
 extern const uint8_t app_bin_md5[];
 
-static const char *TAG = "sdio_ram_loader";
+static const char *TAG = "sdio_flasher";
 
 // Max line size
 #define BUF_LEN 128

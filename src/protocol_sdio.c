@@ -462,13 +462,20 @@ static esp_loader_error_t sdio_read_stub_packet(esp_loader_t *loader, uint8_t *d
     return ESP_LOADER_SUCCESS;
 }
 
+/** @brief Bundled flasher stubs with the SDIO plugin. */
+extern const esp_stub_t esp_stub_esp32c5_sdio;
+extern const esp_stub_t esp_stub_esp32c6_sdio;
+extern const esp_stub_t esp_stub_esp32c61_sdio;
+
 static const esp_stub_t *sdio_get_stub(target_chip_t target)
 {
     switch (target) {
     case ESP32C5_CHIP:
-        return &esp_stub_esp32c5;
+        return &esp_stub_esp32c5_sdio;
     case ESP32C6_CHIP:
-        return &esp_stub_esp32c6;
+        return &esp_stub_esp32c6_sdio;
+    case ESP32C61_CHIP:
+        return &esp_stub_esp32c61_sdio;
     default:
         return NULL;
     }
